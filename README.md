@@ -7,11 +7,11 @@ calculator (no page output). It has three parts:
 |---|---|
 | `bignumlibrary.ps` | Decimal floating-point numbers with as many significant digits as you ask for: arithmetic, comparisons, sin/cos/tan, ln/log10, pi |
 | `Trig.ps` | sin/cos/tan/atan for ordinary PostScript reals using the CORDIC algorithm |
-| `Matrix.ps` | Create matrices, get and set elements, multiply |
+| `Matrix.ps` | Matrices of reals or bignums: build, add, multiply, transpose, determinant, inverse, solve linear systems |
 | `Load.ps` | Loads all three |
 | `test_bignum.ps` | Regression tests for all three files |
 | `make_tests.py` | Generates `test_bignum.ps` (Python 3, standard library only) |
-| [`showcase.pdf`](showcase.pdf) | Every public function with a live result, plus CORDIC plots (7 pages) |
+| [`showcase.pdf`](showcase.pdf) | Every public function with a live result, plus CORDIC plots (8 pages) |
 | `showcase.ps`, `make_showcase.bat` | Source of the showcase and the script that builds it |
 
 ## Showcase
@@ -167,7 +167,7 @@ them, so `stopped` catches them and Ghostscript reports them as, for example,
 ### Speed
 
 Arithmetic works one decimal digit at a time. At 20 digits each operation is
-instant and the full test suite (322 tests) takes about 5 seconds. At 100 digits, `pibn`
+instant and the full test suite (375 tests) takes about 6 seconds. At 100 digits, `pibn`
 takes about 5 s the first time (it's cached after that) and `sinbn` about 2 s.
 
 ## Trig.ps
@@ -189,15 +189,51 @@ Also defines `pi` as a real.
 
 ## Matrix.ps
 
-Matrices are arrays of columns, and indices start at 1.
+Matrices are arrays of columns, and indices start at 1. The easiest way to
+write one is as a list of rows:
 
-| Procedure | Stack |
-|---|---|
-| `marray` | `m n → M` (m rows × n columns, zero-filled) |
-| `mput` | `M i j value → –` |
-| `mget` | `M i j → value` |
-| `msize` | `M → n m` |
-| `mmul` | `A B → A×B` (or the string `(Nan)` if the sizes don't match) |
+```postscript
+/A [[1 2] [3 4]] mfromrows def
+A mdet =                           % -2
+A [[5] [6]] mfromrows msolve mPrint  % -4.0 / 4.5  (solves A x = [5; 6])
+```
+
+**Reals or bignums.** Every operation works on ordinary PostScript numbers.
+If any element is a bignum, or a string such as `(0.1)`, the whole
+calculation switches to bignum arithmetic at the current `bnn` (strings and
+other numbers are converted with `setbn`). So
+`[[(0.1) (0.2)] [(0.3) (0.4)]] mfromrows mdet` is exactly −0.02, where reals
+give −0.0200000033. `mmul`, `mdet`, `minv` and `msolve` work with 6 extra
+digits and then round. Bignum elements need `bignumlibrary.ps`; with reals
+only, Matrix.ps works on its own.
+
+| Procedure | Stack | Notes |
+|---|---|---|
+| `marray` | `m n → M` | m rows × n columns, zero-filled |
+| `mfromrows` | `[[row] [row] …] → M` | rows must all be the same length, else `rangecheck` |
+| `mtorows` | `M → [[row] [row] …]` | |
+| `midentity` | `n → I` | n × n identity |
+| `mcopy` | `M → copy` | independent of M |
+| `mput` | `M i j value → –` | changes M in place |
+| `mget` | `M i j → value` | |
+| `msize` | `M → m n` | rows, then columns on top |
+| `mtranspose` | `M → Mᵀ` | |
+| `madd` `msub` | `A B → A±B` | sizes must match, else `rangecheck` |
+| `mscale` | `M s → s·M` | s a number, bignum or string |
+| `mmul` | `A B → A×B` | returns the string `(Nan)` if A's columns don't match B's rows (kept from the 2012 version) |
+| `mdet` | `A → det` | A square. Singular gives 0; an all-integer matrix gives an integer |
+| `minv` | `A → A⁻¹` | singular A gives `undefinedresult` |
+| `msolve` | `A B → X` | solves A X = B for an n × n A and n × k B; singular A gives `undefinedresult` |
+| `mPrint` | `M → –` | prints one row per line |
+
+`mdet`, `minv` and `msolve` use Gauss-Jordan elimination with partial
+pivoting (row swaps). A pivot counts as zero when it is smaller than the
+largest element of A times 10⁻⁵ for reals, or times 10^−(bnn+3) for bignums,
+so rounding errors don't hide a singular matrix. With reals, results have
+about 7 significant digits, and fewer for ill-conditioned matrices such as
+Hilbert matrices. Use bignums when that matters.
+
+The operations never change their arguments, except `mput`.
 
 ## Tests
 
@@ -221,6 +257,17 @@ runme.bat test_bignum.ps
 The script writes `test_bignum.ps` itself. Don't redirect its output with
 `>`: in Windows PowerShell 5.1 that writes UTF-16, which Ghostscript can't
 read.
+
+## Changes in version 1.1 (November 2026)
+
+**Matrix.ps** now stands on its own as a linear algebra library:
+
+- Added `mfromrows`, `mtorows`, `mcopy`, `midentity`, `mtranspose`, `madd`,
+  `msub`, `mscale`, `mdet`, `minv`, `msolve` and `mPrint`.
+- Every operation, including `mmul`, accepts bignum and decimal-string
+  elements, for exact decimal results.
+- 53 new tests, and a matrix section in the showcase covering each new
+  procedure.
 
 ## Changes in version 1.0 (November 2026)
 

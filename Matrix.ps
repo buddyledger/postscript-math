@@ -6,7 +6,7 @@
 %%DocumentNeededFonts: Courier
 %%EndComments
 %
-% Copyright 2012 Buddy Ledger
+% Copyright 2012, 2026 Buddy Ledger
 %
 % This work may be distributed and/or modified under the
 % conditions of the LaTeX Project Public License, either version 1.3c
@@ -21,6 +21,10 @@
 % The Current Maintainer of this work is Buddy Ledger.
 %
 % This work consists of the files listed in README.md.
+%
+% Version 1.1 (2026): added mfromrows, mtorows, mcopy, midentity, mtranspose,
+% madd, msub, mscale, mdet, minv, msolve and mPrint. Every operation accepts
+% bignum elements when bignumlibrary.ps is loaded.
 %
 
 %M i j Val
@@ -49,34 +53,251 @@ A
 end
 } bind def
 
-/msize {dup length exch 0 get length exch} bind def %puts n m on the stack /n exch def /m exch def 
+/msize {dup length exch 0 get length exch} bind def % M -> m n (rows, then columns on top) 
 
 
-/mmul {
-15 dict begin
-/mmulB exch def /mmulA exch def
-mmulA msize /mmulnA exch def /mmulmA exch def
-mmulB msize /mmulnB exch def /mmulmB exch def
-%cols of A must equal cols ofB
-mmulnA mmulmB eq {
-/mmulR mmulmA mmulnB marray def
-1 1 mmulnB {/mmulj exch def 
-    1 1 mmulmA {/mmuli exch def 
-        /mmulsum 0 def
-        1 1 mmulnA {/mmulk exch def %i = j = k =
-            mmulsum 
-            mmulA mmuli mmulk mget 
-            mmulB mmulk mmulj mget 
-            mul add
-            /mmulsum exch def
-        } for
-        mmulR mmuli mmulj mmulsum mput
-    } for
-} for
-mmulR
-/mmulR 0 def %detach
-}{(Nan)} ifelse
+% ---------------------------------------------------------------- arithmetic
+% Every operation below works on plain numbers. If any element is a bignum
+% (bignumlibrary.ps), the whole calculation switches to bignum arithmetic at
+% the current precision bnn. Numbers in the matrix are converted with setbn,
+% and so are strings, so [[(0.1) (0.2)] [(0.3) (0.4)]] mfromrows is an exact
+% decimal matrix. Names starting with m_ are internal.
+
+/m_isbn { % any -> bool (has the shape of a bignum)
+	dup type /arraytype eq {
+		dup length 3 eq {
+			dup 0 get type /booleantype eq
+			1 index 1 get type /stringtype eq and
+			exch 2 get type /integertype eq and
+		}{ pop false } ifelse
+	}{ pop false } ifelse
+} bind def
+
+% M -> bool: true if any element is a bignum or a string such as (0.1),
+% which is then read with setbn
+/m_hasbn { false exch { { dup type /stringtype eq exch m_isbn or or } forall } forall } bind def
+/m_allint { true exch { { type /integertype eq and } forall } forall } bind def
+
+% Two sets of the same operations; m_ops picks one to put on the dict stack.
+/m_realops 20 dict def
+m_realops begin
+	/m_add { add } def  /m_sub { sub } def  /m_mul { mul } def  /m_div { div } def
+	/m_neg { neg } def  /m_abs { abs } def  /m_gt { gt } def    /m_isz { 0 eq } def
+	/m_cv { } def       /m_zero { 0 } def   /m_one { 1 } def
+	/m_eps { 1e-5 } def                     % relative size of a "zero" pivot
+	/m_guard { } def    /m_unguard { } def  /m_fin { } def
+	/m_str { 30 string cvs } def
 end
+/m_bnops 20 dict def
+m_bnops begin
+	/m_add { addbn } def  /m_sub { subbn } def  /m_mul { mulbn } def  /m_div { divbn } def
+	/m_neg { negbn } def  /m_abs { absbn } def  /m_gt { gtbn } def    /m_isz { bniszero } def
+	/m_cv { setbn } def   /m_zero { 0 setbn } def  /m_one { 1 setbn } def
+	/m_eps { bnn 3 sub dup 1 lt { pop 1 } if 10 string cvs (1e-) exch mergestr setbn } def
+	% work with 6 extra digits, then round the results back to bnn
+	/m_guard { 20 dict begin /bnn bnn 6 add def } def
+	/m_unguard { end } def
+	/m_fin { bn_renorm } def
+	/m_str { bncvs } def
+end
+/m_ops { { m_bnops }{ m_realops } ifelse } bind def   % bool -> dict
+/m_finm { [ exch { [ exch { m_fin } forall ] } forall ] } bind def
+
+% ---------------------------------------------------------------- building
+
+%[ [a b] [c d] ] mfromrows -> M   (a list of rows, all the same length)
+/mfromrows {
+10 dict begin
+	/R exch def
+	R type /arraytype ne { R end /mfromrows errordict /typecheck get exec } if
+	/m R length def
+	m 0 eq { R end /mfromrows errordict /rangecheck get exec } if
+	R {
+		dup type /arraytype ne { pop R end /mfromrows errordict /typecheck get exec } if
+		length R 0 get length ne { R end /mfromrows errordict /rangecheck get exec } if
+	} forall
+	/n R 0 get length def
+	n 0 eq { R end /mfromrows errordict /rangecheck get exec } if
+	/A m n marray def
+	1 1 m { /i exch def /row R i 1 sub get def
+		1 1 n { /j exch def A i j row j 1 sub get mput } for
+	} for
+	A
+end
+} bind def
+
+%M mtorows -> [ [row 1] [row 2] ... ]
+/mtorows {
+10 dict begin
+	/A exch def A msize /n exch def /m exch def
+	[ 1 1 m { /i exch def [ 1 1 n { /j exch def A i j mget } for ] } for ]
+end
+} bind def
+
+/mcopy { [ exch { [ exch aload pop ] } forall ] } bind def   % M -> independent copy
+
+%n midentity -> n x n identity matrix
+/midentity {
+5 dict begin
+	/n exch def /I n n marray def
+	1 1 n { /i exch def I i i 1 mput } for
+	I
+end
+} bind def
+
+%M mtranspose -> transpose
+/mtranspose {
+10 dict begin
+	/A exch def A msize /n exch def /m exch def
+	/T n m marray def
+	1 1 m { /i exch def 1 1 n { /j exch def T j i A i j mget mput } for } for
+	T
+end
+} bind def
+
+% ---------------------------------------------------------------- arithmetic
+
+/m_ew { % A B /opname /caller -> C   element by element
+	4 2 roll 2 copy m_hasbn exch m_hasbn or m_ops begin
+	10 dict begin
+	/B exch def /A exch def /who exch def /op exch def
+	A msize /n exch def /m exch def
+	B msize n ne exch m ne or { A B who end end errordict /rangecheck get exec } if
+	/C m n marray def
+	1 1 m { /i exch def 1 1 n { /j exch def
+		C i j  A i j mget m_cv  B i j mget m_cv  op load exec  mput
+	} for } for
+	C
+	end end
+} bind def
+/madd { /m_add /madd m_ew } bind def   % A B -> A+B
+/msub { /m_sub /msub m_ew } bind def   % A B -> A-B
+
+%M s mscale -> s times M   (s a number or a bignum)
+/mscale {
+	2 copy dup m_isbn exch type /stringtype eq or exch m_hasbn or m_ops begin
+	10 dict begin
+	/s exch m_cv def /A exch def
+	A msize /n exch def /m exch def
+	/C m n marray def
+	1 1 m { /i exch def 1 1 n { /j exch def C i j A i j mget m_cv s m_mul mput } for } for
+	C
+	end end
+} bind def
+
+%A B mmul -> A x B   (or the string (Nan) if A's columns don't match B's rows)
+/mmul {
+	2 copy m_hasbn exch m_hasbn or m_ops begin
+	15 dict begin
+	/B exch def /A exch def
+	A msize /nA exch def /mA exch def
+	B msize /nB exch def /mB exch def
+	nA mB eq {
+		m_guard
+		/R mA nB marray def
+		1 1 nB { /j exch def
+			1 1 mA { /i exch def
+				m_zero
+				1 1 nA { /k exch def A i k mget m_cv B k j mget m_cv m_mul m_add } for
+				/s exch def R i j s mput
+			} for
+		} for
+		R m_unguard m_finm
+	}{ (Nan) } ifelse
+	end end
+} bind def
+
+% ---------------------------------------------------------------- solving
+
+% Gauss-Jordan elimination with partial pivoting on the rows of [A | B].
+% The arithmetic dict (m_ops) must be current.
+% A B m_gj -> X det true   (A X = B)   or   0 false   (A is singular)
+% A pivot counts as zero when it is below m_eps times the largest |element|
+% of A, so rounding errors don't hide a singular matrix.
+/m_gj {
+	m_guard
+	20 dict begin
+	/B exch def /A exch def
+	/n A length def /k B length def /w n k add def
+	/W [ 1 1 n { /i exch def
+		[ 1 1 n { /j exch def A i j mget m_cv } for
+		  1 1 k { /j exch def B i j mget m_cv } for ]
+	} for ] def
+	m_zero
+	1 1 n { /i exch def 1 1 n { /j exch def
+		A i j mget m_cv m_abs 2 copy m_gt { pop }{ exch pop } ifelse
+	} for } for
+	m_eps m_mul /tol exch def
+	/det m_one def /ok true def
+	0 1 n 1 sub { /c exch def
+		/p c def /best W c get c get m_abs def
+		c 1 add 1 n 1 sub { /r exch def
+			W r get c get m_abs dup best m_gt { /best exch def /p r def }{ pop } ifelse
+		} for
+		best tol m_gt not { /ok false def exit } if
+		p c ne { W p get W c get W exch p exch put W exch c exch put /det det m_neg def } if
+		/rowc W c get def /piv rowc c get def
+		/det det piv m_mul def
+		c 1 w 1 sub { /j exch def rowc j rowc j get piv m_div put } for
+		rowc c m_one put
+		0 1 n 1 sub { /r exch def r c ne {
+			/rowr W r get def /f rowr c get def
+			f m_isz not {
+				c 1 w 1 sub { /j exch def rowr j  rowr j get f rowc j get m_mul m_sub  put } for
+			} if
+		} if } for
+	} for
+	ok {
+		/X n k marray def
+		1 1 n { /i exch def 1 1 k { /j exch def X i j W i 1 sub get n j add 1 sub get mput } for } for
+		X det true
+	}{ m_zero false } ifelse
+	end
+	m_unguard
+	{ m_fin exch m_finm exch true }{ m_fin false } ifelse
+} bind def
+
+%A mdet -> determinant   (A square)
+/mdet {
+	dup m_hasbn m_ops begin
+	10 dict begin
+	/A exch def
+	A msize ne { A end end /mdet errordict /rangecheck get exec } if
+	A A length 0 marray m_gj { exch pop } if
+	% a matrix of integers has an integer determinant
+	A m_allint { dup abs 1e9 lt { round cvi } if } if
+	end end
+} bind def
+
+%A minv -> inverse of A   (A square; undefinedresult if A is singular)
+/minv {
+	dup m_hasbn m_ops begin
+	10 dict begin
+	/A exch def
+	A msize ne { A end end /minv errordict /rangecheck get exec } if
+	A A length midentity m_gj
+	{ pop end end }{ pop A end end /minv errordict /undefinedresult get exec } ifelse
+} bind def
+
+%A B msolve -> X with A X = B   (A n x n, B n x k; undefinedresult if A is singular)
+/msolve {
+	2 copy m_hasbn exch m_hasbn or m_ops begin
+	10 dict begin
+	/B exch def /A exch def
+	A msize ne  B msize pop A msize pop ne  or { A B end end /msolve errordict /rangecheck get exec } if
+	A B m_gj
+	{ pop end end }{ pop A B end end /msolve errordict /undefinedresult get exec } ifelse
+} bind def
+
+%M mPrint -> prints M one row per line
+/mPrint {
+	dup m_hasbn m_ops begin
+	mtorows {
+		dup 0 get m_cv m_str print
+		1 1 index length 1 sub getinterval { ( ) print m_cv m_str print } forall
+		() =
+	} forall
+	end
 } bind def
 
 %~ %Example Matrix Mult

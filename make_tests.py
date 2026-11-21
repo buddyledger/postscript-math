@@ -220,6 +220,129 @@ out("(mmul 2x2) { /bnt_M 2 2 marray def bnt_M 1 1 1 mput bnt_M 1 2 2 mput bnt_M 
     " exch dup 2 1 mget 4 string cvs exch 2 2 mget 4 string cvs"
     " ( ) exch mergestr mergestr ( ) exch mergestr mergestr ( ) exch mergestr mergestr } (7 10 15 22) check")
 
+# ---------------------------------------------------------------- Matrix.ps v1.1
+from fractions import Fraction as F
+
+def mlit(rows):  # Python rows -> PostScript list of rows; strings stay decimal strings
+    def el(x): return f"({x})" if isinstance(x, str) else str(x)
+    return "[" + "".join("[" + " ".join(el(x) for x in r) + "]" for r in rows) + "]"
+
+def fr(x): return F(D(x)) if isinstance(x, str) else F(x)
+
+def mdet_exact(rows):
+    a = [[fr(x) for x in r] for r in rows]; m = len(a); d = F(1)
+    for c in range(m):
+        p = next((r for r in range(c, m) if a[r][c] != 0), None)
+        if p is None: return F(0)
+        if p != c: a[c], a[p] = a[p], a[c]; d = -d
+        d *= a[c][c]
+        for r in range(c + 1, m):
+            f = a[r][c] / a[c][c]
+            a[r] = [x - f * y for x, y in zip(a[r], a[c])]
+    return d
+
+def msolve_exact(rows, rhs):  # exact X with rows * X = rhs, as rows of Fractions
+    m = len(rows)
+    a = [[fr(x) for x in r] + [fr(x) for x in b] for r, b in zip(rows, rhs)]
+    for c in range(m):
+        p = next(r for r in range(c, m) if a[r][c] != 0)
+        a[c], a[p] = a[p], a[c]
+        pv = a[c][c]; a[c] = [x / pv for x in a[c]]
+        for r in range(m):
+            if r != c and a[r][c] != 0:
+                f = a[r][c]; a[r] = [x - f * y for x, y in zip(a[r], a[c])]
+    return [r[m:] for r in a]
+
+def ident(m): return [[1 if i == j else 0 for j in range(m)] for i in range(m)]
+
+def fdec(q, digits):  # Fraction -> bncvs string
+    with localcontext() as c:
+        c.prec = HP
+        return fmt(D(q.numerator) / D(q.denominator), digits)
+
+def mbn(rows, digits): return "; ".join(" ".join(fdec(F(x), digits) for x in r) for r in rows)
+def mflat(rows): return "[" + " ".join(f"{float(x):.9g}" for r in rows for x in r) + "]"
+
+def ma(label, proc, rows):
+    esc = label.replace("(", "\\(").replace(")", "\\)")
+    out(f"({esc}) {{ {proc} }} {mflat(rows)} mapprox")
+
+out(); out("(Matrix.ps building and arithmetic) bnt_section  10 setbnsize")
+A2 = [[1, 2], [3, 4]]
+t("mfromrows and bnt_mstr", f"{mlit(A2)} mfromrows bnt_mstr", "1 2; 3 4")
+t("mfromrows stores columns", f"{mlit(A2)} mfromrows 2 1 mget", "3")
+t("mfromrows typchk", f"{mlit(A2)} mfromrows typchk", "matrixtype")
+t("mfromrows rejects ragged rows", "[[1 2][3]] mfromrows", "ERR:rangecheck")
+t("mfromrows rejects an empty list", "[] mfromrows", "ERR:rangecheck")
+t("mfromrows rejects a number", "5 mfromrows", "ERR:typecheck")
+t("mtorows", f"{mlit(A2)} mfromrows mtorows 1 get 0 get", "3")
+t("mcopy is independent", f"/bnt_M {mlit(A2)} mfromrows def bnt_M mcopy 1 1 99 mput bnt_M bnt_mstr", "1 2; 3 4")
+t("midentity 3", "3 midentity bnt_mstr", "1 0 0; 0 1 0; 0 0 1")
+t("mtranspose 2x3", "[[1 2 3][4 5 6]] mfromrows mtranspose bnt_mstr", "1 4; 2 5; 3 6")
+t("madd", f"{mlit(A2)} mfromrows [[10 20][30 40]] mfromrows madd bnt_mstr", "11 22; 33 44")
+t("msub", f"{mlit(A2)} mfromrows [[10 20][30 40]] mfromrows msub bnt_mstr", "-9 -18; -27 -36")
+t("madd size mismatch", f"{mlit(A2)} mfromrows [[1 2 3]] mfromrows madd", "ERR:rangecheck")
+t("msub size mismatch", f"{mlit(A2)} mfromrows [[1][2]] mfromrows msub", "ERR:rangecheck")
+t("mscale by 3", f"{mlit(A2)} mfromrows 3 mscale bnt_mstr", "3 6; 9 12")
+t("mmul 2x3 by 3x2", "[[1 2 3][4 5 6]] mfromrows [[7 8][9 10][11 12]] mfromrows mmul bnt_mstr", "58 64; 139 154")
+t("mmul size mismatch gives Nan", "[[1 2 3]] mfromrows [[1 2]] mfromrows mmul", "Nan")
+t("mmul by identity", f"{mlit(A2)} mfromrows 2 midentity mmul bnt_mstr", "1 2; 3 4")
+D2 = [["0.1", "0.2"], ["0.3", "0.4"]]
+t("decimal strings switch to bignums", f"{mlit(D2)} mfromrows [[1 1][1 1]] mfromrows madd bnt_mstr",
+  mbn([[fr(a) + 1 for a in r] for r in D2], 10))
+t("mscale by a decimal string", f"{mlit(A2)} mfromrows (0.5) mscale bnt_mstr", mbn([[F(x, 2) for x in r] for r in A2], 10))
+# 1/3 is first rounded to 10 digits, 0.3333333333, so 3 times it is 0.9999999999
+t("mscale by a bignum", f"{mlit(A2)} mfromrows 1 setbn 3 setbn divbn mscale bnt_mstr",
+  mbn([[x * F(D("0.3333333333")) for x in r] for r in A2], 10))
+t("mmul with decimals is exact", f"{mlit(D2)} mfromrows dup mmul bnt_mstr",
+  mbn([[sum(fr(D2[i][k]) * fr(D2[k][j]) for k in range(2)) for j in range(2)] for i in range(2)], 10))
+
+out(); out("(Matrix.ps determinant, inverse, solve - reals) bnt_section  20 setbnsize")
+M3 = [[2, 1, 1], [1, 3, 2], [1, 0, 0]]
+S3 = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+R4 = [[4, -2, 1, 3], [3, 6, -4, 2], [2, 1, 8, -5], [1, -3, 2, 7]]
+t("mdet 2x2 integers", f"{mlit(A2)} mfromrows mdet", "-2")
+t("mdet 3x3 integers", f"{mlit(M3)} mfromrows mdet", str(mdet_exact(M3)))
+t("mdet 4x4 integers", f"{mlit(R4)} mfromrows mdet", str(mdet_exact(R4)))
+t("mdet 1x1", "[[5]] mfromrows mdet", "5")
+t("mdet needs a row swap", "[[0 1][1 0]] mfromrows mdet", "-1")
+t("mdet singular is 0", f"{mlit(S3)} mfromrows mdet", "0")
+t("mdet non-square", "[[1 2 3][4 5 6]] mfromrows mdet", "ERR:rangecheck")
+out("(mdet reals) { [[0.5 1][2 3]] mfromrows mdet } -0.5 approx")
+ma("minv 2x2", f"{mlit(A2)} mfromrows minv", msolve_exact(A2, ident(2)))
+ma("minv 3x3", f"{mlit(M3)} mfromrows minv", msolve_exact(M3, ident(3)))
+ma("minv 4x4", f"{mlit(R4)} mfromrows minv", msolve_exact(R4, ident(4)))
+ma("minv needs a row swap", "[[0 1][1 0]] mfromrows minv", [[0, 1], [1, 0]])
+ma("A times minv A is the identity", f"{mlit(R4)} mfromrows dup minv mmul", ident(4))
+t("minv singular", f"{mlit(S3)} mfromrows minv", "ERR:undefinedresult")
+t("minv non-square", "[[1 2 3][4 5 6]] mfromrows minv", "ERR:rangecheck")
+ma("msolve 2x2", f"{mlit(A2)} mfromrows [[5][6]] mfromrows msolve", msolve_exact(A2, [[5], [6]]))
+ma("msolve 4x4", f"{mlit(R4)} mfromrows [[1][2][3][4]] mfromrows msolve", msolve_exact(R4, [[1], [2], [3], [4]]))
+ma("msolve two right-hand sides", f"{mlit(M3)} mfromrows [[1 4][2 5][3 6]] mfromrows msolve",
+   msolve_exact(M3, [[1, 4], [2, 5], [3, 6]]))
+t("msolve singular", f"{mlit(S3)} mfromrows [[1][2][3]] mfromrows msolve", "ERR:undefinedresult")
+t("msolve row mismatch", f"{mlit(A2)} mfromrows [[1][2][3]] mfromrows msolve", "ERR:rangecheck")
+t("msolve leaves A unchanged", f"/bnt_M {mlit(A2)} mfromrows def bnt_M [[5][6]] mfromrows msolve pop bnt_M bnt_mstr", "1 2; 3 4")
+
+out(); out("(Matrix.ps determinant, inverse, solve - bignums) bnt_section  20 setbnsize")
+n = 20
+def bnl(rows): return f"{mlit(rows)} mfromrows"
+D3 = [["0.5", "1.25", "-2"], ["3.1", "0.2", "1"], ["-1", "4", "2.75"]]
+B6 = [[(i * 37 + j * 91) % 1000 - 500 + (1999 if i == j else 0) for j in range(6)] for i in range(6)]
+t("mdet decimals", f"{bnl(D2)} mdet bnt_str", fdec(mdet_exact(D2), n))
+t("mdet 3x3 decimals", f"{bnl(D3)} mdet bnt_str", fdec(mdet_exact(D3), n))
+t("mdet singular bignum is 0", f"{bnl(S3)} 1 setbn mscale mdet bnt_str", fdec(F(0), n))
+t("mdet 6x6 integers as bignums", f"{bnl(B6)} 1 setbn mscale mdet bnt_str", fdec(mdet_exact(B6), n))
+t("minv decimals", f"{bnl(D2)} minv bnt_mstr", mbn(msolve_exact(D2, ident(2)), n))
+t("minv 3x3 decimals", f"{bnl(D3)} minv bnt_mstr", mbn(msolve_exact(D3, ident(3)), n))
+t("minv singular bignum", f"{bnl(S3)} 1 setbn mscale minv", "ERR:undefinedresult")
+t("msolve decimals", f"{bnl(D3)} [[(1)][(0.5)][(-2)]] mfromrows msolve bnt_mstr",
+  mbn(msolve_exact(D3, [["1"], ["0.5"], ["-2"]]), n))
+t("msolve integers with a decimal right-hand side", f"{bnl(M3)} [[(1)][2][3]] mfromrows msolve bnt_mstr",
+  mbn(msolve_exact(M3, [[1], [2], [3]]), n))
+t("minv with a tiny pivot", "[[(1e-30) 1][1 1]] mfromrows minv bnt_mstr",
+  mbn(msolve_exact([["1e-30", 1], [1, 1]], ident(2)), n))
+
 header = r"""%!PS
 % test_bignum.ps - regression tests for bignumlibrary.ps, Trig.ps and Matrix.ps
 % Generated by make_tests.py - edit that file, not this one.
@@ -276,6 +399,31 @@ header = r"""%!PS
 } def
 /approx { 1e-5 bnt_approx } def         % reals within 1e-5
 /approx_coarse { 1e-2 bnt_approx } def  % reals within 1e-2 (few iterations)
+/bnt_mstr { % M -> (a b; c d)
+	mtorows () exch {
+		exch dup length 0 gt { (; ) mergestr } if exch
+		() exch { bnt_str exch dup length 0 gt { ( ) mergestr } if exch mergestr } forall
+		mergestr
+	} forall
+} def
+/bnt_mok { % [flat values] -> bool   (each within 1e-4 of bnt_exp)
+	/bnt_g exch def
+	bnt_g length bnt_exp length eq dup {
+		0 1 bnt_g length 1 sub { /bnt_k exch def
+			bnt_g bnt_k get bnt_exp bnt_k get sub abs 1e-4 le and } for
+	} if
+} def
+/mapprox { % (label) {proc} [expected, row by row]   (each within 1e-4)
+	/bnt_exp exch def /bnt_proc exch def /bnt_lab exch def
+	/bnt_proc load stopped { clear (ERR:) $error /errorname get 40 string cvs mergestr false }{
+		dup typchk (matrixtype) eq {
+			dup mtorows [ exch { aload pop } forall ] bnt_mok exch bnt_mstr exch
+		}{ bnt_str false } ifelse
+	} ifelse
+	count 2 ne { pop count 1 sub { exch pop } repeat (EXTRA ITEMS LEFT ON STACK) mergestr false } if
+	bnt_lab 3 1 roll
+	bnt_result
+} def
 """
 footer = r"""
 () =
@@ -287,4 +435,4 @@ bnt_fail 0 gt { (TESTS FAILED) = } { (ALL TESTS PASSED) = } ifelse
 target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).with_name("test_bignum.ps")
 with open(target, "w", encoding="ascii", newline="\n") as f:
     f.write(header + "\n".join(lines) + "\n" + footer + "\n")
-print(f"wrote {target} ({sum(l.endswith((' check', ' approx', ' approx_coarse')) for l in lines)} tests)")
+print(f"wrote {target} ({sum(l.endswith((' check', ' approx', ' approx_coarse', ' mapprox')) for l in lines)} tests)")

@@ -54,6 +54,31 @@
 } def
 /approx { 1e-5 bnt_approx } def         % reals within 1e-5
 /approx_coarse { 1e-2 bnt_approx } def  % reals within 1e-2 (few iterations)
+/bnt_mstr { % M -> (a b; c d)
+	mtorows () exch {
+		exch dup length 0 gt { (; ) mergestr } if exch
+		() exch { bnt_str exch dup length 0 gt { ( ) mergestr } if exch mergestr } forall
+		mergestr
+	} forall
+} def
+/bnt_mok { % [flat values] -> bool   (each within 1e-4 of bnt_exp)
+	/bnt_g exch def
+	bnt_g length bnt_exp length eq dup {
+		0 1 bnt_g length 1 sub { /bnt_k exch def
+			bnt_g bnt_k get bnt_exp bnt_k get sub abs 1e-4 le and } for
+	} if
+} def
+/mapprox { % (label) {proc} [expected, row by row]   (each within 1e-4)
+	/bnt_exp exch def /bnt_proc exch def /bnt_lab exch def
+	/bnt_proc load stopped { clear (ERR:) $error /errorname get 40 string cvs mergestr false }{
+		dup typchk (matrixtype) eq {
+			dup mtorows [ exch { aload pop } forall ] bnt_mok exch bnt_mstr exch
+		}{ bnt_str false } ifelse
+	} ifelse
+	count 2 ne { pop count 1 sub { exch pop } repeat (EXTRA ITEMS LEFT ON STACK) mergestr false } if
+	bnt_lab 3 1 roll
+	bnt_result
+} def
 
 (setbn / bncvs) bnt_section  20 setbnsize
 (setbn 509) { (509) setbn } (+5.0900000000000000000e2) check
@@ -398,6 +423,65 @@
 
 (Matrix.ps) bnt_section
 (mmul 2x2) { /bnt_M 2 2 marray def bnt_M 1 1 1 mput bnt_M 1 2 2 mput bnt_M 2 1 3 mput bnt_M 2 2 4 mput bnt_M bnt_M mmul dup 1 1 mget 4 string cvs exch dup 1 2 mget 4 string cvs exch dup 2 1 mget 4 string cvs exch 2 2 mget 4 string cvs ( ) exch mergestr mergestr ( ) exch mergestr mergestr ( ) exch mergestr mergestr } (7 10 15 22) check
+
+(Matrix.ps building and arithmetic) bnt_section  10 setbnsize
+(mfromrows and bnt_mstr) { [[1 2][3 4]] mfromrows bnt_mstr } (1 2; 3 4) check
+(mfromrows stores columns) { [[1 2][3 4]] mfromrows 2 1 mget } (3) check
+(mfromrows typchk) { [[1 2][3 4]] mfromrows typchk } (matrixtype) check
+(mfromrows rejects ragged rows) { [[1 2][3]] mfromrows } (ERR:rangecheck) check
+(mfromrows rejects an empty list) { [] mfromrows } (ERR:rangecheck) check
+(mfromrows rejects a number) { 5 mfromrows } (ERR:typecheck) check
+(mtorows) { [[1 2][3 4]] mfromrows mtorows 1 get 0 get } (3) check
+(mcopy is independent) { /bnt_M [[1 2][3 4]] mfromrows def bnt_M mcopy 1 1 99 mput bnt_M bnt_mstr } (1 2; 3 4) check
+(midentity 3) { 3 midentity bnt_mstr } (1 0 0; 0 1 0; 0 0 1) check
+(mtranspose 2x3) { [[1 2 3][4 5 6]] mfromrows mtranspose bnt_mstr } (1 4; 2 5; 3 6) check
+(madd) { [[1 2][3 4]] mfromrows [[10 20][30 40]] mfromrows madd bnt_mstr } (11 22; 33 44) check
+(msub) { [[1 2][3 4]] mfromrows [[10 20][30 40]] mfromrows msub bnt_mstr } (-9 -18; -27 -36) check
+(madd size mismatch) { [[1 2][3 4]] mfromrows [[1 2 3]] mfromrows madd } (ERR:rangecheck) check
+(msub size mismatch) { [[1 2][3 4]] mfromrows [[1][2]] mfromrows msub } (ERR:rangecheck) check
+(mscale by 3) { [[1 2][3 4]] mfromrows 3 mscale bnt_mstr } (3 6; 9 12) check
+(mmul 2x3 by 3x2) { [[1 2 3][4 5 6]] mfromrows [[7 8][9 10][11 12]] mfromrows mmul bnt_mstr } (58 64; 139 154) check
+(mmul size mismatch gives Nan) { [[1 2 3]] mfromrows [[1 2]] mfromrows mmul } (Nan) check
+(mmul by identity) { [[1 2][3 4]] mfromrows 2 midentity mmul bnt_mstr } (1 2; 3 4) check
+(decimal strings switch to bignums) { [[(0.1) (0.2)][(0.3) (0.4)]] mfromrows [[1 1][1 1]] mfromrows madd bnt_mstr } (+1.100000000e0 +1.200000000e0; +1.300000000e0 +1.400000000e0) check
+(mscale by a decimal string) { [[1 2][3 4]] mfromrows (0.5) mscale bnt_mstr } (+5.000000000e-1 +1.000000000e0; +1.500000000e0 +2.000000000e0) check
+(mscale by a bignum) { [[1 2][3 4]] mfromrows 1 setbn 3 setbn divbn mscale bnt_mstr } (+3.333333333e-1 +6.666666666e-1; +9.999999999e-1 +1.333333333e0) check
+(mmul with decimals is exact) { [[(0.1) (0.2)][(0.3) (0.4)]] mfromrows dup mmul bnt_mstr } (+7.000000000e-2 +1.000000000e-1; +1.500000000e-1 +2.200000000e-1) check
+
+(Matrix.ps determinant, inverse, solve - reals) bnt_section  20 setbnsize
+(mdet 2x2 integers) { [[1 2][3 4]] mfromrows mdet } (-2) check
+(mdet 3x3 integers) { [[2 1 1][1 3 2][1 0 0]] mfromrows mdet } (-1) check
+(mdet 4x4 integers) { [[4 -2 1 3][3 6 -4 2][2 1 8 -5][1 -3 2 7]] mfromrows mdet } (1654) check
+(mdet 1x1) { [[5]] mfromrows mdet } (5) check
+(mdet needs a row swap) { [[0 1][1 0]] mfromrows mdet } (-1) check
+(mdet singular is 0) { [[1 2 3][4 5 6][7 8 9]] mfromrows mdet } (0) check
+(mdet non-square) { [[1 2 3][4 5 6]] mfromrows mdet } (ERR:rangecheck) check
+(mdet reals) { [[0.5 1][2 3]] mfromrows mdet } -0.5 approx
+(minv 2x2) { [[1 2][3 4]] mfromrows minv } [-2 1 1.5 -0.5] mapprox
+(minv 3x3) { [[2 1 1][1 3 2][1 0 0]] mfromrows minv } [0 0 1 -2 1 3 3 -1 -5] mapprox
+(minv 4x4) { [[4 -2 1 3][3 6 -4 2][2 1 8 -5][1 -3 2 7]] mfromrows minv } [0.251511487 0.0278113664 0.00967351874 -0.108827086 -0.160822249 0.140870617 0.0707376058 0.0792019347 -0.0918984281 0.00906892382 0.11185006 0.11668682 -0.0785973398 0.053808948 -0.00302297461 0.159008464] mapprox
+(minv needs a row swap) { [[0 1][1 0]] mfromrows minv } [0 1 1 0] mapprox
+(A times minv A is the identity) { [[4 -2 1 3][3 6 -4 2][2 1 8 -5][1 -3 2 7]] mfromrows dup minv mmul } [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1] mapprox
+(minv singular) { [[1 2 3][4 5 6][7 8 9]] mfromrows minv } (ERR:undefinedresult) check
+(minv non-square) { [[1 2 3][4 5 6]] mfromrows minv } (ERR:rangecheck) check
+(msolve 2x2) { [[1 2][3 4]] mfromrows [[5][6]] mfromrows msolve } [-4 4.5] mapprox
+(msolve 4x4) { [[4 -2 1 3][3 6 -4 2][2 1 8 -5][1 -3 2 7]] mfromrows [[1][2][3][4]] mfromrows msolve } [-0.0991535671 0.649939541 0.72853688 0.65598549] mapprox
+(msolve two right-hand sides) { [[2 1 1][1 3 2][1 0 0]] mfromrows [[1 4][2 5][3 6]] mfromrows msolve } [3 6 9 15 -14 -23] mapprox
+(msolve singular) { [[1 2 3][4 5 6][7 8 9]] mfromrows [[1][2][3]] mfromrows msolve } (ERR:undefinedresult) check
+(msolve row mismatch) { [[1 2][3 4]] mfromrows [[1][2][3]] mfromrows msolve } (ERR:rangecheck) check
+(msolve leaves A unchanged) { /bnt_M [[1 2][3 4]] mfromrows def bnt_M [[5][6]] mfromrows msolve pop bnt_M bnt_mstr } (1 2; 3 4) check
+
+(Matrix.ps determinant, inverse, solve - bignums) bnt_section  20 setbnsize
+(mdet decimals) { [[(0.1) (0.2)][(0.3) (0.4)]] mfromrows mdet bnt_str } (-2.0000000000000000000e-2) check
+(mdet 3x3 decimals) { [[(0.5) (1.25) (-2)][(3.1) (0.2) (1)][(-1) (4) (2.75)]] mfromrows mdet bnt_str } (-3.8831250000000000000e1) check
+(mdet singular bignum is 0) { [[1 2 3][4 5 6][7 8 9]] mfromrows 1 setbn mscale mdet bnt_str } (+0.0000000000000000000e0) check
+(mdet 6x6 integers as bignums) { [[1499 -409 -318 -227 -136 -45][-463 1627 -281 -190 -99 -8][-426 -335 1755 -153 -62 29][-389 -298 -207 1883 -25 66][-352 -261 -170 -79 2011 103][-315 -224 -133 -42 49 2139]] mfromrows 1 setbn mscale mdet bnt_str } (+2.3689298121237115546e19) check
+(minv decimals) { [[(0.1) (0.2)][(0.3) (0.4)]] mfromrows minv bnt_mstr } (-2.0000000000000000000e1 +1.0000000000000000000e1; +1.5000000000000000000e1 -5.0000000000000000000e0) check
+(minv 3x3 decimals) { [[(0.5) (1.25) (-2)][(3.1) (0.2) (1)][(-1) (4) (2.75)]] mfromrows minv bnt_mstr } (+8.8845968131337518107e-2 +2.9454369869628198938e-1 -4.2491549975857073877e-2; +2.4529212940608401738e-1 +1.6095284081764043135e-2 +1.7254144535651054241e-1; -3.2448092708836310961e-1 +8.3695477225173024304e-2 +9.7215515853854820538e-2) check
+(minv singular bignum) { [[1 2 3][4 5 6][7 8 9]] mfromrows 1 setbn mscale minv } (ERR:undefinedresult) check
+(msolve decimals) { [[(0.5) (1.25) (-2)][(3.1) (0.2) (1)][(-1) (4) (2.75)]] mfromrows [[(1)][(0.5)][(-2)]] mfromrows msolve bnt_mstr } (+3.2110091743119266055e-1; -9.1743119266055045872e-2; -4.7706422018348623853e-1) check
+(msolve integers with a decimal right-hand side) { [[2 1 1][1 3 2][1 0 0]] mfromrows [[(1)][2][3]] mfromrows msolve bnt_mstr } (+3.0000000000000000000e0; +9.0000000000000000000e0; -1.4000000000000000000e1) check
+(minv with a tiny pivot) { [[(1e-30) 1][1 1]] mfromrows minv bnt_mstr } (-1.0000000000000000000e0 +1.0000000000000000000e0; +1.0000000000000000000e0 -1.0000000000000000000e-30) check
 
 () =
 bnt_pass =only ( passed, ) print bnt_fail =only ( failed) =
