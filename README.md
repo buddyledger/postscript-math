@@ -11,13 +11,15 @@ calculator (no page output). It has three parts:
 | `Load.ps` | Loads all three |
 | `test_bignum.ps` | Regression tests for all three files |
 | `make_tests.py` | Generates `test_bignum.ps` (Python 3, standard library only) |
-| [`showcase.pdf`](showcase.pdf) | Every public function with a live result, plus CORDIC plots (5 pages) |
+| [`showcase.pdf`](showcase.pdf) | Every public function with a live result, plus CORDIC plots (7 pages) |
 | `showcase.ps`, `make_showcase.bat` | Source of the showcase and the script that builds it |
 
 ## Showcase
 
 [showcase.pdf](showcase.pdf) runs every public procedure and typesets the code
-next to its result, including the errors. It also has a table and plots that
+next to its result, with a note under each row explaining what it shows. Red
+results are errors raised on purpose, to show how each procedure rejects bad
+input. It also has a table and plots that
 compare the CORDIC functions with Ghostscript's built-in sin and cos. Each
 code entry is executed as written while the PDF is built, so the document
 always matches the library. To rebuild it after changing the library (about

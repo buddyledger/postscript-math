@@ -92,19 +92,23 @@
 	sc_L sc_y 7 sub moveto (CODE) show sc_rx sc_y 7 sub moveto (RESULT) show
 	10 sc_down 0.8 sc_rule 3 sc_down sc_ink
 } def
-/sc_para { % (text)  wrapped body text
-	/Helvetica 9.5 sc_font sc_ink
-	/sc_rest exch def /sc_acc () def
+/sc_wrap { % (text) width -> [ (line) ... ]   word wrap in the current font
+	/sc_ww exch def /sc_rest exch def /sc_acc () def
+	[
 	{
 		sc_rest ( ) search
 		{ /sc_word exch def pop /sc_rest exch def }
 		{ /sc_word exch def /sc_rest () def } ifelse
 		sc_acc length 0 eq { sc_word }{ sc_acc ( ) mergestr sc_word mergestr } ifelse
-		dup stringwidth pop sc_W gt sc_acc length 0 gt and
-		{ pop sc_acc sc_paraline /sc_acc sc_word def }{ /sc_acc exch def } ifelse
+		dup stringwidth pop sc_ww gt sc_acc length 0 gt and
+		{ pop sc_acc /sc_acc sc_word def }{ /sc_acc exch def } ifelse
 		sc_rest length 0 eq { exit } if
 	} loop
-	sc_acc sc_paraline 5 sc_down
+	sc_acc ]
+} def
+/sc_para { % (text)  wrapped body text
+	/Helvetica 9.5 sc_font sc_ink
+	sc_W sc_wrap { sc_paraline } forall 5 sc_down
 } def
 /sc_paraline { % font is set after any page break, which changes it
 	13 sc_need /Helvetica 9.5 sc_font sc_ink
@@ -137,8 +141,8 @@
 	} ifelse
 } def
 
-/sc_row { % (code)   run it, typeset code and result
-	/sc_code exch def
+/sc_row { % (code) (note)   run code, typeset code, result and note
+	/sc_note exch def /sc_code exch def
 	countdictstack /sc_dc exch def
 	mark sc_code cvx stopped
 	{ cleartomark countdictstack sc_dc sub { end } repeat
@@ -155,15 +159,19 @@
 	}{
 		/sc_cl sc_code sc_allchars sc_chunks def /sc_split true def
 	} ifelse
+	/Helvetica-Oblique 8 sc_font
+	/sc_nl sc_note length 0 eq { [ ] }{ sc_note sc_W sc_wrap } ifelse def
 	sc_split { sc_cl length sc_rl length add }{ sc_rl length } ifelse
-	sc_lead mul 4 add sc_need
+	sc_lead mul sc_nl length 10 mul add 6 add sc_need
 	/Courier sc_fs sc_font
 	sc_y
 	sc_muted sc_cl { sc_L sc_y 8 sub moveto show sc_split { sc_lead sc_down } if } forall
 	sc_split not { /sc_y exch def }{ pop } ifelse
 	sc_err { sc_red }{ sc_none { sc_muted }{ sc_accent } ifelse } ifelse
 	sc_rl { sc_rx sc_y 8 sub moveto show sc_lead sc_down } forall
-	sc_ink 2 sc_down 0.9 sc_rule 2 sc_down
+	/Helvetica-Oblique 8 sc_font 0.30 setgray
+	sc_nl { sc_L sc_y 7 sub moveto show 10 sc_down } forall
+	sc_ink 3 sc_down 0.9 sc_rule 2 sc_down
 } def
 
 % ================================================================ page 1
@@ -177,8 +185,10 @@
 } def
 sc_title
 
-(This document shows every public procedure of postscript-math with a live result. Each entry in the Code column is executed exactly as written while the document is generated, and the Result column shows what it leaves on the operand stack, or the error it raises (in red). It was produced by showcase.ps, so it always matches the library.) sc_para
-(The library has three parts: bignumlibrary.ps for decimal numbers with any number of significant digits, Trig.ps for CORDIC trigonometry on ordinary PostScript reals, and Matrix.ps for small matrices. Bignums print in the form sign, digit, point, digits, e, exponent: +1.25e-3 means 0.00125.) sc_para
+(This document shows every public procedure of postscript-math with a live result. Each row has three parts. The Code column, in gray, is PostScript that is executed exactly as written while the document is generated. The Result column, in blue, is what that code leaves on the operand stack. The note in italics underneath explains what the row shows and why the result is what it is.) sc_para
+(Results in red are errors, and every one of them is deliberate: those rows feed a procedure bad input, such as a division by zero or the logarithm of a negative number, to show that it refuses with a standard PostScript error instead of returning a wrong answer. Rows marked no result are procedures that change a setting or print to the console rather than leave a value.) sc_para
+(Because every result is computed while the PDF is built by showcase.ps, the document always matches the library.) sc_para
+(The library has three parts: bignumlibrary.ps for decimal numbers with any number of significant digits, Trig.ps for CORDIC trigonometry on ordinary PostScript reals, and Matrix.ps for small matrices. All three are loaded with \(Load.ps\) run.) sc_para
 (Generated with ) product mergestr ( ) mergestr
 revision 100 idiv 10 string cvs mergestr (.) mergestr
 revision 100 mod dup 10 lt { exch (0) mergestr exch } if 10 string cvs mergestr
@@ -186,114 +196,189 @@ revision 100 mod dup 10 lt { exch (0) mergestr exch } if 10 string cvs mergestr
 
 % ================================================================ bignum
 (bignumlibrary.ps) sc_h1
+(A bignum is a decimal number with a fixed number of significant digits, set with setbnsize. You make one from an integer, a real or a string with setbn, combine bignums with the procedures below, and every result is rounded to the current precision, with halves going away from zero. Results print as sign, first digit, point, remaining digits, e, exponent: +1.25e-3 means 1.25 x 10^-3 = 0.00125.) sc_para
 
 (Setting the precision and making bignums) sc_h2
-(20 setbnsize) sc_row
-(509 setbn) sc_row
-(\(-1.25e-3\) setbn) sc_row
-(\(.5\) setbn) sc_row
-(\(1E5\) setbn) sc_row
-(\(123456789012345678901234567890\) setbn) sc_row
-(3.14159265 setbn) sc_row
-(\(3.14159265\) setbn) sc_row
-(\(3.5\) setbn setbn) sc_row
-(\(12x\) setbn) sc_row
-(0 setbnsize) sc_row
-(Strings keep every digit; a real keeps only the 6 digits Ghostscript prints for it, and the input is rounded to the current precision. The last two rows show the errors for a malformed string and a bad precision.) sc_para
+(20 setbnsize)
+	(Sets the working precision to 20 significant digits, the default. It leaves nothing on the stack; every later result is rounded to this many digits.) sc_row
+(509 setbn)
+	(Converts an integer to a bignum. Results print as sign, one digit, point, the remaining digits, then e and the power of ten: +5.09e2 means 5.09 x 10^2 = 509.) sc_row
+(\(-1.25e-3\) setbn)
+	(A string can carry a sign, a decimal point and an exponent. -1.25e-3 is -0.00125.) sc_row
+(\(.5\) setbn)
+	(A leading decimal point is fine: .5 is 0.5, printed as 5 x 10^-1.) sc_row
+(\(1E5\) setbn)
+	(The exponent marker can be e or E: 1E5 is 100000.) sc_row
+(\(123456789012345678901234567890\) setbn)
+	(This 30-digit number doesn't fit in 20 digits, so it is rounded, halves away from zero, and the exponent e29 keeps its size.) sc_row
+(3.14159265 setbn)
+	(A PostScript real carries only the 6 digits Ghostscript prints for it, so the rest of pi is lost before setbn even sees it.) sc_row
+(\(3.14159265\) setbn)
+	(The same number written as a string keeps all 9 digits. Use strings whenever precision matters.) sc_row
+(\(3.5\) setbn setbn)
+	(setbn also accepts an existing bignum and returns a copy rounded to the current precision.) sc_row
+(\(12x\) setbn)
+	(Deliberate error: 12x is not a number, so setbn raises syntaxerror rather than guessing.) sc_row
+(0 setbnsize)
+	(Deliberate error: the precision must be a whole number of at least 1, so 0 raises rangecheck and the precision stays at 20.) sc_row
 
 (Converting back) sc_h2
-(\(2.5\) setbn bncvs) sc_row
-(\(-1.5e3\) setbn bncvr) sc_row
-(\(1e-3\) setbn bnPrint) sc_row
-(bnPrint writes to standard output, so its row has no result here.) sc_para
+(\(2.5\) setbn bncvs)
+	(bncvs turns a bignum into a string, the same text bnPrint shows. It is shown in parentheses because the result is a PostScript string.) sc_row
+(\(-1.5e3\) setbn bncvr)
+	(bncvr converts back to an ordinary PostScript real, here -1500. A real keeps only about 7 digits and can't go beyond about 3.4e38.) sc_row
+(\(1e-3\) setbn bnPrint)
+	(bnPrint writes the bignum to the console and leaves nothing on the stack, so there is no result to show here.) sc_row
 
 (Arithmetic) sc_h2
-(509 setbn 67 setbn addbn) sc_row
-(\(0.1\) setbn \(0.2\) setbn addbn) sc_row
-(67 setbn 509 setbn subbn) sc_row
-(1 setbn \(1e-25\) setbn subbn) sc_row
-(12 setbn 34 setbn mulbn) sc_row
-(\(123456789.123456789\) setbn \(987654321.987654321\) setbn mulbn) sc_row
-(1 setbn 7 setbn divbn) sc_row
-(22 setbn 7 setbn divbn) sc_row
-(-1 setbn 8 setbn divbn) sc_row
-(1 setbn 0 setbn divbn) sc_row
-(Every result is rounded to the current precision, halves away from zero. 1 - 1e-25 needs 25 digits, so at 20 it rounds back to 1.) sc_para
+(509 setbn 67 setbn addbn)
+	(Addition: 509 + 67 = 576.) sc_row
+(\(0.1\) setbn \(0.2\) setbn addbn)
+	(Decimal arithmetic is exact: 0.1 + 0.2 is exactly 0.3. Binary floating point, as in most programming languages, gives 0.30000000000000004.) sc_row
+(67 setbn 509 setbn subbn)
+	(Subtraction takes the second number from the first: 67 - 509 = -442.) sc_row
+(1 setbn \(1e-25\) setbn subbn)
+	(1 - 10^-25 needs 25 digits to write out exactly. At 20 digits it rounds back to 1.) sc_row
+(12 setbn 34 setbn mulbn)
+	(Multiplication: 12 x 34 = 408.) sc_row
+(\(123456789.123456789\) setbn \(987654321.987654321\) setbn mulbn)
+	(The exact product has 36 digits, so it is rounded to 20.) sc_row
+(1 setbn 7 setbn divbn)
+	(Division: 1/7 = 0.142857142857..., cut to 20 digits with the last one rounded.) sc_row
+(22 setbn 7 setbn divbn)
+	(22/7, the classic approximation of pi. It is right to only 3 digits; compare pibn further down.) sc_row
+(-1 setbn 8 setbn divbn)
+	(Signs follow the usual rules: -1/8 = -0.125, which is exact.) sc_row
+(1 setbn 0 setbn divbn)
+	(Deliberate error: dividing by zero raises undefinedresult, the same error PostScript's own div gives.) sc_row
 
 (Sign and integer parts) sc_h2
-(\(3.75\) setbn negbn) sc_row
-(\(-3.75\) setbn absbn) sc_row
-(\(-12.5\) setbn truncbn) sc_row
-(\(-12.5\) setbn roundbn) sc_row
-(\(2.5\) setbn roundbn) sc_row
-(\(0.4\) setbn roundbn) sc_row
+(\(3.75\) setbn negbn)
+	(negbn flips the sign: 3.75 becomes -3.75.) sc_row
+(\(-3.75\) setbn absbn)
+	(absbn gives the size without the sign: 3.75.) sc_row
+(\(-12.5\) setbn truncbn)
+	(truncbn drops the fraction, rounding toward zero: -12.5 becomes -12.) sc_row
+(\(-12.5\) setbn roundbn)
+	(roundbn rounds to the nearest whole number, with halves going away from zero: -12.5 becomes -13.) sc_row
+(\(2.5\) setbn roundbn)
+	(Halves go away from zero for positive numbers too: 2.5 becomes 3.) sc_row
+(\(0.4\) setbn roundbn)
+	(0.4 is nearer to 0 than to 1, so it rounds to 0.) sc_row
 
 (Comparison) sc_h2
-(2 setbn 3 setbn cmpbn) sc_row
-(3 setbn 2 setbn cmpbn) sc_row
-(\(123\) setbn \(1.23e2\) setbn cmpbn) sc_row
-(\(123\) setbn \(1.23e2\) setbn eqbn) sc_row
-(2 setbn 3 setbn nebn) sc_row
-(-2 setbn -3 setbn gtbn) sc_row
-(-2 setbn -3 setbn gebn) sc_row
-(\(1e-50\) setbn 0 setbn ltbn) sc_row
-(5 setbn 5 setbn lebn) sc_row
-(0 setbn \(-0\) setbn eqbn) sc_row
-(\(-0.000\) setbn bniszero) sc_row
-(\(1e-99\) setbn bniszero) sc_row
+(2 setbn 3 setbn cmpbn)
+	(cmpbn answers -1, 0 or 1 when the first number is less than, equal to or greater than the second. 2 is less than 3.) sc_row
+(3 setbn 2 setbn cmpbn)
+	(3 is greater than 2, so 1.) sc_row
+(\(123\) setbn \(1.23e2\) setbn cmpbn)
+	(Numbers compare by value, not by how they were written: 123 and 1.23e2 are equal.) sc_row
+(\(123\) setbn \(1.23e2\) setbn eqbn)
+	(eqbn returns true when the two values are equal.) sc_row
+(2 setbn 3 setbn nebn)
+	(nebn returns true when they differ.) sc_row
+(-2 setbn -3 setbn gtbn)
+	(gtbn asks whether the first is greater than the second. -2 is greater than -3.) sc_row
+(-2 setbn -3 setbn gebn)
+	(gebn asks greater than or equal.) sc_row
+(\(1e-50\) setbn 0 setbn ltbn)
+	(ltbn asks whether the first is less than the second. 10^-50 is tiny but still positive, so the answer is false.) sc_row
+(5 setbn 5 setbn lebn)
+	(lebn asks less than or equal, so equal values give true.) sc_row
+(0 setbn \(-0\) setbn eqbn)
+	(Zero has no sign: 0 and -0 are equal.) sc_row
+(\(-0.000\) setbn bniszero)
+	(bniszero tests for zero however it was written, with a sign or extra zeros.) sc_row
+(\(1e-99\) setbn bniszero)
+	(10^-99 is very small, but it is not zero.) sc_row
 
 (Functions at 30 digits) sc_h2
-(30 setbnsize) sc_row
-(pibn) sc_row
-(1 setbn sinbn) sc_row
-(1 setbn cosbn) sc_row
-(1 setbn tanbn) sc_row
-(\(1e50\) setbn sinbn) sc_row
-(2 setbn lnbn) sc_row
-(10 setbn lnbn) sc_row
-(2 setbn log10bn) sc_row
-(1000 setbn log10bn) sc_row
-(0 setbn lnbn) sc_row
-(-1 setbn log10bn) sc_row
-(Angles are in radians and can be any size: sin of 10^50 is correct to every digit because the working precision grows with the argument. These functions work with 6 guard digits and then round.) sc_para
+(30 setbnsize)
+	(Raises the precision to 30 digits for the rows below.) sc_row
+(pibn)
+	(pi, from Machin's formula: pi = 16 atan\(1/5\) - 4 atan\(1/239\).) sc_row
+(1 setbn sinbn)
+	(sin of 1 radian, from its Taylor series after the angle is brought into the range -pi to pi.) sc_row
+(1 setbn cosbn)
+	(cos of 1 radian.) sc_row
+(1 setbn tanbn)
+	(tan of 1 radian, worked out as sin divided by cos.) sc_row
+(\(1e50\) setbn sinbn)
+	(sin of 10^50 radians. Reducing so large an angle needs pi to about 86 digits: the 30 shown, 6 guard digits and 50 more for the size of the angle; the library raises its working precision automatically, so every digit shown is correct.) sc_row
+(2 setbn lnbn)
+	(The natural logarithm of 2.) sc_row
+(10 setbn lnbn)
+	(ln 10. The constants ln 2 and ln 10 are worked out once per precision and then reused.) sc_row
+(2 setbn log10bn)
+	(The base-10 logarithm of 2.) sc_row
+(1000 setbn log10bn)
+	(Exact powers of ten give exact answers: log10 of 1000 is 3.) sc_row
+(0 setbn lnbn)
+	(Deliberate error: the logarithm of 0 is undefined, so lnbn raises rangecheck.) sc_row
+(-1 setbn log10bn)
+	(Deliberate error: logarithms of negative numbers are undefined too.) sc_row
 
 (The same calculation at different precisions) sc_h2
-(5 setbnsize pibn) sc_row
-(20 setbnsize pibn) sc_row
-(50 setbnsize pibn) sc_row
-(100 setbnsize pibn) sc_row
-(50 setbnsize 1 setbn 7 setbn divbn) sc_row
-(50 setbnsize 2 setbn lnbn) sc_row
+(5 setbnsize pibn)
+	(pi to 5 significant digits: 3.1416, rounded from 3.14159.) sc_row
+(20 setbnsize pibn)
+	(pi to 20 digits.) sc_row
+(50 setbnsize pibn)
+	(pi to 50 digits.) sc_row
+(100 setbnsize pibn)
+	(pi to 100 digits. This takes a few seconds the first time; after that the value is cached.) sc_row
+(50 setbnsize 1 setbn 7 setbn divbn)
+	(1/7 to 50 digits: the 142857 pattern repeats right up to the final, rounded digit.) sc_row
+(50 setbnsize 2 setbn lnbn)
+	(ln 2 to 50 digits.) sc_row
 
 (Exact big integers) sc_h2
-(70 setbnsize) sc_row
-(1 setbn 1 1 50 { setbn mulbn } for) sc_row
-(1 setbn 1 1 200 { pop 2 setbn mulbn } for) sc_row
-(\(1e30\) setbn 1 setbn addbn) sc_row
-(With enough digits, results are exact integers: 50! has 65 digits and 2^200 has 61. The last row is 10^30 + 1, which needs 31 digits.) sc_para
-(20 setbnsize) sc_row
+(70 setbnsize)
+	(70 digits is enough to hold the next results exactly.) sc_row
+(1 setbn 1 1 50 { setbn mulbn } for)
+	(50 factorial, 1 x 2 x 3 x ... x 50. All 65 digits are exact; the trailing zeros pad it to 70 digits.) sc_row
+(1 setbn 1 1 200 { pop 2 setbn mulbn } for)
+	(2 to the power 200, built by 200 doublings: 61 exact digits.) sc_row
+(\(1e30\) setbn 1 setbn addbn)
+	(10^30 + 1 needs 31 digits. At 70 digits the final 1 is kept.) sc_row
+(20 setbnsize)
+	(Back to the default precision of 20 digits.) sc_row
 
 % ================================================================ Trig
 (Trig.ps) sc_h1
 (CORDIC builds an angle from the fixed steps atan\(1\), atan\(1/2\), atan\(1/4\), and so on, using only additions and halvings. Results are ordinary PostScript reals, good to about 6 significant digits with the default 40 iterations.) sc_para
 
 (Functions) sc_h2
-(1 corsin) sc_row
-(4 corcos) sc_row
-(-2 cortan) sc_row
-(1 corcot) sc_row
-(1 corsec) sc_row
-(1 corcsc) sc_row
-(1 1 coratan) sc_row
-(1 -1 coratan) sc_row
-(-1 1 coratan) sc_row
-(-1 -1 coratan) sc_row
-(0 1 coratan) sc_row
-(0 0 coratan) sc_row
-(0.5 40 cordiccossin) sc_row
-(1 1 8 cordicatan) sc_row
-(1 1 40 cordicatan) sc_row
-(cordiccossin returns a 2x1 matrix in Matrix.ps layout, shown as [cos; sin]. With only 8 iterations atan\(1\) is off in the third decimal place; with 40 it matches pi/4 = 0.785398.) sc_para
+(1 corsin)
+	(sin of 1 radian as a PostScript real. Compare 0.841471 with the 30-digit sinbn result above.) sc_row
+(4 corcos)
+	(cos of 4 radians. An angle of 4 lies in the third quadrant, where cos is negative.) sc_row
+(-2 cortan)
+	(tan of -2 radians.) sc_row
+(1 corcot)
+	(Cotangent, 1/tan.) sc_row
+(1 corsec)
+	(Secant, 1/cos.) sc_row
+(1 corcsc)
+	(Cosecant, 1/sin.) sc_row
+(1 1 coratan)
+	(coratan takes x, then y, and returns atan\(y/x\). Here atan\(1\) = pi/4.) sc_row
+(1 -1 coratan)
+	(With y negative the angle is negative: -pi/4.) sc_row
+(-1 1 coratan)
+	(atan\(y/x\) depends only on the ratio, so x = -1, y = 1 also gives atan\(-1\) = -pi/4. The result is always between -pi/2 and pi/2.) sc_row
+(-1 -1 coratan)
+	(Both negative: the ratio is 1, so pi/4.) sc_row
+(0 1 coratan)
+	(x = 0 is a vertical line: the angle is pi/2 when y is positive.) sc_row
+(0 0 coratan)
+	(Deliberate error: with x and y both 0 there is no angle, so coratan raises undefinedresult.) sc_row
+(0.5 40 cordiccossin)
+	(The routine behind corsin and corcos: an angle and an iteration count go in, and cos and sin come out together as a 2x1 matrix, shown as [cos; sin].) sc_row
+(1 1 8 cordicatan)
+	(The routine behind coratan, with only 8 iterations: 0.778 instead of 0.785, off by about 0.007. More iterations give more correct digits.) sc_row
+(1 1 40 cordicatan)
+	(With 40 iterations the answer matches pi/4 = 0.785398 to the full precision of a real.) sc_row
 
 % ---- comparison table
 /sc_tablerow { % [ (c1) (c2) ... ] font gray
@@ -309,6 +394,7 @@ revision 100 mod dup 10 lt { exch (0) mergestr exch } if 10 string cvs mergestr
 /sc_deg { 180 mul pi div } def
 
 (CORDIC against Ghostscript's built-in sin and cos) sc_h2plain
+(Each row gives an angle x in radians, the CORDIC result, the result of Ghostscript's built-in operator for the same angle \(the built-in sin and cos work in degrees, so x is converted\), and the difference between the two.) sc_para
 [ (x) (corsin x) (built-in sin) (difference) (corcos x) (built-in cos) (difference) ]
 	/Helvetica-Bold 0.42 sc_tablerow
 0.8 sc_rule 3 sc_down
@@ -351,6 +437,7 @@ revision 100 mod dup 10 lt { exch (0) mergestr exch } if 10 string cvs mergestr
 	/Helvetica 7.5 sc_font sc_ink sc_lx 24 add sc_ly moveto sc_lt show
 } def
 
+210 sc_need
 (Plot: CORDIC sin and cos over two periods) sc_h2plain
 /sc_ph 150 def 170 sc_need
 /sc_pb sc_y sc_ph sub 4 sub def
@@ -367,6 +454,7 @@ sc_R (2 pi) stringwidth pop sub sc_pb 10 sub moveto (2 pi) show
 sc_ink /sc_y sc_pb 18 sub def
 (The thick gray curves are Ghostscript's built-in sin and cos; the thin colored curves are corsin and corcos drawn on top. They coincide everywhere.) sc_para
 
+170 sc_need
 (Plot: CORDIC minus built-in, magnified) sc_h2plain
 /sc_emax 0 def
 0 1 sc_N { sc_N div sc_xmax sc_xmin sub mul sc_xmin add /sc_x exch def
@@ -387,32 +475,45 @@ sc_ink /sc_y sc_pb 18 sub def
 
 % ================================================================ Matrix
 (Matrix.ps) sc_h1
-(Matrices are arrays of columns and indices start at 1. Below, matrices print row by row as [row; row].) sc_para
+(A matrix is stored as an array of columns, and rows and columns are numbered from 1. The results below print a matrix row by row, as [row; row], so [1 2; 3 4] has 1 2 on its first row and 3 4 on its second.) sc_para
 
 (Building and reading) sc_h2
-(2 3 marray) sc_row
-(/A 2 2 marray def A 1 1 1 mput A 1 2 2 mput A 2 1 3 mput A 2 2 4 mput A) sc_row
-(A 2 1 mget) sc_row
-(A msize) sc_row
-(A typchk) sc_row
+(2 3 marray)
+	(Creates a matrix with 2 rows and 3 columns, filled with zeros.) sc_row
+(/A 2 2 marray def A 1 1 1 mput A 1 2 2 mput A 2 1 3 mput A 2 2 4 mput A)
+	(Builds the 2x2 matrix A = [1 2; 3 4]. mput takes the matrix, a row, a column and a value.) sc_row
+(A 2 1 mget)
+	(mget reads row 2, column 1 of A: 3.) sc_row
+(A msize)
+	(msize gives the number of rows, then the number of columns.) sc_row
+(A typchk)
+	(typchk recognises the array as a matrix.) sc_row
 
 (Multiplication) sc_h2
-(A A mmul) sc_row
-(/B 2 1 marray def B 1 1 5 mput B 2 1 6 mput B) sc_row
-(A B mmul) sc_row
-(2 3 marray 2 2 marray mmul) sc_row
-(msize leaves the number of rows, then columns. mmul returns the string \(Nan\) when the inner sizes don't match.) sc_para
+(A A mmul)
+	(A times A: [1 2; 3 4] x [1 2; 3 4] = [7 10; 15 22].) sc_row
+(/B 2 1 marray def B 1 1 5 mput B 2 1 6 mput B)
+	(Builds a column vector B = [5; 6], a matrix with 2 rows and 1 column.) sc_row
+(A B mmul)
+	(A times B: [1x5 + 2x6; 3x5 + 4x6] = [17; 39].) sc_row
+(2 3 marray 2 2 marray mmul)
+	(Deliberate mismatch: a 2x3 matrix can't multiply a 2x2 one, because its 3 columns must meet 3 rows. mmul returns the string Nan instead of raising an error.) sc_row
 
 % ================================================================ other
 (Utilities) sc_h1
 (Helpers) sc_h2
-(\(ab\) \(cd\) mergestr) sc_row
-(1 setbn typchk) sc_row
-(A typchk) sc_row
-(5 typchk) sc_row
-(\(text\) typchk) sc_row
-(bnDebug) sc_row
-(Set bnDebug to true to make setbn and the arithmetic procedures print each result as they go.) sc_para
+(\(ab\) \(cd\) mergestr)
+	(mergestr joins two strings into a new one.) sc_row
+(1 setbn typchk)
+	(typchk names the library's own types: here a bignum,) sc_row
+(A typchk)
+	(a matrix,) sc_row
+(5 typchk)
+	(and for anything else, PostScript's own type name: an integer,) sc_row
+(\(text\) typchk)
+	(or a string.) sc_row
+(bnDebug)
+	(The debug switch, off by default. Set it to true to make setbn and the arithmetic procedures print each result as they go.) sc_row
 
 sc_footer showpage
 %%EOF
