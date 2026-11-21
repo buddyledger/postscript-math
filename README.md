@@ -11,6 +11,21 @@ calculator (no page output). It has three parts:
 | `Load.ps` | Loads all three |
 | `test_bignum.ps` | Regression tests for all three files |
 | `make_tests.py` | Generates `test_bignum.ps` (Python 3, standard library only) |
+| [`showcase.pdf`](showcase.pdf) | Every public function with a live result, plus CORDIC plots (5 pages) |
+| `showcase.ps`, `make_showcase.bat` | Source of the showcase and the script that builds it |
+
+## Showcase
+
+[showcase.pdf](showcase.pdf) runs every public procedure and typesets the code
+next to its result, including the errors. It also has a table and plots that
+compare the CORDIC functions with Ghostscript's built-in sin and cos. Each
+code entry is executed as written while the PDF is built, so the document
+always matches the library. To rebuild it after changing the library (about
+15 seconds):
+
+```bat
+make_showcase.bat
+```
 
 `Examples/bignumfactorial.ps` is a stand-alone program, separate from the
 library, that computes 34!. It draws the result on the page, so open it in a
@@ -31,6 +46,7 @@ Maintainer of this work is Buddy Ledger.
 
 This work consists of the files `bignumlibrary.ps`, `Trig.ps`, `Matrix.ps`,
 `Load.ps`, `gs.bat`, `runme.bat`, `test_bignum.ps`, `make_tests.py`,
+`showcase.ps`, `showcase.pdf`, `make_showcase.bat`,
 `Examples/bignumfactorial.ps` and `README.md`.
 
 ## Running
@@ -226,5 +242,10 @@ names and results, so the whole work can be licensed under LPPL.
   `coratan` crashed for x > 0, y < 0.
 - `coratan` no longer prints its result, and handles x = 0.
 - No longer needs Matrix.ps, and the recursion demos `K` and `Q` are gone.
+
+**Matrix.ps**: removed a stray `showpage` at the end of the file, which added
+a blank page to any document that loaded the library.
+
+**Showcase**: added `showcase.ps` and the generated `showcase.pdf`.
 
 **Licensing**: the work is now under LPPL 1.3c, with a notice in each file.

@@ -1,0 +1,418 @@
+%!PS-Adobe-3.0
+%%Title: showcase.ps - every function of postscript-math, typeset
+%%Creator: Buddy Ledger
+%%DocumentMedia: Letter 612 792 0 () ()
+%%EndComments
+%
+% Copyright 2026 Buddy Ledger
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3c
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   https://www.latex-project.org/lppl.txt
+% and version 1.3c or later is part of all distributions of LaTeX
+% version 2008 or later.
+%
+% This work has the LPPL maintenance status `author-maintained'.
+%
+% The Current Maintainer of this work is Buddy Ledger.
+%
+% This work consists of the files listed in README.md.
+%
+% Build the PDF with make_showcase.bat, or:
+%   gswin64c -q -dNOSAFER -dBATCH -dNOPAUSE -sDEVICE=pdfwrite
+%            -sOutputFile=showcase.pdf showcase.ps
+%
+% Every "Code" column entry below is a string that is executed as written;
+% the "Result" column is whatever it leaves on the stack (or the error it
+% raises), so the document always matches the library.
+
+(Load.ps) run
+
+/pdfmark where { pop }{ userdict /pdfmark /cleartomark load put } ifelse
+[ /Title (postscript-math: function showcase)
+  /Author (Buddy Ledger)
+  /Subject (Arbitrary-precision decimals, CORDIC trig and matrices in PostScript)
+  /DOCINFO pdfmark
+
+% ---------------------------------------------------------------- layout
+/sc_L 54 def /sc_R 558 def /sc_W sc_R sc_L sub def
+/sc_top 738 def /sc_bot 60 def
+/sc_page 1 def /sc_y sc_top def
+/sc_fs 8.5 def /sc_chw sc_fs 0.6 mul def        % Courier advance = 0.6 em
+/sc_lead 11 def
+/sc_cw 40 def                                    % code column, characters
+/sc_rx sc_L sc_cw sc_chw mul add 12 add def      % result column x
+/sc_rchars sc_R sc_rx sub sc_chw div cvi def     % result column, characters
+/sc_allchars sc_W sc_chw div cvi def
+
+/sc_accent { 0.11 0.33 0.62 setrgbcolor } def
+/sc_warm   { 0.80 0.38 0.10 setrgbcolor } def
+/sc_red    { 0.72 0.11 0.11 setrgbcolor } def
+/sc_ink    { 0.12 setgray } def
+/sc_muted  { 0.42 setgray } def
+
+/sc_min { 2 copy gt { exch } if pop } def
+/sc_max { 2 copy lt { exch } if pop } def
+/sc_font { exch findfont exch scalefont setfont } def
+
+/sc_footer {
+	/Helvetica 8 sc_font sc_muted
+	sc_L 34 moveto (postscript-math  \267  function showcase) show
+	(Page ) sc_page 4 string cvs mergestr
+	dup stringwidth pop sc_R exch sub 34 moveto show
+	sc_ink
+} def
+/sc_newpage { sc_footer showpage /sc_page sc_page 1 add def /sc_y sc_top def } def
+/sc_need { sc_y exch sub sc_bot lt { sc_newpage } if } def
+/sc_down { /sc_y exch sc_y exch sub def } def
+/sc_rule { % gray
+	setgray 0.5 setlinewidth sc_L sc_y moveto sc_R sc_y lineto stroke sc_ink
+} def
+
+% ---------------------------------------------------------------- text
+/sc_h1 { % (title)
+	sc_y sc_top lt { 70 sc_need } if
+	sc_y sc_top lt { 14 sc_down } if
+	[ /Title 2 index /Page sc_page /OUT pdfmark
+	/Helvetica-Bold 16 sc_font sc_accent
+	sc_L sc_y 14 sub moveto show
+	22 sc_down 0.75 sc_rule 12 sc_down sc_ink
+} def
+/sc_h2plain { % (title)   subheading only
+	40 sc_need 6 sc_down
+	/Helvetica-Bold 10.5 sc_font sc_ink
+	sc_L sc_y 9 sub moveto show
+	14 sc_down
+} def
+/sc_h2 { % (title)   subheading with CODE / RESULT column labels
+	sc_h2plain
+	/Helvetica-Bold 7.5 sc_font sc_muted
+	sc_L sc_y 7 sub moveto (CODE) show sc_rx sc_y 7 sub moveto (RESULT) show
+	10 sc_down 0.8 sc_rule 3 sc_down sc_ink
+} def
+/sc_para { % (text)  wrapped body text
+	/Helvetica 9.5 sc_font sc_ink
+	/sc_rest exch def /sc_acc () def
+	{
+		sc_rest ( ) search
+		{ /sc_word exch def pop /sc_rest exch def }
+		{ /sc_word exch def /sc_rest () def } ifelse
+		sc_acc length 0 eq { sc_word }{ sc_acc ( ) mergestr sc_word mergestr } ifelse
+		dup stringwidth pop sc_W gt sc_acc length 0 gt and
+		{ pop sc_acc sc_paraline /sc_acc sc_word def }{ /sc_acc exch def } ifelse
+		sc_rest length 0 eq { exit } if
+	} loop
+	sc_acc sc_paraline 5 sc_down
+} def
+/sc_paraline { % font is set after any page break, which changes it
+	13 sc_need /Helvetica 9.5 sc_font sc_ink
+	sc_L sc_y 10 sub moveto show 13 sc_down
+} def
+
+% ---------------------------------------------------------------- results
+/sc_fmtmatrix { % M -> (a b; c d)
+	/sc_M exch def sc_M msize /sc_nc exch def /sc_nr exch def
+	([) 1 1 sc_nr { /sc_i exch def
+		1 1 sc_nc { /sc_j exch def
+			sc_M sc_i sc_j mget 30 string cvs mergestr
+			sc_j sc_nc lt { ( ) mergestr } if
+		} for
+		sc_i sc_nr lt { (; ) mergestr } if
+	} for (]) mergestr
+} def
+/sc_fmt { % any -> string
+	dup typchk (bignumtype) eq { bncvs }{
+	dup typchk (matrixtype) eq { sc_fmtmatrix }{
+	dup type /stringtype eq { (\() exch mergestr (\)) mergestr }{
+	dup type /nametype eq { dup xcheck { 60 string cvs }{ (/) exch 60 string cvs mergestr } ifelse }{
+	60 string cvs } ifelse } ifelse } ifelse } ifelse
+} def
+/sc_chunks { % (str) n -> [ (piece) ... ]
+	/sc_n exch def /sc_s exch def
+	sc_s length 0 eq { [ () ] }{
+	[ 0 sc_n sc_s length 1 sub {
+		sc_s exch dup sc_n add sc_s length sc_min 1 index sub getinterval } for ]
+	} ifelse
+} def
+
+/sc_row { % (code)   run it, typeset code and result
+	/sc_code exch def
+	countdictstack /sc_dc exch def
+	mark sc_code cvx stopped
+	{ cleartomark countdictstack sc_dc sub { end } repeat
+	  (error: /) $error /errorname get 40 string cvs mergestr /sc_err true def }
+	{ counttomark dup 0 eq { pop pop (no result) /sc_none true def }{
+		array astore exch pop
+		() exch { sc_fmt 1 index length 0 gt { exch (   ) mergestr exch } if mergestr } forall
+		/sc_none false def } ifelse
+	  /sc_err false def } ifelse
+	/sc_res exch def
+	/sc_rl sc_res sc_rchars sc_chunks def
+	sc_code length sc_cw le {
+		/sc_cl [ sc_code ] def /sc_split false def
+	}{
+		/sc_cl sc_code sc_allchars sc_chunks def /sc_split true def
+	} ifelse
+	sc_split { sc_cl length sc_rl length add }{ sc_rl length } ifelse
+	sc_lead mul 4 add sc_need
+	/Courier sc_fs sc_font
+	sc_y
+	sc_muted sc_cl { sc_L sc_y 8 sub moveto show sc_split { sc_lead sc_down } if } forall
+	sc_split not { /sc_y exch def }{ pop } ifelse
+	sc_err { sc_red }{ sc_none { sc_muted }{ sc_accent } ifelse } ifelse
+	sc_rl { sc_rx sc_y 8 sub moveto show sc_lead sc_down } forall
+	sc_ink 2 sc_down 0.9 sc_rule 2 sc_down
+} def
+
+% ================================================================ page 1
+/sc_title {
+	/Helvetica-Bold 24 sc_font sc_ink
+	sc_L sc_y 22 sub moveto (postscript-math) show
+	32 sc_down
+	/Helvetica 13 sc_font sc_muted
+	sc_L sc_y 12 sub moveto (Function showcase) show
+	24 sc_down 0.75 sc_rule 14 sc_down
+} def
+sc_title
+
+(This document shows every public procedure of postscript-math with a live result. Each entry in the Code column is executed exactly as written while the document is generated, and the Result column shows what it leaves on the operand stack, or the error it raises (in red). It was produced by showcase.ps, so it always matches the library.) sc_para
+(The library has three parts: bignumlibrary.ps for decimal numbers with any number of significant digits, Trig.ps for CORDIC trigonometry on ordinary PostScript reals, and Matrix.ps for small matrices. Bignums print in the form sign, digit, point, digits, e, exponent: +1.25e-3 means 0.00125.) sc_para
+(Generated with ) product mergestr ( ) mergestr
+revision 100 idiv 10 string cvs mergestr (.) mergestr
+revision 100 mod dup 10 lt { exch (0) mergestr exch } if 10 string cvs mergestr
+(. Copyright 2012, 2026 Buddy Ledger; distributed under the LaTeX Project Public License 1.3c or later.) mergestr sc_para
+
+% ================================================================ bignum
+(bignumlibrary.ps) sc_h1
+
+(Setting the precision and making bignums) sc_h2
+(20 setbnsize) sc_row
+(509 setbn) sc_row
+(\(-1.25e-3\) setbn) sc_row
+(\(.5\) setbn) sc_row
+(\(1E5\) setbn) sc_row
+(\(123456789012345678901234567890\) setbn) sc_row
+(3.14159265 setbn) sc_row
+(\(3.14159265\) setbn) sc_row
+(\(3.5\) setbn setbn) sc_row
+(\(12x\) setbn) sc_row
+(0 setbnsize) sc_row
+(Strings keep every digit; a real keeps only the 6 digits Ghostscript prints for it, and the input is rounded to the current precision. The last two rows show the errors for a malformed string and a bad precision.) sc_para
+
+(Converting back) sc_h2
+(\(2.5\) setbn bncvs) sc_row
+(\(-1.5e3\) setbn bncvr) sc_row
+(\(1e-3\) setbn bnPrint) sc_row
+(bnPrint writes to standard output, so its row has no result here.) sc_para
+
+(Arithmetic) sc_h2
+(509 setbn 67 setbn addbn) sc_row
+(\(0.1\) setbn \(0.2\) setbn addbn) sc_row
+(67 setbn 509 setbn subbn) sc_row
+(1 setbn \(1e-25\) setbn subbn) sc_row
+(12 setbn 34 setbn mulbn) sc_row
+(\(123456789.123456789\) setbn \(987654321.987654321\) setbn mulbn) sc_row
+(1 setbn 7 setbn divbn) sc_row
+(22 setbn 7 setbn divbn) sc_row
+(-1 setbn 8 setbn divbn) sc_row
+(1 setbn 0 setbn divbn) sc_row
+(Every result is rounded to the current precision, halves away from zero. 1 - 1e-25 needs 25 digits, so at 20 it rounds back to 1.) sc_para
+
+(Sign and integer parts) sc_h2
+(\(3.75\) setbn negbn) sc_row
+(\(-3.75\) setbn absbn) sc_row
+(\(-12.5\) setbn truncbn) sc_row
+(\(-12.5\) setbn roundbn) sc_row
+(\(2.5\) setbn roundbn) sc_row
+(\(0.4\) setbn roundbn) sc_row
+
+(Comparison) sc_h2
+(2 setbn 3 setbn cmpbn) sc_row
+(3 setbn 2 setbn cmpbn) sc_row
+(\(123\) setbn \(1.23e2\) setbn cmpbn) sc_row
+(\(123\) setbn \(1.23e2\) setbn eqbn) sc_row
+(2 setbn 3 setbn nebn) sc_row
+(-2 setbn -3 setbn gtbn) sc_row
+(-2 setbn -3 setbn gebn) sc_row
+(\(1e-50\) setbn 0 setbn ltbn) sc_row
+(5 setbn 5 setbn lebn) sc_row
+(0 setbn \(-0\) setbn eqbn) sc_row
+(\(-0.000\) setbn bniszero) sc_row
+(\(1e-99\) setbn bniszero) sc_row
+
+(Functions at 30 digits) sc_h2
+(30 setbnsize) sc_row
+(pibn) sc_row
+(1 setbn sinbn) sc_row
+(1 setbn cosbn) sc_row
+(1 setbn tanbn) sc_row
+(\(1e50\) setbn sinbn) sc_row
+(2 setbn lnbn) sc_row
+(10 setbn lnbn) sc_row
+(2 setbn log10bn) sc_row
+(1000 setbn log10bn) sc_row
+(0 setbn lnbn) sc_row
+(-1 setbn log10bn) sc_row
+(Angles are in radians and can be any size: sin of 10^50 is correct to every digit because the working precision grows with the argument. These functions work with 6 guard digits and then round.) sc_para
+
+(The same calculation at different precisions) sc_h2
+(5 setbnsize pibn) sc_row
+(20 setbnsize pibn) sc_row
+(50 setbnsize pibn) sc_row
+(100 setbnsize pibn) sc_row
+(50 setbnsize 1 setbn 7 setbn divbn) sc_row
+(50 setbnsize 2 setbn lnbn) sc_row
+
+(Exact big integers) sc_h2
+(70 setbnsize) sc_row
+(1 setbn 1 1 50 { setbn mulbn } for) sc_row
+(1 setbn 1 1 200 { pop 2 setbn mulbn } for) sc_row
+(\(1e30\) setbn 1 setbn addbn) sc_row
+(With enough digits, results are exact integers: 50! has 65 digits and 2^200 has 61. The last row is 10^30 + 1, which needs 31 digits.) sc_para
+(20 setbnsize) sc_row
+
+% ================================================================ Trig
+(Trig.ps) sc_h1
+(CORDIC builds an angle from the fixed steps atan\(1\), atan\(1/2\), atan\(1/4\), and so on, using only additions and halvings. Results are ordinary PostScript reals, good to about 6 significant digits with the default 40 iterations.) sc_para
+
+(Functions) sc_h2
+(1 corsin) sc_row
+(4 corcos) sc_row
+(-2 cortan) sc_row
+(1 corcot) sc_row
+(1 corsec) sc_row
+(1 corcsc) sc_row
+(1 1 coratan) sc_row
+(1 -1 coratan) sc_row
+(-1 1 coratan) sc_row
+(-1 -1 coratan) sc_row
+(0 1 coratan) sc_row
+(0 0 coratan) sc_row
+(0.5 40 cordiccossin) sc_row
+(1 1 8 cordicatan) sc_row
+(1 1 40 cordicatan) sc_row
+(cordiccossin returns a 2x1 matrix in Matrix.ps layout, shown as [cos; sin]. With only 8 iterations atan\(1\) is off in the third decimal place; with 40 it matches pi/4 = 0.785398.) sc_para
+
+% ---- comparison table
+/sc_tablerow { % [ (c1) (c2) ... ] font gray
+	setgray /sc_tf exch def /sc_cells exch def
+	14 sc_need sc_tf 8.5 sc_font
+	0 1 sc_cells length 1 sub { /sc_k exch def
+		sc_L sc_k sc_W mul sc_cells length div add sc_y 9 sub moveto
+		sc_cells sc_k get show
+	} for
+	12 sc_down
+} def
+/sc_r2s { 12 string cvs } def
+/sc_deg { 180 mul pi div } def
+
+(CORDIC against Ghostscript's built-in sin and cos) sc_h2plain
+[ (x) (corsin x) (built-in sin) (difference) (corcos x) (built-in cos) (difference) ]
+	/Helvetica-Bold 0.42 sc_tablerow
+0.8 sc_rule 3 sc_down
+[ -3 -1 -0.5 0 0.3 1 1.5707 2 3 4 6 10 ] {
+	/sc_x exch def
+	[ sc_x sc_r2s
+	  sc_x corsin dup sc_r2s exch sc_x sc_deg sin dup sc_r2s 3 1 roll sub sc_r2s
+	  sc_x corcos dup sc_r2s exch sc_x sc_deg cos dup sc_r2s 3 1 roll sub sc_r2s ]
+	/Courier 0.12 sc_tablerow
+} forall
+4 sc_down
+(The differences are at the level of single-precision rounding, which is where both CORDIC and the built-in operators run out of digits.) sc_para
+
+% ---- plots
+/sc_px { sc_xmin sub sc_xmax sc_xmin sub div sc_W mul sc_L add } def
+/sc_py { sc_ymin sub sc_ymax sc_ymin sub div sc_ph mul sc_pb add } def
+/sc_N 240 def
+/sc_curve { % {f}   stroke f over [sc_xmin, sc_xmax]
+	/sc_f exch def newpath
+	0 1 sc_N { /sc_i exch def
+		sc_i sc_N div sc_xmax sc_xmin sub mul sc_xmin add
+		dup sc_px exch sc_f sc_py
+		sc_i 0 eq { moveto }{ lineto } ifelse
+	} for stroke
+} def
+/sc_frame { % (ylabel-top) (ylabel-bottom)
+	0.85 setgray 0.5 setlinewidth
+	sc_L sc_pb sc_W sc_ph rectstroke
+	0 sc_px sc_pb moveto 0 sc_ph rlineto
+	sc_L 0 sc_py moveto sc_W 0 rlineto stroke
+	/Helvetica 7.5 sc_font sc_muted
+	sc_L 3 add sc_pb sc_ph add 9 sub moveto exch show
+	sc_L 3 add sc_pb 4 add moveto show
+	sc_ink
+} def
+/sc_legend { % (label) {color} y-offset-index
+	/sc_li exch def /sc_lc exch def /sc_lt exch def
+	/sc_lx sc_R 150 sub def /sc_ly sc_pb sc_ph add 12 sub sc_li 11 mul sub def
+	sc_lc 1.6 setlinewidth sc_lx sc_ly 3 add moveto 18 0 rlineto stroke
+	/Helvetica 7.5 sc_font sc_ink sc_lx 24 add sc_ly moveto sc_lt show
+} def
+
+(Plot: CORDIC sin and cos over two periods) sc_h2plain
+/sc_ph 150 def 170 sc_need
+/sc_pb sc_y sc_ph sub 4 sub def
+/sc_xmin pi -2 mul def /sc_xmax pi 2 mul def /sc_ymin -1.25 def /sc_ymax 1.9 def
+(1.9) (-1.25) sc_frame
+0.82 setgray 4 setlinewidth { sc_deg sin } sc_curve { sc_deg cos } sc_curve
+1.1 setlinewidth sc_accent { corsin } sc_curve sc_warm { corcos } sc_curve
+(built-in sin and cos) { 0.82 setgray } 0 sc_legend
+(corsin) { sc_accent } 1 sc_legend
+(corcos) { sc_warm } 2 sc_legend
+/Helvetica 7.5 sc_font sc_muted
+sc_L sc_pb 10 sub moveto (-2 pi) show
+sc_R (2 pi) stringwidth pop sub sc_pb 10 sub moveto (2 pi) show
+sc_ink /sc_y sc_pb 18 sub def
+(The thick gray curves are Ghostscript's built-in sin and cos; the thin colored curves are corsin and corcos drawn on top. They coincide everywhere.) sc_para
+
+(Plot: CORDIC minus built-in, magnified) sc_h2plain
+/sc_emax 0 def
+0 1 sc_N { sc_N div sc_xmax sc_xmin sub mul sc_xmin add /sc_x exch def
+	/sc_emax sc_emax sc_x corsin sc_x sc_deg sin sub abs sc_max
+	                 sc_x corcos sc_x sc_deg cos sub abs sc_max def } for
+/sc_ph 110 def 130 sc_need
+/sc_pb sc_y sc_ph sub 4 sub def
+/sc_ymax sc_emax 2.3 mul def /sc_ymin sc_emax -1.3 mul def
+sc_ymax sc_r2s sc_ymin sc_r2s sc_frame
+1 setlinewidth
+sc_accent { dup corsin exch sc_deg sin sub } sc_curve
+sc_warm { dup corcos exch sc_deg cos sub } sc_curve
+(corsin - sin) { sc_accent } 0 sc_legend
+(corcos - cos) { sc_warm } 1 sc_legend
+sc_ink /sc_y sc_pb 18 sub def
+(Largest difference over this range: ) sc_emax sc_r2s mergestr
+(. The vertical scale is set by that value, so the plot shows the size and pattern of the rounding noise.) mergestr sc_para
+
+% ================================================================ Matrix
+(Matrix.ps) sc_h1
+(Matrices are arrays of columns and indices start at 1. Below, matrices print row by row as [row; row].) sc_para
+
+(Building and reading) sc_h2
+(2 3 marray) sc_row
+(/A 2 2 marray def A 1 1 1 mput A 1 2 2 mput A 2 1 3 mput A 2 2 4 mput A) sc_row
+(A 2 1 mget) sc_row
+(A msize) sc_row
+(A typchk) sc_row
+
+(Multiplication) sc_h2
+(A A mmul) sc_row
+(/B 2 1 marray def B 1 1 5 mput B 2 1 6 mput B) sc_row
+(A B mmul) sc_row
+(2 3 marray 2 2 marray mmul) sc_row
+(msize leaves the number of rows, then columns. mmul returns the string \(Nan\) when the inner sizes don't match.) sc_para
+
+% ================================================================ other
+(Utilities) sc_h1
+(Helpers) sc_h2
+(\(ab\) \(cd\) mergestr) sc_row
+(1 setbn typchk) sc_row
+(A typchk) sc_row
+(5 typchk) sc_row
+(\(text\) typchk) sc_row
+(bnDebug) sc_row
+(Set bnDebug to true to make setbn and the arithmetic procedures print each result as they go.) sc_para
+
+sc_footer showpage
+%%EOF
