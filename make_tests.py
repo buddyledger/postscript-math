@@ -343,8 +343,293 @@ t("msolve integers with a decimal right-hand side", f"{bnl(M3)} [[(1)][2][3]] mf
 t("minv with a tiny pivot", "[[(1e-30) 1][1 1]] mfromrows minv bnt_mstr",
   mbn(msolve_exact([["1e-30", 1], [1, 1]], ident(2)), n))
 
+# ---------------------------------------------------------------- version 1.1 references
+def hp():
+    c = Context(prec=HP + 20, rounding=ROUND_HALF_UP)
+    return c
+
+def d_atan(x):
+    with localcontext() as c:
+        c.prec = HP + 20
+        x = D(x); neg = x < 0; x = abs(x); inv = x > 1
+        if inv: x = 1 / x
+        for _ in range(4): x = x / (1 + (1 + x * x).sqrt())
+        s = x; t = x; x2 = x * x; k = 1
+        while True:
+            t = -t * x2; term = t / (2 * k + 1)
+            if abs(term) < D(10) ** (-(HP + 15)): break
+            s += term; k += 1
+        s *= 16
+        if inv: s = PI / 2 - s
+        return -s if neg else s
+
+def d_asin(x):
+    with localcontext() as c:
+        c.prec = HP + 20
+        x = D(x)
+        if x == 1: return PI / 2
+        if x == -1: return -PI / 2
+        return d_atan(x / (1 - x * x).sqrt())
+
+def d_acos(x):
+    with localcontext() as c:
+        c.prec = HP + 20
+        return PI / 2 - d_asin(x)
+
+def d_atan2(y, x):
+    with localcontext() as c:
+        c.prec = HP + 20
+        y, x = D(y), D(x)
+        if x == 0:
+            return D(0) if y == 0 else (PI / 2 if y > 0 else -PI / 2)
+        a = d_atan(y / x)
+        if x < 0: a = a - PI if y < 0 else a + PI
+        return a
+
+def d_exp(x):
+    with localcontext() as c:
+        c.prec = HP + 20
+        return D(x).exp()
+
+def d_hyp(x, which):
+    with localcontext() as c:
+        c.prec = HP + 20
+        e = D(x).exp(); ei = 1 / e
+        return {'sinh': (e - ei) / 2, 'cosh': (e + ei) / 2, 'tanh': (e - ei) / (e + ei)}[which]
+
+def d_sin(x): return sincos(x, 'sin')
+def d_cos(x): return sincos(x, 'cos')
+
+def cfmt(re, im, digits):  # what ccvs prints in bignum mode
+    re_s = fmt(re, digits); im_s = fmt(abs(D(im)), digits)
+    neg = D(im) < 0 or (D(im) == 0 and str(im).startswith("-"))
+    return re_s + (" - " if neg else " + ") + im_s[1:] + "i"
+
+n = 20
+section("sqrtbn expbn powbn", n)
+for x in ["2", "4", "0", "1e-51", "123456789", "0.0001", "99.99", "1e100", "0.5"]:
+    with localcontext() as c:
+        c.prec = HP
+        t(f"sqrtbn {x}", f"{ps(x)} setbn sqrtbn", fmt(D(x).sqrt(), n))
+t("sqrtbn -1 is an error", "-1 setbn sqrtbn", "ERR:rangecheck")
+for x in ["0", "1", "-1", "100", "-100", "0.001", "-0.001", "1e-30", "50.5", "2302.585", "-700"]:
+    t(f"expbn {x}", f"{ps(x)} setbn expbn", fmt(d_exp(x), n))
+t("expbn 1e9 is out of range", "(1e9) setbn expbn", "ERR:rangecheck")
+for x, y in [("2", "0.5"), ("2", "100"), ("-2", "3"), ("2", "-2"), ("1.5", "2.5"), ("10", "-20.5"),
+             ("0", "0"), ("0", "5"), ("7", "0"), ("0.5", "-3"), ("1e10", "0.1"), ("3", "1e-5"),
+             ("-1.5", "-3"), ("123.456", "7.89")]:
+    with localcontext() as c:
+        c.prec = HP
+        X, Y = D(x), D(y)
+        v = D(1) if (X == 0 and Y == 0) else X ** Y
+    t(f"powbn {x} {y}", f"{ps(x)} setbn {ps(y)} setbn powbn", fmt(v, n))
+t("powbn 0 -1", "0 setbn -1 setbn powbn", "ERR:undefinedresult")
+t("powbn -2 0.5", "-2 setbn (0.5) setbn powbn", "ERR:rangecheck")
+
+section("inverse trigonometric and hyperbolic", n)
+for x in ["0", "1", "-1", "0.5", "-3", "1e20", "1e-20", "0.2", "2"]:
+    t(f"atanbn {x}", f"{ps(x)} setbn atanbn", fmt(d_atan(x), n))
+for x in ["0", "0.5", "-0.5", "1", "-1", "0.999", "1e-10"]:
+    t(f"asinbn {x}", f"{ps(x)} setbn asinbn", fmt(d_asin(x), n))
+for x in ["0", "0.5", "-0.5", "1", "-1", "0.9999999999", "1e-10"]:
+    t(f"acosbn {x}", f"{ps(x)} setbn acosbn", fmt(d_acos(x), n))
+t("asinbn 1.5 is an error", "(1.5) setbn asinbn", "ERR:rangecheck")
+t("acosbn -2 is an error", "-2 setbn acosbn", "ERR:rangecheck")
+for y, x in [("1", "-1"), ("-1", "-1"), ("0", "-1"), ("0", "0"), ("1", "0"), ("-1", "0"), ("3", "4"), ("-3", "4")]:
+    t(f"atan2bn {y} {x}", f"{ps(y)} setbn {ps(x)} setbn atan2bn", fmt(d_atan2(y, x), n))
+for x in ["0", "1", "-1", "1e-10", "0.5", "10", "-20", "50"]:
+    for w in ("sinh", "cosh", "tanh"):
+        t(f"{w}bn {x}", f"{ps(x)} setbn {w}bn", fmt(d_hyp(x, w), n))
+
+section("factbn binombn", n)
+for k in [0, 1, 5, 20, 30, 50]:
+    t(f"factbn {k}", f"{k} factbn", fmt(math.factorial(k), n))
+t("factbn -1", "-1 factbn", "ERR:rangecheck")
+t("factbn 2.5", "2.5 factbn", "ERR:rangecheck")
+for a, b in [(10, 3), (100, 50), (5, 7), (5, -1), (0, 0), (52, 5), (60, 30)]:
+    t(f"binombn {a} {b}", f"{a} {b} binombn", fmt(math.comb(a, b) if 0 <= b <= a else 0, n))
+
+# ---------------------------------------------------------------- Complex.ps
+section("Complex.ps", n)
+t("typchk complex", "[1 2] typchk", "complextype")
+t("typchk bignum complex", "[1 setbn 2 setbn] typchk", "complextype")
+t("typchk matrix still a matrix", "[[1 2][3 4]] mfromrows typchk", "matrixtype")
+t("typchk list of bignums", "[1 setbn 2 setbn 3 setbn] typchk", "arraytype")
+t("typchk bignum matrix", "[[(1) 2][3 4]] mfromrows 1 setbn mscale typchk", "matrixtype")
+t("typchk decimal-string matrix", "[[(1) (2)][(3) (4)]] mfromrows typchk", "matrixtype")
+t("cpx", "3 4 cpx ccvs", "3 + 4i")
+t("cadd", "[1 2] [3 4] cadd ccvs", "4 + 6i")
+t("csub", "[1 2] [3 4] csub ccvs", "-2 - 2i")
+t("cmul", "[1 2] [3 4] cmul ccvs", "-5 + 10i")
+t("cmul by a plain number", "[1 2] 3 cmul ccvs", "3 + 6i")
+t("cdiv", "[1 2] [3 4] cdiv ccvs", "0.44 + 0.08i")
+t("cdiv by 0", "[1 2] [0 0] cdiv", "ERR:undefinedresult")
+t("cneg", "[1 -2] cneg ccvs", "-1 + 2i")
+t("cconj", "[1 2] cconj ccvs", "1 - 2i")
+t("cre cim", "[1 2] dup cre exch cim add", "3")
+t("cabs", "[3 4] cabs", "5.0")
+out(f"(carg -1) {{ [-1 0] carg }} {math.pi:.9f} approx")
+out(f"(cexp i, real part) {{ [0 1] cexp cre }} {math.cos(1):.9f} approx")
+t("csqrt -4", "[-4 0] csqrt ccvs", "0.0 + 2.0i")
+t("csqrt 3+4i", "[3 4] csqrt ccvs", "2.0 + 1.0i")
+t("csqrt 3-4i", "[3 -4] csqrt ccvs", "2.0 - 1.0i")
+t("cpow i^2", "[0 1] 2 cpow ccvs", "-1 + 0i")
+t("cpow (1+i)^-2", "[1 1] -2 cpow ccvs", "0.0 - 0.5i")
+t("cln 0 is an error", "[0 0] cln", "ERR:rangecheck")
+t("cpow 0^-1 is an error", "[0 0] -1 cpow", "ERR:undefinedresult")
+def cdiv_d(a, b, c_, d_):
+    with localcontext() as c:
+        c.prec = HP
+        den = c_ * c_ + d_ * d_
+        return (a * c_ + b * d_) / den, (b * c_ - a * d_) / den
+re_, im_ = cdiv_d(D(1), D(2), D(3), D(7))
+t("cdiv bignums", "[(1) 2] [3 7] cdiv ccvs", cfmt(re_, im_, n))
+with localcontext() as c:
+    c.prec = HP + 10
+    e1 = D(1).exp()
+t("cexp bignums", "[(1) (2)] cexp ccvs", cfmt(e1 * d_cos("2"), e1 * d_sin("2"), n))
+with localcontext() as c:
+    c.prec = HP + 10
+    l5 = D(25).ln() / 2
+t("cln bignums", "[(3) (4)] cln ccvs", cfmt(l5, d_atan2("4", "3"), n))
+with localcontext() as c:
+    c.prec = HP + 10
+    t("csqrt bignums", "[(-3) (4)] csqrt ccvs", cfmt(D(1), D(2), n))
+    t("cabs bignums", "[(1) (1)] cabs bnt_str", fmt(D(2).sqrt(), n))
+    t("carg bignums", "[(-1) (-1)] carg bnt_str", fmt(-3 * PI / 4, n))
+    t("cpow i^i", "[(0) 1] [0 1] cpow ccvs", cfmt((-PI / 2).exp(), D(0), n))
+    t("cpow (1+2i)^10", "[(1) 2] 10 cpow ccvs", cfmt(D(237), D(-3116), n))
+
+# ---------------------------------------------------------------- Numeric.ps
+section("Numeric.ps integers and roots", n)
+for a, b in [(12, 345), (0, 5), (-12, 18), (17, 5), (0, 0)]:
+    t(f"gcd {a} {b}", f"{a} {b} gcd", str(math.gcd(a, b)))
+for a, b in [(12, 18), (4, 6), (0, 5), (-3, 7)]:
+    t(f"lcm {a} {b}", f"{a} {b} lcm", str(abs(a * b) // math.gcd(a, b) if a and b else 0))
+out("(froot x^2 - 2, reals) { { dup mul 2 sub } 0 2 froot } 1.414213562 approx")
+out(f"(froot sin, reals) {{ {{ 57.29577951 mul sin }} 3 4 froot }} {math.pi:.9f} approx")
+out("(froot root at 0, reals) { { dup dup dup mul mul exch sub } -0.5 0.3 froot } 0 approx")
+t("froot needs a sign change", "{ dup mul 1 add } 0 2 froot", "ERR:rangecheck")
+with localcontext() as c:
+    c.prec = HP
+    t("froot x^2 - 2, bignums", "{ dup mulbn 2 setbn subbn } (1) (2) froot bnt_str", fmt(D(2).sqrt(), n))
+t("froot cos, bignums", "{ cosbn } (1) (2) froot bnt_str", fmt(PI / 2, n))
+def newton_e3x():
+    with localcontext() as c:
+        c.prec = HP + 20
+        x = D("0.6")
+        for _ in range(60): x = x - (x.exp() - 3 * x) / (x.exp() - 3)
+        return x
+t("froot e^x = 3x, bignums", "{ dup expbn exch 3 setbn mulbn subbn } (0) (1) froot bnt_str", fmt(newton_e3x(), n))
+
+out(); out("(Numeric.ps integration) bnt_section  12 setbnsize")
+out("(fintegrate x^2, reals) { { dup mul } 0 1 fintegrate } 0.333333333 approx")
+out("(fintegrate sin over 0..pi, reals) { { 57.29577951 mul sin } 0 3.14159265 fintegrate } 2 approx")
+out("(fintegrate sqrt with a singular end, reals) { { sqrt } 0 1 fintegrate } 0.666666667 approx")
+out("(fintegrate backwards, reals) { { dup mul } 1 0 fintegrate } -0.333333333 approx")
+t("fintegrate x^2, bignums", "{ dup mulbn } (0) (1) fintegrate bnt_str", fmt(F(1, 3).numerator / D(3), 12))
+with localcontext() as c:
+    c.prec = HP
+    t("fintegrate e^x, bignums", "{ expbn } (0) (1) fintegrate bnt_str", fmt(D(1).exp() - 1, 12))
+t("fintegrate 1/(1+x^2), bignums", "{ 1 setbn exch dup mulbn 1 setbn addbn divbn } (0) (1) fintegrate bnt_str", fmt(PI / 4, 12))
+
+section("Numeric.ps polynomials", n)
+t("polyval", "[1 0 -2] 3 polyval", "7")
+t("polyval at a complex x", "[1 0 -2] [0 1] polyval ccvs", "-3 + 0i")
+t("polyval bignums", "[(0.1) (0.2) (0.3)] (0.5) polyval bnt_str", fmt(D("0.1") * D("0.25") + D("0.1") + D("0.3"), n))
+t("polyder", "[1 2 3] polyder bnt_list", "2 2")
+t("polyder of a constant", "[5] polyder bnt_list", "0")
+t("polyadd", "[1 2 3] [1 1] polyadd bnt_list", "1 3 4")
+t("polymul", "[1 2] [1 -2] polymul bnt_list", "1 0 -4")
+t("polymul bignums", "[(0.5) 1] [(0.5) -1] polymul bnt_list", " ".join(fmt(D(v), n) for v in ["0.25", "0", "-1"]))
+def roots_str(rs): return "; ".join(cfmt(r, i, n) for r, i in rs)
+with localcontext() as c:
+    c.prec = HP
+    r2 = D(2).sqrt()
+t("polyroots x^2 - 2", "[(1) 0 -2] polyroots bnt_clist", roots_str([(-r2, 0), (r2, 0)]))
+t("polyroots (x-1)(x-2)(x-3)", "[(1) -6 11 -6] polyroots bnt_clist", roots_str([(1, 0), (2, 0), (3, 0)]))
+t("polyroots x^2 + 1", "[(1) 0 1] polyroots bnt_clist", roots_str([(0, -1), (0, 1)]))
+t("polyroots x^2 + 2x + 5", "[(1) 2 5] polyroots bnt_clist", roots_str([(-1, -2), (-1, 2)]))
+t("polyroots x^4 - 1", "[(1) 0 0 0 -1] polyroots bnt_clist", roots_str([(-1, 0), (0, -1), (0, 1), (1, 0)]))
+t("polyroots 2x^5 - ... (roots -2 -1 0.5 1 3)", "[(2) -3 -13 9 11 -6] polyroots bnt_clist",
+  roots_str([(-2, 0), (-1, 0), (D("0.5"), 0), (1, 0), (3, 0)]))
+t("polyroots skips leading zeros", "[0 (1) -2] polyroots bnt_clist", roots_str([(2, 0)]))
+t("polyroots of a constant", "[5] polyroots length", "0")
+t("polyroots of zero", "[0 0] polyroots", "ERR:rangecheck")
+out("(polyroots reals) { [1 -6 11 -6] polyroots 2 get 0 get } 3 approx")
+X5 = [0, 1, 2, 3, 4]; Y5 = ["1.1", "1.9", "5.2", "9.8", "17.1"]
+def polyfit_exact(xs, ys, d):
+    A = [[F(x) ** (d - j) for j in range(d + 1)] for x in xs]
+    AtA = [[sum(A[r][i] * A[r][j] for r in range(len(xs))) for j in range(d + 1)] for i in range(d + 1)]
+    Atb = [[sum(A[r][i] * fr(ys[r]) for r in range(len(xs)))] for i in range(d + 1)]
+    return [row[0] for row in msolve_exact(AtA, Atb)]
+pf = polyfit_exact(X5, Y5, 2)
+t("polyfit degree 2, bignums", f"{mlit([X5])} 0 get {mlit([Y5])} 0 get 2 polyfit bnt_list", " ".join(fdec(q, n) for q in pf))
+out("(polyfit degree 1, reals) { [0 1 2 3] [1 3 5 7] 1 polyfit 0 get } 2 approx")
+t("polyfit too few points", "[1 2] [3 4] 2 polyfit", "ERR:rangecheck")
+
+section("Matrix.ps least squares and eigenvalues", n)
+LA = [[1, 1], [1, 2], [1, 3], [1, 4]]; LB = [["6"], ["5"], ["7"], ["10"]]
+def lstsq_exact(A, B):
+    m_ = len(A); k_ = len(A[0])
+    AtA = [[sum(F(A[r][i]) * F(A[r][j]) for r in range(m_)) for j in range(k_)] for i in range(k_)]
+    Atb = [[sum(F(A[r][i]) * fr(B[r][c]) for r in range(m_)) for c in range(len(B[0]))] for i in range(k_)]
+    return msolve_exact(AtA, Atb)
+t("mlstsq line fit, bignums", f"{bnl(LA)} {bnl(LB)} mlstsq bnt_mstr",
+  mbn(lstsq_exact(LA, LB), n))
+ma("mlstsq line fit, reals", f"{mlit(LA)} mfromrows [[6][5][7][10]] mfromrows mlstsq", lstsq_exact(LA, [[6], [5], [7], [10]]))
+ma("mlstsq square system", f"{mlit(R4)} mfromrows [[1][2][3][4]] mfromrows mlstsq", msolve_exact(R4, [[1], [2], [3], [4]]))
+t("mlstsq dependent columns", "[[1 2][2 4][3 6]] mfromrows [[1][2][3]] mfromrows mlstsq", "ERR:undefinedresult")
+t("mlstsq more columns than rows", "[[1 2 3][4 5 6]] mfromrows [[1][2]] mfromrows mlstsq", "ERR:rangecheck")
+
+def sym_eigs(Mrows):
+    # roots of det(M - x I) by bisection at high precision
+    nn = len(Mrows)
+    def det(x):
+        a = [[D(Mrows[i][j]) - (x if i == j else 0) for j in range(nn)] for i in range(nn)]
+        dd = D(1)
+        for c_ in range(nn):
+            p = max(range(c_, nn), key=lambda r: abs(a[r][c_]))
+            if a[p][c_] == 0: return D(0)
+            if p != c_: a[c_], a[p] = a[p], a[c_]; dd = -dd
+            dd *= a[c_][c_]
+            for r in range(c_ + 1, nn):
+                f = a[r][c_] / a[c_][c_]
+                a[r] = [x1 - f * y1 for x1, y1 in zip(a[r], a[c_])]
+        return dd
+    with localcontext() as c:
+        c.prec = HP + 20
+        bound = 1 + max(sum(abs(D(v)) for v in r) for r in Mrows)
+        grid = [-bound + (2 * bound) * D(i) / 4000 for i in range(4001)]
+        roots = []
+        for lo, hi in zip(grid, grid[1:]):
+            flo, fhi = det(lo), det(hi)
+            if flo == 0: roots.append(lo); continue
+            if flo * fhi < 0:
+                for _ in range(400):
+                    mid = (lo + hi) / 2; fm = det(mid)
+                    if (fm < 0) == (flo < 0): lo, flo = mid, fm
+                    else: hi = mid
+                roots.append((lo + hi) / 2)
+        return sorted(roots)
+E3 = [[4, 1, 2], [1, 3, 0], [2, 0, 5]]
+t("meigsym 2x2 values, bignums", f"{bnl([[2, 1], [1, 2]])} 1 setbn mscale meigsym pop bnt_list", " ".join(fmt(v, n) for v in [1, 3]))
+with localcontext() as c:
+    c.prec = HP
+    h = 1 / D(2).sqrt()
+t("meigsym 2x2 vectors, bignums", f"{bnl([[2, 1], [1, 2]])} 1 setbn mscale meigsym exch pop bnt_mstr",
+  f"{fmt(h, n)} {fmt(h, n)}; {fmt(-h, n)} {fmt(h, n)}")
+t("meigsym 3x3 values, bignums", f"{bnl(E3)} 1 setbn mscale meigsym pop bnt_list", " ".join(fmt(v, n) for v in sym_eigs(E3)))
+ev3 = sym_eigs(E3)
+out(f"(meigsym 3x3 smallest value, reals) {{ {mlit(E3)} mfromrows meigsym pop 0 get }} {float(ev3[0]):.9f} approx")
+out(f"(meigsym 3x3: A v = lambda v, reals) {{ {mlit(E3)} mfromrows dup meigsym /bnt_V exch def 2 get /bnt_l exch def"
+    " bnt_V mmul 2 get /bnt_c exch def"
+    " 0 0 1 2 { /bnt_i exch def bnt_c bnt_i get bnt_V 2 get bnt_i get bnt_l mul sub abs 2 copy lt { exch } if pop } for } 0 approx")
+t("meigsym non-symmetric", "[[1 2][3 4]] mfromrows meigsym", "ERR:rangecheck")
+t("meigsym non-square", "[[1 2 3][4 5 6]] mfromrows meigsym", "ERR:rangecheck")
+
 header = r"""%!PS
-% test_bignum.ps - regression tests for bignumlibrary.ps, Trig.ps and Matrix.ps
+% test_bignum.ps - regression tests for the postscript-math library
 % Generated by make_tests.py - edit that file, not this one.
 %
 % Copyright 2026 Buddy Ledger
@@ -374,8 +659,11 @@ header = r"""%!PS
 /bnt_section { (== ) print = } def
 /bnt_str {
 	dup typchk (bignumtype) eq { bncvs }{
-	dup type /stringtype eq { }{ 80 string cvs } ifelse } ifelse
+	dup typchk (complextype) eq { ccvs }{
+	dup type /stringtype eq { }{ 80 string cvs } ifelse } ifelse } ifelse
 } def
+/bnt_list { () exch { bnt_str exch dup length 0 gt { ( ) mergestr } if exch mergestr } forall } def
+/bnt_clist { () exch { ccvs exch dup length 0 gt { (; ) mergestr } if exch mergestr } forall } def
 /bnt_result { % label got ok
 	{ /bnt_pass bnt_pass 1 add def bnt_verbose { (ok   ) print pop = }{ pop pop } ifelse }
 	{ /bnt_fail bnt_fail 1 add def (FAIL ) print exch print (: got ) print = (       expected ) print bnt_exp = } ifelse

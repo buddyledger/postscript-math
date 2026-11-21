@@ -126,12 +126,23 @@
 		sc_i sc_nr lt { (; ) mergestr } if
 	} for (]) mergestr
 } def
+/sc_listmode false def
+/sc_rowl { /sc_listmode true def sc_row /sc_listmode false def } def   % as sc_row, result shown as a list
+/sc_fmtlist { % [a b ...] -> ([a, b, ...])
+	/sc_listmode false def
+	([) exch true exch {
+		exch { }{ exch (, ) mergestr exch } ifelse sc_fmt mergestr false
+	} forall pop (]) mergestr
+} def
 /sc_fmt { % any -> string
+	sc_listmode 1 index type /arraytype eq and { sc_fmtlist }{
 	dup typchk (bignumtype) eq { bncvs }{
+	dup typchk (complextype) eq { ccvs }{
 	dup typchk (matrixtype) eq { sc_fmtmatrix }{
+	dup type /arraytype eq 1 index xcheck not and { sc_fmtlist }{
 	dup type /stringtype eq { (\() exch mergestr (\)) mergestr }{
 	dup type /nametype eq { dup xcheck { 60 string cvs }{ (/) exch 60 string cvs mergestr } ifelse }{
-	60 string cvs } ifelse } ifelse } ifelse } ifelse
+	60 string cvs } ifelse } ifelse } ifelse } ifelse } ifelse } ifelse } ifelse
 } def
 /sc_chunks { % (str) n -> [ (piece) ... ]
 	/sc_n exch def /sc_s exch def
@@ -188,7 +199,7 @@ sc_title
 (This document shows every public procedure of postscript-math with a live result. Each row has three parts. The Code column, in gray, is PostScript that is executed exactly as written while the document is generated. The Result column, in blue, is what that code leaves on the operand stack. The note in italics underneath explains what the row shows and why the result is what it is.) sc_para
 (Results in red are errors, and every one of them is deliberate: those rows feed a procedure bad input, such as a division by zero or the logarithm of a negative number, to show that it refuses with a standard PostScript error instead of returning a wrong answer. Rows marked no result are procedures that change a setting or print to the console rather than leave a value.) sc_para
 (Because every result is computed while the PDF is built by showcase.ps, the document always matches the library.) sc_para
-(The library has three parts: bignumlibrary.ps for decimal numbers with any number of significant digits, Trig.ps for CORDIC trigonometry on ordinary PostScript reals, and Matrix.ps for small matrices. All three are loaded with \(Load.ps\) run.) sc_para
+(The library has five parts: bignumlibrary.ps for decimal numbers with any number of significant digits, Trig.ps for CORDIC trigonometry on ordinary PostScript reals, Matrix.ps for linear algebra, Complex.ps for complex numbers, and Numeric.ps for roots, integrals and polynomials. Matrix.ps, Complex.ps and Numeric.ps work on ordinary reals or on bignums. All five are loaded with \(Load.ps\) run.) sc_para
 (Generated with ) product mergestr ( ) mergestr
 revision 100 idiv 10 string cvs mergestr (.) mergestr
 revision 100 mod dup 10 lt { exch (0) mergestr exch } if 10 string cvs mergestr
@@ -317,6 +328,38 @@ revision 100 mod dup 10 lt { exch (0) mergestr exch } if 10 string cvs mergestr
 	(Deliberate error: the logarithm of 0 is undefined, so lnbn raises rangecheck.) sc_row
 (-1 setbn log10bn)
 	(Deliberate error: logarithms of negative numbers are undefined too.) sc_row
+
+(Roots, powers and more functions) sc_h2
+(2 setbn sqrtbn)
+	(The square root of 2, by Newton's method starting from the ordinary real square root. Each step doubles the number of correct digits.) sc_row
+(1 setbn expbn)
+	(e, the base of natural logarithms. expbn writes x as k ln 10 + r, so e^x = 10^k e^r, and sums the Taylor series of e^r.) sc_row
+(\(-50\) setbn expbn)
+	(e^-50 is tiny, but a bignum keeps its full precision: there is no underflow.) sc_row
+(2 setbn \(0.5\) setbn powbn)
+	(2 to the power 0.5 is the square root of 2 again. A power that is not a whole number is worked out as e^\(y ln x\).) sc_row
+(2 setbn 90 setbn powbn)
+	(Whole-number powers use repeated squaring instead, so 2^90 is exact: all 28 digits.) sc_row
+(-2 setbn 3 setbn powbn)
+	(A whole-number power of a negative number is allowed: \(-2\)^3 = -8.) sc_row
+(1 setbn atanbn)
+	(atan 1 = pi/4. atanbn halves the angle twice before summing its series, so the series converges fast.) sc_row
+(\(0.5\) setbn asinbn)
+	(asin 0.5 = pi/6.) sc_row
+(\(0.5\) setbn acosbn)
+	(acos 0.5 = pi/3.) sc_row
+(-1 setbn -1 setbn atan2bn)
+	(atan2bn takes y, then x, and gives the angle of the point \(x, y\): here -3pi/4, in the correct quadrant, which atan of y/x alone can't tell.) sc_row
+(1 setbn sinhbn)
+	(The hyperbolic sine, \(e^x - e^-x\)/2. For small x it uses its own series, so no digits are lost to cancellation.) sc_row
+(1 setbn tanhbn)
+	(The hyperbolic tangent. coshbn completes the set.) sc_row
+(25 factbn)
+	(25 factorial, exact: 26 digits fit in 30.) sc_row
+(60 30 binombn)
+	(60 choose 30, the number of ways to pick 30 items from 60: exact.) sc_row
+(-1 setbn sqrtbn)
+	(Deliberate error: negative numbers have no real square root, so sqrtbn raises rangecheck. Complex.ps has csqrt for that.) sc_row
 
 (The same calculation at different precisions) sc_h2
 (5 setbnsize pibn)
@@ -548,6 +591,110 @@ sc_labels
 	(The same matrix with 12-digit bignums. Its entries 1/3 and 1/5 are rounded to 12 digits, so the inverse is not exact either, but about 10 of its 12 digits are right. More digits give a closer answer.) sc_row
 20 setbnsize
 
+(Least squares and eigenvalues) sc_h2
+([[1 1] [1 2] [1 3] [1 4]] mfromrows [[6] [5] [7] [10]] mfromrows mlstsq)
+	(The best straight line y = a + bx through \(1, 6\), \(2, 5\), \(3, 7\), \(4, 10\): a = 3.5, b = 1.4. mlstsq solves an overdetermined system by Householder QR, which is more accurate than the normal equations.) sc_row
+([[1 2] [2 4] [3 6]] mfromrows [[1] [2] [3]] mfromrows mlstsq)
+	(Deliberate error: the second column is twice the first, so there is no unique answer and mlstsq raises undefinedresult.) sc_row
+([[2 1] [1 2]] mfromrows meigsym pop)
+	(meigsym returns the eigenvalues of a symmetric matrix in ascending order, here 1 and 3, found by cyclic Jacobi rotations. This row drops the second result to show the first.) sc_rowl
+([[2 1] [1 2]] mfromrows meigsym exch pop)
+	(The second result holds the unit eigenvectors as columns: [0.707; -0.707] for 1 and [0.707; 0.707] for 3.) sc_row
+([[4 1 2] [1 3 0] [2 0 5]] mfromrows meigsym pop)
+	(The three eigenvalues of a 3x3 symmetric matrix. They add up to 12, the sum of the diagonal.) sc_rowl
+([[\(4\) 1 2] [1 3 0] [2 0 5]] mfromrows meigsym pop)
+	(The same eigenvalues with 20-digit bignums.) sc_rowl
+([[1 2] [3 4]] mfromrows meigsym)
+	(Deliberate error: meigsym only accepts symmetric matrices, and raises rangecheck otherwise.) sc_row
+
+% ================================================================ Complex
+(Complex.ps) sc_h1
+(A complex number is the array [re im], and results print as re + im i. Wherever a complex number is expected, a plain number x counts as [x 0]. As with matrices, if any part is a bignum or a string such as \(0.1\), the calculation uses bignums.) sc_para
+
+(Arithmetic) sc_h2
+([1 2] [3 4] cadd)
+	(\(1 + 2i\) + \(3 + 4i\).) sc_row
+([1 2] [3 4] cmul)
+	(\(1 + 2i\)\(3 + 4i\) = 3 + 4i + 6i + 8i^2 = -5 + 10i, since i^2 = -1.) sc_row
+([1 2] [3 4] cdiv)
+	(Division multiplies top and bottom by the conjugate 3 - 4i: \(11 + 2i\)/25.) sc_row
+([1 2] cconj)
+	(The conjugate flips the sign of the imaginary part. cneg flips both.) sc_row
+([3 4] cabs)
+	(The modulus, the distance from 0: sqrt\(3^2 + 4^2\) = 5.) sc_row
+([0 1] carg)
+	(The argument, the angle from the positive real axis, in radians: i is at pi/2.) sc_row
+([1 2] [0 0] cdiv)
+	(Deliberate error: division by zero raises undefinedresult.) sc_row
+
+(Functions) sc_h2
+([-4 0] csqrt)
+	(The square root of -4 is 2i. csqrt gives the root with a positive real part.) sc_row
+([0 1] 2 cpow)
+	(i squared is -1. Whole-number powers use repeated multiplication.) sc_row
+([\(1\) 2] 10 cpow)
+	(\(1 + 2i\)^10 with bignums, exact: 237 - 3116i.) sc_row
+([\(0\) 1] [0 1] cpow)
+	(i to the power i is a real number, e^\(-pi/2\) = 0.2079. General powers use e^\(w ln z\).) sc_row
+([0 pibn] cexp)
+	(e^\(i pi\) = -1. The tiny imaginary part is not an error in cexp: pibn gives pi rounded to 20 digits, which is slightly too large, and the sine of that is about -3.7e-20.) sc_row
+([0 1] cln)
+	(The principal logarithm: ln i = i pi/2.) sc_row
+([0 0] cln)
+	(Deliberate error: the logarithm of 0 is undefined.) sc_row
+
+% ================================================================ Numeric
+(Numeric.ps) sc_h1
+(Numerical methods for ordinary reals or bignums. A function is passed as a procedure that takes x and returns f\(x\); with bignums it receives a bignum and must return one, so it uses addbn, mulbn and the rest.) sc_para
+
+(Whole numbers) sc_h2
+(84 36 gcd)
+	(The greatest common divisor of 84 and 36, by Euclid's algorithm.) sc_row
+(84 36 lcm)
+	(The least common multiple.) sc_row
+
+(Roots of a function) sc_h2
+({ dup mul 2 sub } 0 2 froot)
+	(The x between 0 and 2 where x^2 - 2 = 0. froot needs a range where f changes sign, and narrows it with the Illinois method.) sc_row
+({ dup mulbn 2 setbn subbn } \(1\) \(2\) froot)
+	(The same root with bignums: the square root of 2 to 20 digits.) sc_row
+({ cosbn } \(1\) \(2\) froot)
+	(Where cos x = 0 between 1 and 2: pi/2.) sc_row
+({ dup mul 1 add } 0 2 froot)
+	(Deliberate error: x^2 + 1 has no sign change \(no real root\), so froot raises rangecheck.) sc_row
+
+(Integrals) sc_h2
+({ dup mul } 0 1 fintegrate)
+	(The area under x^2 from 0 to 1, which is 1/3. fintegrate uses Gauss-Legendre rules with 16 and 32 points, and halves the interval wherever they disagree.) sc_row
+({ sqrt } 0 1 fintegrate)
+	(The square root has an infinite slope at 0, which polynomial-based rules handle badly, so the interval is halved repeatedly near 0. The answer, 2/3, is still right to the precision of a real.) sc_row
+(12 setbnsize { 1 setbn exch dup mulbn 1 setbn addbn divbn } \(0\) \(1\) fintegrate)
+	(The integral of 1/\(1 + x^2\) from 0 to 1 is pi/4, here to 12 digits. The first bignum integral at a precision is slow, about 10 seconds, while the rule's points and weights are worked out; they are kept for later calls.) sc_row
+(20 setbnsize)
+	(Back to 20 digits.) sc_row
+
+(Polynomials) sc_h2
+(A polynomial is a list of coefficients, highest power first: [1 0 -2] is x^2 - 2.) sc_para
+sc_labels
+([1 0 -2] 3 polyval)
+	(x^2 - 2 at x = 3: 7. polyval uses Horner's rule.) sc_row
+([1 0 -2] [0 1] polyval)
+	(At x = i the value is i^2 - 2 = -3.) sc_row
+([1 2 3] polyder)
+	(The derivative of x^2 + 2x + 3 is 2x + 2.) sc_rowl
+([1 2] [1 -2] polymul)
+	(\(x + 2\)\(x - 2\) = x^2 - 4. polyadd adds two polynomials.) sc_rowl
+([1 2 5] polyroots)
+	(All roots, complex included, sorted by real part: x^2 + 2x + 5 has roots -1 - 2i and -1 + 2i. polyroots uses the Durand-Kerner iteration.) sc_rowl
+([\(1\) -6 11 -6] polyroots)
+	(The roots of x^3 - 6x^2 + 11x - 6 = \(x-1\)\(x-2\)\(x-3\), to 20 digits.) sc_rowl
+([1 -2 1] polyroots)
+	(\(x - 1\)^2 has 1 as a double root. Repeated roots converge slowly and keep only about half the digits, which shows here as small errors.) sc_rowl
+([0 1 2 3 4] [1.1 1.9 5.2 9.8 17.1] 2 polyfit)
+	(The least-squares parabola through five points, as coefficients of x^2, x and 1. polyfit builds the system and solves it with mlstsq.) sc_rowl
+([0 1 2 3 4] [\(1.1\) \(1.9\) \(5.2\) \(9.8\) \(17.1\)] 2 polyfit)
+	(The same fit with bignums. The exact coefficients are 143/140, -67/700 and 379/350, repeating decimals that are rounded to 20 digits.) sc_rowl
+
 % ================================================================ other
 (Utilities) sc_h1
 (Helpers) sc_h2
@@ -555,6 +702,8 @@ sc_labels
 	(mergestr joins two strings into a new one.) sc_row
 (1 setbn typchk)
 	(typchk names the library's own types: here a bignum,) sc_row
+([1 2] typchk)
+	(a complex number,) sc_row
 (A typchk)
 	(a matrix,) sc_row
 (5 typchk)

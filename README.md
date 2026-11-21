@@ -1,17 +1,19 @@
 # PostScript maths library
 
 A small maths library written in PostScript and run with Ghostscript as a
-calculator (no page output). It has three parts:
+calculator (no page output). It has five parts:
 
 | File | What it does |
 |---|---|
-| `bignumlibrary.ps` | Decimal floating-point numbers with as many significant digits as you ask for: arithmetic, comparisons, sin/cos/tan, ln/log10, pi |
+| `bignumlibrary.ps` | Decimal floating-point numbers with as many significant digits as you ask for: arithmetic, comparisons, sqrt, exp, powers, logarithms, trigonometric and hyperbolic functions and their inverses, pi, factorials |
 | `Trig.ps` | sin/cos/tan/atan for ordinary PostScript reals using the CORDIC algorithm |
-| `Matrix.ps` | Matrices of reals or bignums: build, add, multiply, transpose, determinant, inverse, solve linear systems |
-| `Load.ps` | Loads all three |
-| `test_bignum.ps` | Regression tests for all three files |
+| `Matrix.ps` | Matrices of reals or bignums: build, add, multiply, transpose, determinant, inverse, linear systems, least squares, symmetric eigenvalues |
+| `Complex.ps` | Complex numbers of reals or bignums: arithmetic, modulus and argument, sqrt, exp, ln, powers |
+| `Numeric.ps` | Roots of functions, integrals, polynomials (values, roots, fitting), gcd and lcm |
+| `Load.ps` | Loads all five |
+| `test_bignum.ps` | Regression tests for all five files |
 | `make_tests.py` | Generates `test_bignum.ps` (Python 3, standard library only) |
-| [`showcase.pdf`](showcase.pdf) | Every public function with a live result, plus CORDIC plots (8 pages) |
+| [`showcase.pdf`](showcase.pdf) | Every public function with a live result, plus CORDIC plots (11 pages) |
 | `showcase.ps`, `make_showcase.bat` | Source of the showcase and the script that builds it |
 
 ## Showcase
@@ -23,7 +25,7 @@ input. It also has a table and plots that
 compare the CORDIC functions with Ghostscript's built-in sin and cos. Each
 code entry is executed as written while the PDF is built, so the document
 always matches the library. To rebuild it after changing the library (about
-15 seconds):
+50 seconds, mostly the bignum integral):
 
 ```bat
 make_showcase.bat
@@ -47,7 +49,7 @@ This work has the LPPL maintenance status `author-maintained`. The Current
 Maintainer of this work is Buddy Ledger.
 
 This work consists of the files `bignumlibrary.ps`, `Trig.ps`, `Matrix.ps`,
-`Load.ps`, `gs.bat`, `runme.bat`, `test_bignum.ps`, `make_tests.py`,
+`Complex.ps`, `Numeric.ps`, `Load.ps`, `gs.bat`, `runme.bat`, `test_bignum.ps`, `make_tests.py`,
 `showcase.ps`, `showcase.pdf`, `make_showcase.bat`,
 `Examples/bignumfactorial.ps` and `README.md`.
 
@@ -103,8 +105,8 @@ Inputs are rounded too when `setbn` converts them.
 
 - `addbn`, `subbn`, `mulbn`, `divbn`, `truncbn`, `roundbn` are exact
   before the final rounding, so their results are always correctly rounded.
-- `sinbn`, `cosbn`, `tanbn`, `lnbn`, `log10bn`, `pibn` work with 6 extra
-  digits and then round. Every test value is correct to the last digit, but
+- The functions (`sqrtbn`, `expbn`, `powbn`, `sinbn` and the rest, `pibn`,
+  `factbn`, `binombn`) work with 6 extra digits and then round. Every test value is correct to the last digit, but
   correct rounding isn't proven for every input.
 
 Precision doesn't change existing bignums. A bignum made at one precision
@@ -148,12 +150,22 @@ Stack effects are shown as `inputs → outputs`. `bn` is a bignum.
 |---|---|---|
 | `sinbn` `cosbn` `tanbn` | `x → bn` | x in radians. Any size: working precision grows with the size of x, so `(1e50) setbn sinbn` is accurate but slower |
 | `lnbn` `log10bn` | `x → bn` | x ≤ 0 gives `rangecheck` |
+| `sqrtbn` | `x → bn` | x < 0 gives `rangecheck` |
+| `expbn` | `x → eˣ` | \|x\| ≥ 10⁹ gives `rangecheck` |
+| `powbn` | `x y → xʸ` | whole-number y (below 10⁹) by repeated squaring, so negative x is allowed and results are exact when they fit; otherwise e^(y ln x), and x < 0 gives `rangecheck`. 0 to a negative power gives `undefinedresult`; 0⁰ = 1 |
+| `atanbn` | `x → bn` | in (−π/2, π/2) |
+| `asinbn` `acosbn` | `x → bn` | \|x\| > 1 gives `rangecheck` |
+| `atan2bn` | `y x → bn` | angle of the point (x, y), in (−π, π]; 0 for (0, 0) |
+| `sinhbn` `coshbn` `tanhbn` | `x → bn` | \|x\| ≥ 10⁹ gives `rangecheck` |
+| `factbn` | `n → n!` | n an integer ≥ 0 |
+| `binombn` | `n k → C(n, k)` | 0 when k < 0 or k > n |
 | `pibn` | `– → bn` | |
 
 pi, ln 2 and ln 10 are computed once per precision and cached.
 
 **Other:** `mergestr` (`(ab) (cd) → (abcd)`), `typchk` (`any → (bignumtype)`,
-`(matrixtype)` or the PostScript type name), `bnDebug` (set it `true` to
+`(complextype)`, `(matrixtype)` or the PostScript type name; a two-element
+array of numbers or bignums counts as complex), `bnDebug` (set it `true` to
 print each result of `setbn` and the arithmetic procedures).
 
 Procedures whose names start with `bn_` are internal.
@@ -167,8 +179,9 @@ them, so `stopped` catches them and Ghostscript reports them as, for example,
 ### Speed
 
 Arithmetic works one decimal digit at a time. At 20 digits each operation is
-instant and the full test suite (375 tests) takes about 6 seconds. At 100 digits, `pibn`
-takes about 5 s the first time (it's cached after that) and `sinbn` about 2 s.
+instant. At 100 digits, `pibn` takes about 5 s the first time (it's cached
+after that) and `sinbn` about 2 s. The full test suite (575 tests) takes
+about 40 seconds, mostly for bignum integrals and polynomial roots.
 
 ## Trig.ps
 
@@ -224,6 +237,8 @@ only, Matrix.ps works on its own.
 | `mdet` | `A → det` | A square. Singular gives 0; an all-integer matrix gives an integer |
 | `minv` | `A → A⁻¹` | singular A gives `undefinedresult` |
 | `msolve` | `A B → X` | solves A X = B for an n × n A and n × k B; singular A gives `undefinedresult` |
+| `mlstsq` | `A B → X` | least squares: the X that minimises the size of A X − B, for an m × n A with m ≥ n (Householder QR). Linearly dependent columns give `undefinedresult` |
+| `meigsym` | `A → [values] V` | A symmetric. Eigenvalues in ascending order, and V with the matching unit eigenvectors as columns (cyclic Jacobi). Not symmetric gives `rangecheck` |
 | `mPrint` | `M → –` | prints one row per line |
 
 `mdet`, `minv` and `msolve` use Gauss-Jordan elimination with partial
@@ -235,6 +250,78 @@ Hilbert matrices. Use bignums when that matters.
 
 The operations never change their arguments, except `mput`.
 
+## Complex.ps
+
+A complex number is the array `[re im]`. Wherever one is expected, a plain
+number, bignum or string `x` counts as `[x 0]`. As in Matrix.ps, a bignum or
+string part switches the calculation to bignums. Needs Matrix.ps.
+
+```postscript
+[1 2] [3 4] cmul cPrint          % -5 + 10i
+[(0) 1] [0 1] cpow cPrint        % i^i = +2.0787957635076190855e-1 + 0.0...e0i
+```
+
+| Procedure | Stack | Notes |
+|---|---|---|
+| `cpx` | `re im → z` | |
+| `cre` `cim` | `z → part` | |
+| `cadd` `csub` `cmul` `cdiv` | `a b → z` | division by 0 gives `undefinedresult` |
+| `cneg` `cconj` | `z → z` | |
+| `cabs` | `z → \|z\|` | |
+| `carg` | `z → angle` | in (−π, π] |
+| `csqrt` | `z → √z` | the root with real part ≥ 0 |
+| `cexp` | `z → eᶻ` | |
+| `cln` | `z → ln z` | principal value; 0 gives `rangecheck` |
+| `cpow` | `z w → zʷ` | whole-number w by repeated multiplication, otherwise e^(w ln z) |
+| `ccvs` `cPrint` | `z → string`, `z → –` | `re + im i` |
+
+Parts much smaller than the modulus can show rounding noise instead of 0, for
+example `[0 pibn] cexp` gives −1 − 3.7e−20i because pibn is pi rounded to
+`bnn` digits.
+
+## Numeric.ps
+
+Numerical methods for reals or bignums. Needs Matrix.ps; `polyroots` and a
+complex `x` in `polyval` also need Complex.ps.
+
+A function argument is a procedure `{f}` that takes x and returns f(x). If
+the other arguments are bignums or strings, it receives bignums and should
+return a bignum. It runs at 6 digits above `bnn`, so it shouldn't change
+`bnn`.
+
+```postscript
+{ dup mulbn 2 setbn subbn } (1) (2) froot bnPrint   % +1.4142135623730950488e0
+{ dup mul } 0 1 fintegrate =                         % 0.333333
+[1 -6 11 -6] polyroots { cPrint } forall             % 1.0 + 0.0i  2.0 + 0.0i  3.0 + 0.0i
+```
+
+| Procedure | Stack | Notes |
+|---|---|---|
+| `gcd` `lcm` | `a b → n` | integers |
+| `froot` | `{f} a b → x` | a root of f between a and b; f(a) and f(b) must differ in sign, else `rangecheck`. Illinois method |
+| `fintegrate` | `{f} a b → ∫` | Gauss-Legendre with 16 and 32 points, halving the interval where they disagree |
+| `polyval` | `p x → p(x)` | x a number, bignum, string or complex |
+| `polyder` | `p → p′` | |
+| `polyadd` `polymul` | `p q → p+q, p×q` | |
+| `polyroots` | `p → [z …]` | all roots as complex numbers, sorted by real part (Durand-Kerner). All-zero p gives `rangecheck` |
+| `polyfit` | `[x …] [y …] d → p` | least-squares polynomial of degree d, using `mlstsq` |
+
+A polynomial is an array of coefficients, highest power first: `[1 0 -2]` is
+x² − 2.
+
+Limits:
+
+- `fintegrate` is fast and accurate for smooth functions. Where the function
+  or its slope is infinite at an end, as for √x at 0, it has to halve the
+  interval many times: with reals that still gives full accuracy, but with
+  bignums it is slow (over a minute) and the last few digits can be wrong.
+  The first bignum integral at a given precision takes about 10 s extra to
+  compute the rule's points and weights, which are then kept.
+- `polyroots` finds a root of multiplicity m to only about 1/m of the digits,
+  so a double root keeps about half of them.
+- `froot` and `polyroots` stop after 500 iterations even if they haven't
+  converged.
+
 ## Tests
 
 ```bat
@@ -244,7 +331,9 @@ runme.bat test_bignum.ps
 The file prints a line for each failure and ends with
 `N passed, 0 failed / ALL TESTS PASSED`. To see every line, set
 `/bnt_verbose true def` near the top. Expected values come from Python's
-`decimal` module, computed to 100 digits and rounded half away from zero.
+`decimal` module, computed to 100 digits and rounded half away from zero,
+and from exact fractions (`fractions` module) for the matrix and polynomial
+results.
 
 `test_bignum.ps` is generated, so don't edit it by hand. To add or change
 tests, edit the cases in `make_tests.py` and run it again:
@@ -263,11 +352,21 @@ read.
 **Matrix.ps** now stands on its own as a linear algebra library:
 
 - Added `mfromrows`, `mtorows`, `mcopy`, `midentity`, `mtranspose`, `madd`,
-  `msub`, `mscale`, `mdet`, `minv`, `msolve` and `mPrint`.
+  `msub`, `mscale`, `mdet`, `minv`, `msolve`, `mlstsq`, `meigsym` and
+  `mPrint`.
 - Every operation, including `mmul`, accepts bignum and decimal-string
   elements, for exact decimal results.
-- 53 new tests, and a matrix section in the showcase covering each new
-  procedure.
+
+**bignumlibrary.ps**: added `sqrtbn`, `expbn`, `powbn`, `atanbn`, `asinbn`,
+`acosbn`, `atan2bn`, `sinhbn`, `coshbn`, `tanhbn`, `factbn` and `binombn`.
+`typchk` recognises complex numbers, and no longer calls a list of bignums a
+matrix.
+
+**New files**: `Complex.ps` (complex numbers) and `Numeric.ps` (roots,
+integrals, polynomials, gcd and lcm), both working on reals or bignums.
+
+**Tests and showcase**: 253 new tests (575 in all), and showcase sections for
+every new procedure.
 
 ## Changes in version 1.0 (November 2026)
 
