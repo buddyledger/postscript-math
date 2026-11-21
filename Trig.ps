@@ -1,0 +1,115 @@
+%!PS-Adobe-2.0
+%%Title: Trig.ps - CORDIC trigonometry for PostScript reals
+%%Creator: Buddy Ledger
+%%EndComments
+%
+% Copyright 2026 Buddy Ledger
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3c
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   https://www.latex-project.org/lppl.txt
+% and version 1.3c or later is part of all distributions of LaTeX
+% version 2008 or later.
+%
+% This work has the LPPL maintenance status `author-maintained'.
+%
+% The Current Maintainer of this work is Buddy Ledger.
+%
+% This work consists of the files listed in README.md.
+%
+% ---------------------------------------------------------------------------
+% CORDIC (COordinate Rotation DIgital Computer, J. E. Volder, 1959) builds an
+% angle out of the fixed steps atan(1), atan(1/2), atan(1/4), ...  Each step
+% rotates a vector by +/- one of those angles, which needs only additions and
+% halvings.  Every step also stretches the vector by sqrt(1 + 4^-i); the
+% product of those stretches is undone with the precomputed factor K.
+%
+%   rotation mode   start at (K, 0) and step towards the angle b:
+%                   the vector ends at (cos b, sin b)
+%   vectoring mode  start at (x, y) and step until y reaches 0:
+%                   the steps taken add up to atan(y/x)
+%
+% Accuracy is limited by PostScript reals (about 7 significant digits) once
+% the iteration count n reaches about 24.  The procedures below use n = 40.
+%
+%   beta n  cordiccossin  [[cos sin]]   (a 2x1 matrix in Matrix.ps layout)
+%   x y n   cordicatan    atan(y/x)     in [-pi/2, pi/2]
+%   x       corsin corcos cortan corcot corsec corcsc
+%   x y     coratan       atan(y/x)
+% ---------------------------------------------------------------------------
+
+/pi 3.14159265358979 def
+
+/cordic_nmax 64 def
+/cordic_atab cordic_nmax array def           % atan(2^-i) in radians
+/cordic_ktab cordic_nmax 1 add array def     % K_n = product, i < n, of 1/sqrt(1+4^-i)
+
+0 1 cordic_nmax 1 sub {                      % i
+	dup 2 exch neg exp                       % i 2^-i
+	1 atan pi mul 180 div                    % i atan(2^-i)  (atan gives degrees)
+	cordic_atab 3 1 roll put
+} for
+
+cordic_ktab 0 1.0 put
+0 1 cordic_nmax 1 sub {                      % i
+	dup cordic_ktab exch get                 % i K_i
+	1 4 3 index neg exp add sqrt div         % i K_(i+1)
+	cordic_ktab 3 1 roll exch 1 add exch put
+} for
+
+/cordiccossin {                              % beta n -> [[cos sin]]
+12 dict begin
+	/n exch def /b exch def
+	n cordic_nmax gt { /n cordic_nmax def } if
+	% write b = q*pi + r with |r| <= pi/2; cos and sin change sign when q is odd
+	/q b pi div round def
+	/r b q pi mul sub def
+	/sg q cvi 2 mod 0 eq { 1 }{ -1 } ifelse def
+	/x cordic_ktab n get def /y 0.0 def /z r def /p 1.0 def
+	0 1 n 1 sub { /i exch def
+		/d z 0 lt { -1 }{ 1 } ifelse def
+		/xn x d y mul p mul sub def
+		/y y d x mul p mul add def
+		/x xn def
+		/z z d cordic_atab i get mul sub def
+		/p p 0.5 mul def
+	} for
+	[ [ x sg mul y sg mul ] ]
+end
+} bind def
+
+/cordicatan {                                % x y n -> atan(y/x)
+12 dict begin
+	/n exch def /y exch def /x exch def
+	n cordic_nmax gt { /n cordic_nmax def } if
+	x 0 eq {
+		y 0 eq { x y /cordicatan errordict /undefinedresult get exec } if
+		y 0 gt { pi 2 div }{ pi -2 div } ifelse
+	}{
+		% atan(y/x) is unchanged when both signs flip, so start with x > 0
+		x 0 lt { /x x neg def /y y neg def } if
+		/z 0.0 def /p 1.0 def
+		0 1 n 1 sub { /i exch def
+			/d y 0 lt { 1 }{ -1 } ifelse def
+			/xn x d y mul p mul sub def
+			/y y d x mul p mul add def
+			/x xn def
+			/z z d cordic_atab i get mul sub def
+			/p p 0.5 mul def
+		} for
+		z
+	} ifelse
+end
+} bind def
+
+/corsin { 40 cordiccossin 0 get 1 get } bind def
+/corcos { 40 cordiccossin 0 get 0 get } bind def
+/cortan { 40 cordiccossin 0 get aload pop exch div } bind def
+/corcot { cortan 1 exch div } bind def
+/corsec { corcos 1 exch div } bind def
+/corcsc { corsin 1 exch div } bind def
+/coratan { 40 cordicatan } bind def
+
+%%EOF

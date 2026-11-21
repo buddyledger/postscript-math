@@ -1,0 +1,101 @@
+%!PS-Adobe-2.0
+%%Title: Matrix.ps - small matrix library
+%%Creator: Buddy Ledger
+%%Date: February 2012
+%%BoundingBox: 0 0 592 792
+%%DocumentNeededFonts: Courier
+%%EndComments
+%
+% Copyright 2012 Buddy Ledger
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3c
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   https://www.latex-project.org/lppl.txt
+% and version 1.3c or later is part of all distributions of LaTeX
+% version 2008 or later.
+%
+% This work has the LPPL maintenance status `author-maintained'.
+%
+% The Current Maintainer of this work is Buddy Ledger.
+%
+% This work consists of the files listed in README.md.
+%
+
+%M i j Val
+/mput { exch dup 5 -1 roll 
+        dup 4 -1 roll 1 sub get 3 -2 roll 
+        exch 5 -3 roll dup 4 2 roll 
+        exch 1 sub exch put 
+        exch 1 sub exch put
+} def 
+
+%M i j
+/mget {3 -1 roll exch 1 sub get exch 1 sub get} def
+
+%/M m n marray def 
+/marray {
+10 dict begin
+/n exch def /m exch def
+/A n array def % array of cols
+0 1 n 1 sub {/i exch def A i m array put} for %insert arrays of rows
+1 1 m {/i exch def
+    1 1 n {/j exch def
+    A i j 0 mput
+    } for 
+} for
+A
+end
+} bind def
+
+/msize {dup length exch 0 get length exch} bind def %puts n m on the stack /n exch def /m exch def 
+
+
+/mmul {
+15 dict begin
+/mmulB exch def /mmulA exch def
+mmulA msize /mmulnA exch def /mmulmA exch def
+mmulB msize /mmulnB exch def /mmulmB exch def
+%cols of A must equal cols ofB
+mmulnA mmulmB eq {
+/mmulR mmulmA mmulnB marray def
+1 1 mmulnB {/mmulj exch def 
+    1 1 mmulmA {/mmuli exch def 
+        /mmulsum 0 def
+        1 1 mmulnA {/mmulk exch def %i = j = k =
+            mmulsum 
+            mmulA mmuli mmulk mget 
+            mmulB mmulk mmulj mget 
+            mul add
+            /mmulsum exch def
+        } for
+        mmulR mmuli mmulj mmulsum mput
+    } for
+} for
+mmulR
+/mmulR 0 def %detach
+}{(Nan)} ifelse
+end
+} bind def
+
+%~ %Example Matrix Mult
+%~ /A 500 500 marray def
+%~ 1 1 500 {/i exch def 
+    %~ 1 1 500 {/j exch def
+    %~ i j eq {A i j 2 mput}{A i j 0 mput} ifelse
+    %~ }for
+%~ } for
+%~ /B 500 1 marray def
+%~ 1 1 500 {/i exch def 
+    %~ 1 1 1 {/j exch def
+    %~ B i j 2 mput
+    %~ }for
+%~ } for
+
+%~ A B mmul
+
+
+showpage
+
+%%EOF

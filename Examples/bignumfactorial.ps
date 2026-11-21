@@ -1,0 +1,77 @@
+%!PS-Adobe-2.0
+%%Title: Factorial in PostScript
+%%Creator: Buddy Ledger
+%%Date: February 2012
+%%BoundingBox: 0 0 592 792
+%%DocumentNeededFonts: Courier
+%%EndComments
+%
+% Copyright 2012 Buddy Ledger
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3c
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   https://www.latex-project.org/lppl.txt
+% and version 1.3c or later is part of all distributions of LaTeX
+% version 2008 or later.
+%
+% This work has the LPPL maintenance status `author-maintained'.
+%
+% The Current Maintainer of this work is Buddy Ledger.
+%
+% This work consists of the files listed in README.md.
+%
+% Computes Flimit! (34! below) exactly, one decimal digit per array element,
+% and draws the result on the page.  ndigits is the size of the digit array.
+
+/bigfont {/Courier findfont 20 scalefont setfont} bind def
+    
+/ndigits 1000 def
+/base 10 def
+/Flimit 34 def
+/digit ndigits array def
+/carry 0 def
+/d 0 def
+/last 0 def
+/textout ndigits array def
+
+0 1 ndigits 1 sub { digit exch 0 put } for %zero array
+digit 0 1 put
+
+0 1 ndigits 1 sub { textout exch () put } for %zero array
+
+0 1 Flimit 1 sub {
+    1 add /n exch def 
+    /carry 0 def
+    0 1 last {
+        /i exch def
+        digit i get n mul carry add /d exch def 
+        d base mod digit exch i exch put
+        d base idiv /carry exch def 
+    } for 
+    {  carry 0 gt {
+    last 1 add /last exch def
+    carry base mod digit exch last exch put
+    carry base idiv /carry exch def
+    }{exit} ifelse } loop
+    0 1 last {
+        /i exch def
+        %last =
+        textout ndigits i sub 1 sub digit i get put
+    } for
+    carry =
+} for
+
+50 300 moveto
+bigfont 
+Flimit 20 string cvs show
+(! = ) show
+0 1 textout length 1 sub {
+/i exch def 
+textout i get 20 string cvs show 
+} for
+
+showpage
+
+%%EOF
