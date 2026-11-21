@@ -1,5 +1,5 @@
 %!PS-Adobe-2.0
-%%Title: Load.ps - loads Matrix.ps, Trig.ps and bignumlibrary.ps
+%%Title: Load.ps - loads all five parts of the library
 %%Creator: Buddy Ledger
 %%Date: February 2012
 %%EndComments
@@ -26,3 +26,6 @@
 (bignumlibrary.ps) run
 (Complex.ps) run
 (Numeric.ps) run
+
+% Open the library's dictionary, so its names can be used directly.
+currentdict tx@PostScriptMathDict ne { tx@PostScriptMathDict begin } if

@@ -89,6 +89,16 @@ def ps(s):  # PostScript literal for a numeric string input
 
 # ---------------------------------------------------------------- setbn
 n = 20
+section("namespace", n)
+t("loading leaves nothing on the stack", "bnt_junk", "0")
+t("loading adds one name to userdict", "bnt_ud1 bnt_ud0 sub", "1")
+t("the name is the library dictionary", "userdict /tx@PostScriptMathDict get type", "dicttype")
+t("loading leaves the dictionary stack as it was", "bnt_ds1 bnt_ds0 sub", "0")
+t("public names are not in userdict", "[/addbn /setbnsize /mmul /cadd /froot /corsin] { userdict exch known } forall 6 array astore bnt_list",
+  "false false false false false false")
+t("public names are in the library dictionary", "[/addbn /setbnsize /mmul /cadd /froot /corsin] { tx@PostScriptMathDict exch known } forall 6 array astore bnt_list",
+  "true true true true true true")
+
 section("setbn / bncvs", n)
 for s in ["509", "-0.00125", "123456789012345678901234", "0", "-0", "0.000",
           "99999999999999999999.5", "-1.5e-30", "+42", "1E5", ".5", "7.", "00012.3400"]:
@@ -650,10 +660,30 @@ header = r"""%!PS
 %
 % Run from this folder:   runme.bat test_bignum.ps
 %   (or: gswin64c -q -dNODISPLAY -dNOSAFER -dBATCH test_bignum.ps)
+% With -dPSM_HEADERS the tests load the dvips headers in dvips/ (built by
+% make_headers.py) instead of the .ps files.
 % Expected values were generated with Python's decimal module (100-digit
 % references, rounded half away from zero).  Prints failures and a summary.
 
-(Load.ps) run
+% Load the parts one by one, noting what loading changes: it should add one
+% name to userdict, leave the dictionary stack as it was and push nothing.
+userdict length countdictstack
+/PSM_HEADERS where { pop
+	(dvips/postscript-math-bignum.pro) run
+	(dvips/postscript-math-trig.pro) run
+	(dvips/postscript-math-matrix.pro) run
+	(dvips/postscript-math-complex.pro) run
+	(dvips/postscript-math-numeric.pro) run
+	(the dvips headers)
+}{
+	(bignumlibrary.ps) run (Trig.ps) run (Matrix.ps) run (Complex.ps) run (Numeric.ps) run
+	(the .ps files)
+} ifelse
+countdictstack userdict length
+tx@PostScriptMathDict begin
+/bnt_ud1 exch def /bnt_ds1 exch def /bnt_what exch def /bnt_ds0 exch def /bnt_ud0 exch def
+count /bnt_junk exch def clear
+(Testing ) print bnt_what =
 
 /bnt_pass 0 def /bnt_fail 0 def /bnt_verbose false def
 /bnt_section { (== ) print = } def

@@ -20,6 +20,12 @@
 %
 % This work consists of the files listed in README.md.
 %
+
+% Every name is defined in tx@PostScriptMathDict, so that nothing clashes with other
+% PostScript code. Load.ps leaves the dictionary open; after loading a file
+% on its own, use  tx@PostScriptMathDict begin ... end  around calls.
+/tx@PostScriptMathDict where { pop }{ /tx@PostScriptMathDict 600 dict def } ifelse
+tx@PostScriptMathDict begin
 % Everything here works on ordinary numbers, or on bignums when any input
 % is a bignum or a string such as (0.1) (see Matrix.ps). Needs Matrix.ps;
 % polyval with a complex x and polyroots need Complex.ps.
@@ -338,5 +344,7 @@ end
 	[ exch { m_fin } forall ]
 	end
 } bind def
+
+end % tx@PostScriptMathDict
 
 %%EOF

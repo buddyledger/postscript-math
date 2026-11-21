@@ -10,7 +10,9 @@ calculator (no page output). It has five parts:
 | `Matrix.ps` | Matrices of reals or bignums: build, add, multiply, transpose, determinant, inverse, linear systems, least squares, symmetric eigenvalues |
 | `Complex.ps` | Complex numbers of reals or bignums: arithmetic, modulus and argument, sqrt, exp, ln, powers |
 | `Numeric.ps` | Roots of functions, integrals, polynomials (values, roots, fitting), gcd and lcm |
-| `Load.ps` | Loads all five |
+| `Load.ps` | Loads all five and opens the library's dictionary |
+| `dvips/*.pro` | Each part as a dvips header, for use from TeX (generated) |
+| `make_headers.py` | Generates the headers in `dvips/` (Python 3, standard library only) |
 | `test_bignum.ps` | Regression tests for all five files |
 | `make_tests.py` | Generates `test_bignum.ps` (Python 3, standard library only) |
 | [`showcase.pdf`](showcase.pdf) | Every public function with a live result, plus CORDIC plots (11 pages) |
@@ -50,6 +52,9 @@ Maintainer of this work is Buddy Ledger.
 
 This work consists of the files `bignumlibrary.ps`, `Trig.ps`, `Matrix.ps`,
 `Complex.ps`, `Numeric.ps`, `Load.ps`, `gs.bat`, `runme.bat`, `test_bignum.ps`, `make_tests.py`,
+`make_headers.py`, `dvips/postscript-math-bignum.pro`, `dvips/postscript-math-trig.pro`,
+`dvips/postscript-math-matrix.pro`, `dvips/postscript-math-complex.pro`,
+`dvips/postscript-math-numeric.pro`,
 `showcase.ps`, `showcase.pdf`, `make_showcase.bat`,
 `Examples/bignumfactorial.ps` and `README.md`.
 
@@ -70,6 +75,52 @@ From PowerShell, use `.\gs.bat` and `.\runme.bat`.
 which stops `Load.ps` from `run`-ning the other files. It also means any file
 run through these launchers can read and write your files, so use them only
 for PostScript you trust.
+
+## The library's dictionary
+
+Every name the library defines is in one dictionary, `tx@PostScriptMathDict`,
+so nothing clashes with other PostScript code or with your own names. Loading
+the library adds only that one name to `userdict`.
+
+`Load.ps` leaves the dictionary open on the dictionary stack, so after
+`(Load.ps) run` you can call everything directly, as in the examples below.
+Anything you `def` at the top level then goes into the library's dictionary
+too, so avoid redefining its names.
+
+If you load a part on its own, or the dvips headers, open the dictionary
+yourself:
+
+```postscript
+(Matrix.ps) run
+tx@PostScriptMathDict begin
+  [[1 2] [3 4]] mfromrows mdet =
+end
+```
+
+## Using it from TeX: dvips headers
+
+`dvips/` has each part as a separate dvips header, so a document loads only
+the parts it uses:
+
+| Header | Part | Load these first |
+|---|---|---|
+| `postscript-math-bignum.pro` | `bignumlibrary.ps` | |
+| `postscript-math-trig.pro` | `Trig.ps` | |
+| `postscript-math-matrix.pro` | `Matrix.ps` | bignum, for bignum matrices |
+| `postscript-math-complex.pro` | `Complex.ps` | matrix; bignum, for bignums |
+| `postscript-math-numeric.pro` | `Numeric.ps` | matrix and complex; bignum, for bignums |
+
+A header is its `.ps` file without the comment and blank lines (DSC lines
+must not appear in a dvips header). The headers are generated, so don't edit
+them: change the `.ps` file and run
+
+```bat
+python make_headers.py
+```
+
+The test suite runs against the headers too (see [Tests](#tests)). The
+`postscript-math-` file names are provisional, until the library has a name
+as a TeX package.
 
 ## bignumlibrary.ps
 
@@ -180,8 +231,8 @@ them, so `stopped` catches them and Ghostscript reports them as, for example,
 
 Arithmetic works one decimal digit at a time. At 20 digits each operation is
 instant. At 100 digits, `pibn` takes about 5 s the first time (it's cached
-after that) and `sinbn` about 2 s. The full test suite (575 tests) takes
-about 40 seconds, mostly for bignum integrals and polynomial roots.
+after that) and `sinbn` about 2 s. The full test suite (581 tests) takes
+about 30 seconds, mostly for bignum integrals and polynomial roots.
 
 ## Trig.ps
 
@@ -346,6 +397,27 @@ runme.bat test_bignum.ps
 The script writes `test_bignum.ps` itself. Don't redirect its output with
 `>`: in Windows PowerShell 5.1 that writes UTF-16, which Ghostscript can't
 read.
+
+The tests normally load the `.ps` files. To test the dvips headers instead,
+run `make_headers.py` and then
+
+```bat
+"C:\Program Files\gs\gs9.52\bin\gswin64c.exe" -q -dNODISPLAY -dNOSAFER -dBATCH -dPSM_HEADERS test_bignum.ps
+```
+
+The first line of output says which were tested. The first section checks
+that loading adds only the library's dictionary to `userdict` and leaves the
+stacks as they were.
+
+## Changes since version 1.1
+
+- Every name is now defined in `tx@PostScriptMathDict` instead of `userdict`.
+  `Load.ps` opens the dictionary, so code that starts with `(Load.ps) run`
+  works unchanged.
+- Each part is available as a dvips header in `dvips/`, built by
+  `make_headers.py`.
+- 6 new tests for the namespace (581 in all), and the suite can run against
+  the headers.
 
 ## Changes in version 1.1 (November 2026)
 

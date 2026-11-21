@@ -19,6 +19,12 @@
 %
 % This work consists of the files listed in README.md.
 %
+
+% Every name is defined in tx@PostScriptMathDict, so that nothing clashes with other
+% PostScript code. Load.ps leaves the dictionary open; after loading a file
+% on its own, use  tx@PostScriptMathDict begin ... end  around calls.
+/tx@PostScriptMathDict where { pop }{ /tx@PostScriptMathDict 600 dict def } ifelse
+tx@PostScriptMathDict begin
 % ---------------------------------------------------------------------------
 % CORDIC (COordinate Rotation DIgital Computer, J. E. Volder, 1959) builds an
 % angle out of the fixed steps atan(1), atan(1/2), atan(1/4), ...  Each step
@@ -111,5 +117,7 @@ end
 /corsec { corcos 1 exch div } bind def
 /corcsc { corsin 1 exch div } bind def
 /coratan { 40 cordicatan } bind def
+
+end % tx@PostScriptMathDict
 
 %%EOF
