@@ -45,7 +45,7 @@ end
 	/n exch def /y exch def /x exch def
 	n cordic_nmax gt { /n cordic_nmax def } if
 	x 0 eq {
-		y 0 eq { x y /cordicatan errordict /undefinedresult get exec } if
+		y 0 eq { x y end /cordicatan errordict /undefinedresult get exec } if
 		y 0 gt { pi 2 div }{ pi -2 div } ifelse
 	}{
 		x 0 lt { /x x neg def /y y neg def } if

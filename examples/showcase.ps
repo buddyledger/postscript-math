@@ -140,10 +140,11 @@
 	dup typchk (bignumtype) eq { bncvs }{
 	dup typchk (complextype) eq { ccvs }{
 	dup typchk (matrixtype) eq { sc_fmtmatrix }{
+	dup typchk (tensortype) eq { tcvs }{
 	dup type /arraytype eq 1 index xcheck not and { sc_fmtlist }{
 	dup type /stringtype eq { (\() exch mergestr (\)) mergestr }{
 	dup type /nametype eq { dup xcheck { 60 string cvs }{ (/) exch 60 string cvs mergestr } ifelse }{
-	60 string cvs } ifelse } ifelse } ifelse } ifelse } ifelse } ifelse } ifelse
+	60 string cvs } ifelse } ifelse } ifelse } ifelse } ifelse } ifelse } ifelse } ifelse
 } def
 /sc_chunks { % (str) n -> [ (piece) ... ]
 	/sc_n exch def /sc_s exch def
@@ -410,6 +411,16 @@ revision 100 mod dup 10 lt { exch (0) mergestr exch } if 10 string cvs mergestr
 (\(7.5\) 2 modbn)
 	(The numbers need not be whole: 7.5 = 2 x 3 + 1.5.) sc_row
 
+(Number theory) sc_h2
+(2 100 1000007 powmodbn)
+	(2^100 mod 1000007, exact: powmodbn works on integers of any size without forming 2^100.) sc_row
+(\(170141183460469231731687303715884105727\) isprime)
+	(The Mersenne number 2^127 - 1 is prime \(Miller-Rabin, deterministic below 3.3 x 10^24, a strong probable-prime test above\).) sc_row
+(\(18446744073709551617\) factor)
+	(2^64 + 1 = 274177 x 67280421310721, by trial division and Pollard's rho.) sc_rowl
+(360 factor)
+	(The prime factors with multiplicity, ascending.) sc_rowl
+
 % ================================================================ Trig
 (Trig.ps) sc_h1
 (CORDIC builds an angle from the fixed steps atan\(1\), atan\(1/2\), atan\(1/4\), and so on, using only additions and halvings. Results are ordinary PostScript reals, good to about 6 significant digits with the default 40 iterations.) sc_para
@@ -652,6 +663,28 @@ sc_labels
 ([[\(0\) 0 24] [1 0 -26] [0 1 9]] mfromrows meig)
 	(The companion matrix of \(x-2\)\(x-3\)\(x-4\), with bignums: its eigenvalues are the roots.) sc_rowl
 
+(Decompositions, eigenvectors, functions of matrices) sc_h2
+([[4 2] [2 3]] mfromrows mchol)
+	(Cholesky: A = L L^T for a symmetric positive definite A.) sc_row
+([[3 1] [4 2] [0 5]] mfromrows mqr exch pop)
+	(QR: this is R, upper triangular with a positive diagonal; Q has orthonormal columns.) sc_row
+([[3 0] [4 5]] mfromrows msingular)
+	(The singular values, largest first: msvd gives U, S and V with A = U diag\(S\) V^T.) sc_rowl
+([[1 2] [2 4]] mfromrows mpinv)
+	(The pseudo-inverse of a singular matrix, from the SVD.) sc_row
+([[1 2 3] [2 4 6]] mfromrows mnull)
+	(An orthonormal basis of the null space, as columns.) sc_row
+([[2 1] [1 2]] mfromrows meigvec 1 get 1 get)
+	(meigvec gives each eigenvalue with a unit eigenvector of complex numbers: this is the eigenvector of the eigenvalue 3, \(1, 1\)/sqrt 2.) sc_rowl
+([[0 1] [-1 0]] mfromrows mexp)
+	(The matrix exponential: a rotation by 1 radian, [cos 1, sin 1; -sin 1, cos 1].) sc_row
+([[1 1] [1 0]] mfromrows 10 mpow)
+	(Powers: Fibonacci numbers. A negative power uses the inverse.) sc_row
+([[1 2] [3 4]] mfromrows [[0 1] [1 0]] mfromrows mkron)
+	(The Kronecker product.) sc_row
+([1 2 3] mdiag)
+	(A list gives a diagonal matrix; a matrix gives the list of its diagonal.) sc_row
+
 % ================================================================ Complex
 (Complex.ps) sc_h1
 (A complex number is the array [re im], and results print as re + im i. Wherever a complex number is expected, a plain number x counts as [x 0]. As with matrices, if any part is a bignum or a string such as \(0.1\), the calculation uses bignums.) sc_para
@@ -794,6 +827,38 @@ sc_labels
 ([1 2 3 4] fft ifft)
 	(ifft inverts it.) sc_rowl
 
+(More statistics) sc_h2
+([3 1 4 1 5 9 2 6] 0.25 quantile)
+	(The first quartile, R's type 7 and Excel's PERCENTILE.INC.) sc_row
+([2 4 4 4 5 5 7 9] mode)
+	(The most frequent value.) sc_row
+([1 2 3 10] skewness)
+	(Adjusted sample skewness G1; kurtosis gives G2.) sc_row
+([0.5 1.5 1.7 2.2 2.9 3.1] 0 3 3 histogram)
+	(Counts in 3 equal bins on [0, 3].) sc_rowl
+([1 2 3] [3 1 1] wmean)
+	(A weighted mean. listmin, listmax and listsum do what they say.) sc_row
+
+(Regression) sc_h2
+([1 2 3 4 5 6] [2.1 3.9 6.2 7.8 10.1 12.2] 1 regress /coef get)
+	(regress fits a model by least squares and returns a dictionary: here the straight line, constant term first.) sc_rowl
+([1 2 3 4 5 6] [2.1 3.9 6.2 7.8 10.1 12.2] linreg dup /r2 get exch /s get 2 array astore)
+	(r^2 and s, the residual standard error. The dictionary also has se, cov, dof, tval, fitted, resid, stdresid and more.) sc_rowl
+([1 2 3 4 5 6] [2.1 3.9 6.2 7.8 10.1 12.2] linreg 7 regpi)
+	(The 95 % prediction band at x = 7, with the exact t value; regci gives the confidence band of the mean.) sc_rowl
+([1 2 3 4 5] [3.1 12.2 26.8 48.5 75.3] /power regress /params get dup /a get exch /b get 2 array astore)
+	(A power law y = a x^b, fitted as a straight line in log-log space. Also /exp, /ln, /log10, /recip and /gauss.) sc_rowl
+([1 2 3 4] [3 5 7 10] << /model 1 /intercept 1 >> regress /coef get)
+	(With the intercept fixed at 1, as GLLSR's Yint did. Weights and a confidence level go in the same dictionary.) sc_rowl
+([1 2 3 4 5 6] [2.1 3.9 6.2 7.8 10.1 12.2] { dup 57.29578 mul sin 2 array astore } regress /coef get)
+	(Your own basis functions: here y = c1 x + c2 sin x, with x in radians \(PostScript's sin takes degrees\).) sc_rowl
+
+(Random numbers, Gauss-Legendre) sc_h2
+(42 rngseed rnguniform)
+	(A seeded generator that gives the same numbers on every interpreter \(Park-Miller\); rngnormal gives normal numbers.) sc_row
+({ dup mul } 0 1 3 fgauss)
+	(Gauss-Legendre with 3 nodes integrates polynomials up to degree 5 exactly.) sc_row
+
 % ================================================================ Special
 (Special.ps) sc_h1
 (Special functions of a number, a bignum or a string. A number gives a real, computed with bignums at 12 digits; a bignum or a string gives a bignum at the current precision.) sc_para
@@ -823,6 +888,62 @@ sc_labels
 	(The Bessel function J0 at 1. besselj takes an integer order and any x.) sc_row
 (0 2.404825558 besselj)
 	(Near the first zero of J0. A real argument gives a real result.) sc_row
+
+(More special functions) sc_h2
+(\(1\) digamma)
+	(The digamma function at 1 is minus Euler's constant.) sc_row
+(\(0.5\) \(0.5\) betafn)
+	(B\(1/2, 1/2\) = pi.) sc_row
+(\(100\) \(50\) choose)
+	(An exact binomial coefficient with all 30 digits.) sc_row
+(\(3\) \(2\) gammainc)
+	(The regularized incomplete gamma function P\(a, x\); gammaincc gives Q = 1 - P.) sc_row
+(0.3 2 3 betainc)
+	(The regularized incomplete beta function.) sc_row
+(0 \(1\) besselk)
+	(The modified Bessel function K0; besseli and bessely complete the set.) sc_row
+
+(Distributions) sc_h2
+(0.975 10 tinv)
+	(The t value of a 95 % two-sided interval with 10 degrees of freedom.) sc_row
+(\(0.975\) 10 tinv)
+	(The same with bignums.) sc_row
+(3.84146 1 chi2cdf)
+	(The chi-squared distribution function.) sc_row
+(0.95 2 10 finv)
+	(A quantile of the F distribution.) sc_row
+(3 10 0.3 binompdf)
+	(The binomial probability of 3 successes in 10.) sc_row
+(0.5 4 poissoninv)
+	(The median of a Poisson distribution with mean 4.) sc_row
+
+% ================================================================ Tensor
+(Tensor.ps) sc_h1
+(Tensors of any rank of reals or bignums: a dictionary with /shape and /data, the elements in row-major order.) sc_para
+
+(Building and reading) sc_h2
+([[[1 2] [3 4]] [[5 6] [7 8]]] tensor)
+	(A tensor of rank 3 from a nested list.) sc_row
+([[[1 2] [3 4]] [[5 6] [7 8]]] tensor [2 1 2] tget)
+	(One element, indices from 1.) sc_row
+(3 tlevi [1 2 3] tget)
+	(The Levi-Civita symbol; tdelta gives the Kronecker delta.) sc_row
+
+(Algebra and Einstein summation) sc_h2
+([1 2] tensor [3 4] tensor touter)
+	(The outer product.) sc_row
+(\(ij,jk->ik\) [ [[1 2] [3 4]] tensor [[5 6] [7 8]] tensor ] teinsum)
+	(Einstein summation: the matrix product.) sc_row
+(\(ii\) [ [[1 2] [3 4]] tensor ] teinsum)
+	(The trace.) sc_row
+([[1 2] [3 4]] tensor tsym)
+	(The symmetric part; tantisym the antisymmetric part.) sc_row
+([[[1 2] [3 4]] [[5 6] [7 8]]] tensor [3 1 2] tpermute)
+	(The axes in a new order.) sc_row
+([1 0 0] [0 1 0] tcross)
+	(The cross product, through the Levi-Civita symbol.) sc_rowl
+([[1 2] [3 4]] tensor [[1 0] [0 -1]] 1 tlower)
+	(An index lowered with the metric diag\(1, -1\); traise uses its inverse.) sc_row
 
 % ================================================================ other
 (Utilities) sc_h1

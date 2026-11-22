@@ -1,19 +1,24 @@
 pst-numeric: arbitrary precision arithmetic, matrices, complex numbers
 and numerical methods for PSTricks
 
-Version 1.3, 2026/11/21
+Version 1.4, 2026/11/22
 
 pst-numeric is a library of PostScript procedures for PSTricks. Its
 decimal numbers (bignums) carry as many significant digits as asked for,
 with arithmetic, square roots, exponentials, logarithms, trigonometric
 and hyperbolic functions and their inverses, pi, factorials and binomial
-coefficients. On top of that it has matrices (determinant, inverse,
-linear systems, least squares, LU decomposition, eigenvalues), complex
-numbers with their elementary functions, roots of functions, integrals,
-polynomials, interpolation and splines, minima, derivatives, systems of
-equations, statistics, differential equations and the Fourier transform,
-each working on ordinary reals or on bignums, and gamma, error and Bessel
-functions and the normal distribution. The calculations run in
+coefficients, primality and factorization. On top of that it has
+matrices (determinant, inverse, linear systems, least squares, LU,
+Cholesky, QR and singular value decompositions, eigenvalues and
+eigenvectors, matrix exponential), tensors of any rank with Einstein
+summation, complex numbers with their elementary functions, roots of
+functions, integrals, polynomials, interpolation and splines, minima,
+derivatives, systems of equations, statistics, regression with confidence
+and prediction bands, differential equations and the Fourier transform,
+each working on ordinary reals or on bignums, and gamma, beta, error and
+Bessel functions with the normal, t, chi-squared, F, exponential,
+binomial and Poisson distributions. Results can be typeset as rounded
+numbers, matrices with brackets, tensor slices and regression reports. The calculations run in
 the PostScript interpreter while the page is drawn, so they can feed
 plots directly.
 
@@ -23,7 +28,7 @@ plots directly.
     \psNumericShow{50 setbnsize pibn}
 
 The package options choose the parts (bignum, trig, matrix, complex,
-calc, special); each part is a separate dvips header. Like every PSTricks package
+calc, special, tensor); each part is a separate dvips header. Like every PSTricks package
 it needs the latex-dvips route, or xelatex.
 
 Files

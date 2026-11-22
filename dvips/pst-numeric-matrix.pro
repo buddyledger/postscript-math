@@ -571,6 +571,372 @@ end
 	[ exch { aload pop m_fin exch m_fin exch 2 array astore } forall ]
 	end
 } bind def
+/m_dotv { % u v -> u . v
+	m_zero 0 1 3 index length 1 sub { 3 index 1 index get 3 index 2 index get m_mul exch pop m_add } for
+	3 1 roll pop pop
+} bind def
+/m_mm { % X Y -> X Y   (matrices as lists of columns, converted elements)
+	6 dict begin /m_my exch def /m_mx exch def
+	[ m_my { /m_yc exch def
+		[ 0 1 m_mx 0 get length 1 sub { /m_ri exch def
+			m_zero 0 1 m_yc length 1 sub { /m_kk exch def m_mx m_kk get m_ri get m_yc m_kk get m_mul m_add } for
+		} for ]
+	} forall ]
+	end
+} bind def
+/m_colsof { [ exch { [ exch { m_cv } forall ] } forall ] } bind def   % M -> converted copy
+/mkron {
+	2 copy m_hasbn exch m_hasbn or m_ops begin
+	16 dict begin
+	/B exch def /A exch def
+	A msize /na exch def /ma exch def
+	B msize /nb exch def /mb exch def
+	/C ma mb mul na nb mul marray def
+	1 1 ma { /ia exch def 1 1 na { /ja exch def
+		/aij A ia ja mget m_cv def
+		1 1 mb { /ib exch def 1 1 nb { /jb exch def
+			C ia 1 sub mb mul ib add ja 1 sub nb mul jb add
+			aij B ib jb mget m_cv m_mul mput
+		} for } for
+	} for } for
+	C m_finm
+	end end
+} bind def
+/mdiag {
+	dup type /arraytype ne { /mdiag errordict /typecheck get exec } if
+	dup length 0 eq { /mdiag errordict /rangecheck get exec } if
+	dup 0 get dup type /arraytype eq exch m_isbn not and {
+		8 dict begin /A exch def A msize 2 copy gt { exch } if pop /k exch def
+		[ 1 1 k { dup A 3 1 roll mget } for ]
+		end
+	}{
+		8 dict begin /L exch def /n L length def
+		/D n n marray def
+		1 1 n { /i exch def D i i L i 1 sub get mput } for
+		D end
+	} ifelse
+} bind def
+/mpow {
+	dup type /integertype ne { /mpow errordict /typecheck get exec } if
+	1 index msize ne { /mpow errordict /rangecheck get exec } if
+	12 dict begin
+	/k exch def /A exch def
+	k 0 lt {
+		A mdet dup m_isbn { bniszero }{ 0 eq } ifelse
+		{ A k end /mpow errordict /undefinedresult get exec } if
+		/A A minv def /k k neg def
+	} if
+	/R A length midentity def /P A def
+	{ k 0 eq { exit } if
+	  k 2 mod 1 eq { /R R P mmul def } if
+	  /k k 2 idiv def
+	  k 0 gt { /P P P mmul def } if
+	} loop
+	R
+	end
+} bind def
+/mchol {
+	dup m_hasbn m_ops begin m_guard
+	24 dict begin
+	/A exch def A msize /n exch def /m exch def
+	m n ne { A end m_unguard end /mchol errordict /rangecheck get exec } if
+	/W [ 1 1 n { /i exch def [ 1 1 n { /j exch def A i j mget m_cv } for ] } for ] def
+	m_zero W { { m_abs m_max } forall } forall /amax exch def
+	/ok true def
+	0 1 n 1 sub { /i exch def i 1 add 1 n 1 sub { /j exch def
+		W i get j get W j get i get m_sub m_abs amax m_eps m_mul m_gt { /ok false def } if
+	} for } for
+	/L [ 1 1 n { pop [ 1 1 n { pop m_zero } for ] } for ] def
+	ok { 0 1 n 1 sub { /j exch def
+		W j get j get 0 1 j 1 sub { L j get exch get dup m_mul m_sub } for
+		/s exch def
+		s amax m_eps m_mul m_gt not { /ok false def exit } if
+		/d s m_sqrt def L j get j d put
+		j 1 add 1 n 1 sub { /i exch def
+			W i get j get 0 1 j 1 sub { /k exch def L i get k get L j get k get m_mul m_sub } for
+			d m_div L i get j 3 -1 roll put
+		} for
+	} for } if
+	ok not { A end m_unguard end /mchol errordict /rangecheck get exec } if
+	[ 0 1 n 1 sub { /j exch def [ 0 1 n 1 sub { L exch get j get } for ] } for ]
+	end m_unguard m_finm end
+} bind def
+/mqr {
+	dup m_hasbn m_ops begin m_guard
+	24 dict begin
+	/A exch def A msize /n exch def /m exch def
+	m n lt { A end m_unguard end /mqr errordict /rangecheck get exec } if
+	/Q A m_colsof def
+	m_zero Q { { m_abs m_max } forall } forall m_eps m_mul /tol exch def
+	/Rr [ 1 1 n { pop [ 1 1 n { pop m_zero } for ] } for ] def
+	/ok true def
+	0 1 n 1 sub { /j exch def /v Q j get def
+		2 { 0 1 j 1 sub { /i exch def /qi Q i get def
+			qi v m_dotv /r exch def
+			Rr i get j  Rr i get j get r m_add  put
+			0 1 m 1 sub { /k exch def v k  v k get r qi k get m_mul m_sub  put } for
+		} for } repeat
+		v v m_dotv m_sqrt /nrm exch def
+		nrm tol m_gt not { /ok false def exit } if
+		Rr j get j nrm put
+		0 1 m 1 sub { /k exch def v k  v k get nrm m_div  put } for
+	} for
+	ok not { A end m_unguard end /mqr errordict /undefinedresult get exec } if
+	Q
+	[ 0 1 n 1 sub { /j exch def [ 0 1 n 1 sub { Rr exch get j get } for ] } for ]
+	end m_unguard
+	m_finm exch m_finm exch
+	end
+} bind def
+/m_svd {
+	40 dict begin
+	/A exch def A msize /n exch def /m exch def
+	m n lt {
+		A mtranspose m_svd /V2 exch def /S2 exch def /U2 exch def
+		V2 S2 U2
+	}{
+		/W A m_colsof def
+		/V [ 0 1 n 1 sub { /i exch def [ 0 1 n 1 sub { i eq { m_one }{ m_zero } ifelse } for ] } for ] def
+		/tol m_tol def
+		m_zero W { { dup m_mul m_add } forall } forall m_eps m_mul m_eps m_mul /zfl exch def
+		/rotc { % xp xq ->   (xp, xq) <- (c xp - s xq, s xp + c xq)
+			/xq exch def /xp exch def
+			0 1 xp length 1 sub { /k exch def /a1 xp k get def /b1 xq k get def
+				xp k c a1 m_mul s b1 m_mul m_sub put
+				xq k s a1 m_mul c b1 m_mul m_add put
+			} for
+		} def
+		/sweep 0 def
+		{ /rot false def
+		  0 1 n 2 sub { /p exch def p 1 add 1 n 1 sub { /q exch def
+			/wp W p get def /wq W q get def
+			/ga wp wq m_dotv def
+			ga m_isz not {
+				/al wp wp m_dotv def /be wq wq m_dotv def
+				al zfl m_gt be zfl m_gt and { ga m_abs al be m_mul m_sqrt tol m_mul m_gt }{ false } ifelse {
+					/rot true def
+					/ze be al m_sub m_two ga m_mul m_div def
+					/za ze m_abs def
+					za m_one m_gt {
+						m_one za m_div /zi exch def
+						m_one za m_one m_one zi zi m_mul m_add m_sqrt m_add m_mul m_div
+					}{ m_one za m_one za za m_mul m_add m_sqrt m_add m_div } ifelse
+					ze m_isneg { m_neg } if /t exch def
+					/c m_one m_one t t m_mul m_add m_sqrt m_div def
+					/s c t m_mul def
+					wp wq rotc  V p get V q get rotc
+				} if
+			} if
+		  } for } for
+		  rot not { exit } if
+		  /sweep sweep 1 add def sweep 60 gt { exit } if
+		} loop
+		/sig [ W { dup m_dotv m_sqrt } forall ] def
+		/idx [ 0 1 n 1 sub { } for ] def
+		1 1 n 1 sub { /k exch def
+			/cur idx k get def /j k 1 sub def
+			{ j 0 lt { exit } if
+			  sig idx j get get sig cur get m_lt not { exit } if
+			  idx j 1 add idx j get put /j j 1 sub def
+			} loop
+			idx j 1 add cur put
+		} for
+		/ztol sig idx 0 get get m_eps m_mul def
+		/Ul [ ] def
+		/S [ idx { /k exch def
+			sig k get ztol m_gt {
+				/u [ W k get { sig k get m_div } forall ] def
+				/Ul [ Ul aload pop u ] def sig k get
+			}{
+				0 1 m 1 sub { /r exch def
+					/u [ 0 1 m 1 sub { r eq { m_one }{ m_zero } ifelse } for ] def
+					2 { Ul { /w exch def w u m_dotv /dd exch def
+						0 1 m 1 sub { /i exch def u i  u i get dd w i get m_mul m_sub  put } for
+					} forall } repeat
+					u u m_dotv m_sqrt /nu exch def
+					nu m_two m_mul m_one m_gt { exit } if
+				} for
+				/u [ u { nu m_div } forall ] def
+				/Ul [ Ul aload pop u ] def m_zero
+			} ifelse
+		} forall ] def
+		Ul S [ idx { V exch get } forall ]
+	} ifelse
+	end
+} bind def
+/msvd {
+	dup m_hasbn m_ops begin m_guard m_svd m_unguard
+	m_finm 3 1 roll [ exch { m_fin } forall ] exch m_finm exch 3 -1 roll
+	end
+} bind def
+/msingular { msvd pop exch pop } bind def
+/mpinv {
+	dup m_hasbn m_ops begin m_guard
+	20 dict begin
+	/A exch def A msize /n exch def /m exch def
+	A m_svd /V exch def /S exch def /U exch def
+	/k S length def
+	S 0 get m_eps m_mul /ztol exch def
+	[ 0 1 m 1 sub { /jj exch def [ 0 1 n 1 sub { /ii exch def
+		m_zero 0 1 k 1 sub { /kk exch def
+			S kk get ztol m_gt { V kk get ii get U kk get jj get m_mul S kk get m_div m_add } if
+		} for
+	} for ] } for ]
+	end m_unguard m_finm end
+} bind def
+/mnull {
+	dup m_hasbn m_ops begin m_guard
+	20 dict begin
+	/A exch def A msize /n exch def /m exch def
+	m n lt { /A [ A { [ exch aload pop n m sub { 0 } repeat ] } forall ] def } if
+	A m_svd /V exch def /S exch def pop
+	S 0 get m_eps m_mul /ztol exch def
+	[ 0 1 n 1 sub { /kk exch def S kk get ztol m_gt not { V kk get } if } for ]
+	end m_unguard m_finm end
+} bind def
+/meigsymv { meigsym } bind def
+/meigvec {
+	dup meig exch
+	dup m_hasbn m_ops begin m_guard
+	64 dict begin
+	/A exch def /Z exch def
+	A msize /n exch def pop
+	/Ar [ 1 1 n { /i exch def [ 1 1 n { /j exch def A i j mget m_cv } for ] } for ] def
+	m_zero Ar { { m_abs m_max } forall } forall /anorm exch def
+	anorm m_isz { /anorm m_one def } if
+	/tiny anorm m_eps m_mul def
+	/samtol anorm m_eps m_mul 1000 m_cv m_mul def
+	/restol anorm m_eps m_mul 100 m_cv m_mul def
+	/cdv { % ar ai br bi -> (a / b) re im
+		/d_bi exch def /d_br exch def /d_ai exch def /d_ar exch def
+		/d_den d_br d_br m_mul d_bi d_bi m_mul m_add def
+		d_ar d_br m_mul d_ai d_bi m_mul m_add d_den m_div
+		d_ai d_br m_mul d_ar d_bi m_mul m_sub d_den m_div
+	} def
+	/csolve { % br bi -> xr xi   with (A - lambda I) x = b, tiny pivots replaced
+		/bi_ exch def /br_ exch def
+		/Wr [ 0 1 n 1 sub { /ii exch def [ 0 1 n 1 sub { /jj exch def Ar ii get jj get ii jj eq { lr m_sub } if } for br_ ii get ] } for ] def
+		/Wi [ 0 1 n 1 sub { /ii exch def [ 0 1 n 1 sub { /jj exch def ii jj eq { li m_neg }{ m_zero } ifelse } for bi_ ii get ] } for ] def
+		0 1 n 1 sub { /c exch def
+			/p c def /best Wr c get c get Wi c get c get m_cnorm def
+			c 1 add 1 n 1 sub { /r exch def
+				Wr r get c get Wi r get c get m_cnorm dup best m_gt { /best exch def /p r def }{ pop } ifelse
+			} for
+			p c ne { [ Wr Wi ] { /arr exch def arr p get arr c get arr exch p exch put arr exch c exch put } forall } if
+			best tiny m_gt not { Wr c get c tiny put Wi c get c m_zero put } if
+			/pvr Wr c get c get def /pvi Wi c get c get def
+			c 1 add 1 n 1 sub { /r exch def
+				Wr r get c get Wi r get c get pvr pvi cdv /fi exch def /fr exch def
+				c 1 n { /j exch def
+					fr fi Wr c get j get Wi c get j get m_cmul /ti exch def /tr exch def
+					Wr r get j  Wr r get j get tr m_sub  put
+					Wi r get j  Wi r get j get ti m_sub  put
+				} for
+			} for
+		} for
+		/xr n array def /xi n array def
+		n 1 sub -1 0 { /ii exch def
+			Wr ii get n get Wi ii get n get
+			ii 1 add 1 n 1 sub { /j exch def
+				Wr ii get j get Wi ii get j get xr j get xi j get m_cmul
+				3 -1 roll exch m_sub 3 1 roll m_sub exch
+			} for
+			Wr ii get ii get Wi ii get ii get cdv xi ii 3 -1 roll put xr ii 3 -1 roll put
+		} for
+		xr xi
+	} def
+	/vnorm { % vr vi -> vr vi with unit length
+		/ni_ exch def /nr_ exch def
+		m_zero 0 1 n 1 sub { /ii exch def nr_ ii get dup m_mul ni_ ii get dup m_mul m_add m_add } for
+		m_sqrt /nn exch def
+		nn m_isz { nr_ ni_ }{ [ nr_ { nn m_div } forall ] [ ni_ { nn m_div } forall ] } ifelse
+	} def
+	/vorth { % vr vi -> vr vi minus its projections on the vectors in same
+		/oi_ exch def /or_ exch def
+		same { aload pop /ui_ exch def /ur_ exch def
+			m_zero m_zero 0 1 n 1 sub { /ii exch def ur_ ii get ui_ ii get m_neg or_ ii get oi_ ii get m_cmul m_cadd } for
+			/di_ exch def /dr_ exch def
+			0 1 n 1 sub { /ii exch def
+				dr_ di_ ur_ ii get ui_ ii get m_cmul /ti exch def /tr exch def
+				or_ ii or_ ii get tr m_sub put  oi_ ii oi_ ii get ti m_sub put
+			} for
+		} forall
+		or_ oi_
+	} def
+	/invit { % vr vi doorth -> vr vi
+		/dorth exch def
+		dorth { vorth } if vnorm
+		3 { csolve dorth { vorth } if vnorm } repeat
+	} def
+	/resid { % vr vi -> largest |(A v - lambda v)_i|
+		/si_ exch def /sr_ exch def
+		m_zero 0 1 n 1 sub { /ii exch def
+			m_zero m_zero 0 1 n 1 sub { /jj exch def Ar ii get jj get m_zero sr_ jj get si_ jj get m_cmul m_cadd } for
+			lr li sr_ ii get si_ ii get m_cmul m_neg exch m_neg exch m_cadd m_cnorm m_max
+		} for
+	} def
+	/vecs n array def
+	0 1 n 1 sub { /e exch def
+		/lr Z e get 0 get m_cv def /li Z e get 1 get m_cv def
+		/same [ 0 1 e 1 sub { /f exch def
+			Z f get 0 get m_cv lr m_sub Z f get 1 get m_cv li m_sub m_cnorm samtol m_gt not { vecs f get } if
+		} for ] def
+		/b0 [ 0 1 n 1 sub { pop m_zero } for ] def
+		[ 0 1 n 1 sub { 1 add m_cv m_sqrt m_one exch m_div } for ] [ b0 aload pop ] false invit
+		/vi exch def /vr exch def
+		same length 0 gt {
+			[ 0 1 n 1 sub { dup 2 add m_cv m_sqrt m_one exch m_div exch 2 mod 1 eq { m_neg } if } for ]
+			[ b0 aload pop ] true invit /wi exch def /wr exch def
+			wr wi resid restol m_gt not { /vr wr def /vi wi def } if
+		} if
+		/bk 0 def /bm m_zero def
+		0 1 n 1 sub { /ii exch def
+			vr ii get dup m_mul vi ii get dup m_mul m_add
+			dup bm m_one m_eps 100 m_cv m_mul m_add m_mul m_gt { /bm exch def /bk ii def }{ pop } ifelse
+		} for
+		/bm vr bk get dup m_mul vi bk get dup m_mul m_add def
+		/am bm m_sqrt def /pr vr bk get am m_div def /pq vi bk get m_neg am m_div def
+		/ur n array def /ui n array def
+		0 1 n 1 sub { /ii exch def
+			vr ii get vi ii get pr pq m_cmul
+			dup m_abs m_eps m_gt not { pop m_zero } if ui ii 3 -1 roll put
+			dup m_abs m_eps m_gt not { pop m_zero } if ur ii 3 -1 roll put
+		} for
+		ui bk m_zero put
+		vecs e [ ur ui ] put
+	} for
+	[ 0 1 n 1 sub { /e exch def
+		[ Z e get [ 0 1 n 1 sub { /ii exch def [ vecs e get aload pop ii get exch ii get exch ] } for ] ]
+	} for ]
+	end m_unguard
+	[ exch { aload pop [ exch { aload pop m_fin exch m_fin exch 2 array astore } forall ] 2 array astore } forall ]
+	end
+} bind def
+/mexp {
+	dup m_hasbn m_ops begin m_guard m_guard
+	24 dict begin
+	/A exch def A msize /n exch def /m exch def
+	m n ne { A end m_unguard m_unguard end /mexp errordict /rangecheck get exec } if
+	/B A m_colsof def
+	/nrm m_zero B { m_zero exch { m_abs m_add } forall m_max } forall def
+	/sq 0 def /half m_one m_two m_div def
+	{ nrm half m_gt not { exit } if /nrm nrm m_two m_div def /sq sq 1 add def } loop
+	sq 0 gt {
+		/f m_one def sq { /f f m_two m_mul def } repeat
+		/B [ B { [ exch { f m_div } forall ] } forall ] def
+	} if
+	/E [ 0 1 n 1 sub { /i exch def [ 0 1 n 1 sub { i eq { m_one }{ m_zero } ifelse } for ] } for ] def
+	/T [ E { [ exch aload pop ] } forall ] def
+	/tol m_eps 1000 m_cv m_div def
+	1 1 300 { /kk exch def /kc kk m_cv def
+		/T [ T B m_mm { [ exch { kc m_div } forall ] } forall ] def
+		/E [ 0 1 n 1 sub { /jj exch def [ 0 1 n 1 sub { /ii exch def E jj get ii get T jj get ii get m_add } for ] } for ] def
+		m_zero T { { m_abs m_max } forall } forall tol m_gt not { exit } if
+	} for
+	sq { /E E E m_mm def } repeat
+	E
+	end m_unguard m_unguard m_finm end
+} bind def
 /mPrint {
 	dup m_hasbn m_ops begin
 	mtorows {

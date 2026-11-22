@@ -58,7 +58,7 @@ for want in \
 done
 got="$(headers tex-test.ps)"
 echo "headers: $got"
-[ "$got" = "pst-numeric.pro pst-numeric-bignum.pro pst-numeric-trig.pro pst-numeric-matrix.pro pst-numeric-complex.pro pst-numeric-calc.pro pst-numeric-special.pro " ] \
+[ "$got" = "pst-numeric.pro pst-numeric-bignum.pro pst-numeric-trig.pro pst-numeric-matrix.pro pst-numeric-complex.pro pst-numeric-calc.pro pst-numeric-special.pro pst-numeric-tensor.pro " ] \
   || { echo "FAIL wrong headers"; fail=1; }
 
 echo "== option special loads bignum too"
@@ -75,7 +75,7 @@ got="$(headers special.ps)"
 echo "headers: $got"
 [ "$got" = "pst-numeric.pro pst-numeric-bignum.pro pst-numeric-special.pro " ] || { echo "FAIL wrong headers"; fail=1; }
 
-echo "== option calc loads matrix and complex too, but not bignum or trig"
+echo "== option calc loads matrix, complex, special and bignum too, but not trig"
 cat > parts.tex <<'EOF'
 \documentclass{article}
 \usepackage[calc]{pst-numeric}
@@ -87,7 +87,7 @@ build parts || exit 1
 expect parts.txt "1.41421"
 got="$(headers parts.ps)"
 echo "headers: $got"
-[ "$got" = "pst-numeric.pro pst-numeric-matrix.pro pst-numeric-complex.pro pst-numeric-calc.pro " ] \
+[ "$got" = "pst-numeric.pro pst-numeric-bignum.pro pst-numeric-matrix.pro pst-numeric-complex.pro pst-numeric-calc.pro pst-numeric-special.pro " ] \
   || { echo "FAIL wrong headers"; fail=1; }
 
 echo "== \\pstNumericParts set before loading, without options"
@@ -106,29 +106,53 @@ got="$(headers parts2.ps)"
 echo "headers: $got"
 [ "$got" = "pst-numeric.pro pst-numeric-bignum.pro " ] || { echo "FAIL wrong headers"; fail=1; }
 
+echo "== presentation: formats, matrices, tensors, regression"
+cat > pres.tex <<'EOF'
+\documentclass{article}
+\usepackage{pst-numeric}
+\psNumericDef{fit}{[1 2 3 4 5 6] [2.1 3.9 6.2 7.8 10.1 12.2] 1 regress}
+\begin{document}
+\begin{pspicture}(0,-6)(14,1)
+\psNumericShow[numFormat=fixed,numDigits=3]{(2) setbn (3) setbn divbn}
+\rput[l](4,0){\psNumericShow[numFormat=sci,numDigits=3,sciStyle=e]{(1.5e-12) setbn}}
+\rput[l](8,0){\psNumericShow[numFormat=auto,numDecimal={,}]{[1.25 -0.5]}}
+\rput[l](0,-1.5){\psNumericMatrix[label=A]{[[1 -2.5] [3 4]] mfromrows}}
+\rput[l](5,-1.5){\psNumericMatrix{[[[1 2] [3 4]] [[5 6] [7 8]]] tensor}}
+\rput[l](0,-4){\psNumericRegression[regShow=eq r2 dof]{fit}}
+\psset{xunit=0.3cm,yunit=0.2cm}
+\rput(30,-20){\psNumericRegPlot{fit}{0}{7}\psNumericRegPlot[regPlot=pi]{fit}{0}{7}%
+  \psNumericRegPlot[regPlot=data]{fit}{0}{0}}
+\end{pspicture}
+\end{document}
+EOF
+build pres || exit 1
+for want in "0.667" "1.50e" "1,25" "0,5i" "2.5" "(2,:,:)" "y = " "2.02x" "0.9982" "dof = 4"; do
+  expect pres.txt "$want"
+done
+
 echo "== an unknown option is an error"
 cat > badopt.tex <<'EOF'
 \documentclass{article}
-\usepackage[tensor]{pst-numeric}
+\usepackage[bogus]{pst-numeric}
 \begin{document}x\end{document}
 EOF
 if latex -interaction=nonstopmode -halt-on-error badopt.tex > badopt.log 2>&1; then
-  echo "FAIL the option tensor was accepted"; fail=1
+  echo "FAIL the option bogus was accepted"; fail=1
 else
-  grep -q "Unknown option" badopt.log && echo "ok   option tensor rejected" || { echo "FAIL other error"; tail -20 badopt.log; fail=1; }
+  grep -q "Unknown option" badopt.log && echo "ok   option bogus rejected" || { echo "FAIL other error"; tail -20 badopt.log; fail=1; }
 fi
 
 echo "== an unknown part in \\pstNumericParts is an error"
 cat > badpart.tex <<'EOF'
 \documentclass{article}
-\def\pstNumericParts{matrix,tensor}
+\def\pstNumericParts{matrix,bogus}
 \usepackage{pst-numeric}
 \begin{document}x\end{document}
 EOF
 if latex -interaction=nonstopmode -halt-on-error badpart.tex > badpart.log 2>&1; then
-  echo "FAIL the part tensor was accepted"; fail=1
+  echo "FAIL the part bogus was accepted"; fail=1
 else
-  grep -q "unknown part .tensor" badpart.log && echo "ok   part tensor rejected" || { echo "FAIL other error"; tail -20 badpart.log; fail=1; }
+  grep -q "unknown part .bogus" badpart.log && echo "ok   part bogus rejected" || { echo "FAIL other error"; tail -20 badpart.log; fail=1; }
 fi
 
 echo

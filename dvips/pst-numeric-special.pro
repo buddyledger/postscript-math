@@ -227,4 +227,939 @@ end
 	1 index type /integertype ne { /besselj errordict /typecheck get exec } if
 	{ sp_besselj } sp_call
 } bind def
+/sp_calln { % a1 ... an n {proc} -> proc of the arguments, as sp_call does for one
+	exch false 1 1 4 -1 roll { 1 add index sp_isbn or } for
+	{
+		4 dict begin /sp_ds countdictstack def
+		stopped {
+			{ countdictstack sp_ds le { exit } if end } loop
+			end $error /command get errordict $error /errorname get get exec
+		} if
+		end
+	}{
+		4 dict begin /bnn 12 def /sp_ds countdictstack def
+		stopped {
+			{ countdictstack sp_ds le { exit } if end } loop
+			end $error /command get errordict $error /errorname get get exec
+		} if
+		end dup sp_isbn { bncvr } if
+	} ifelse
+} bind def
+/sp_prec { % extra {proc} -> result of proc at bnn + extra + bn_guard digits, rounded to bnn
+3 dict begin
+	/sp_p exch def /bnn exch bnn add bn_guard add def
+	sp_p
+end
+	bn_renorm
+} bind def
+/sp_pole { dup bn_isint exch dup bn_isneg exch bniszero or and } bind def   % bn -> 0, -1, -2, ...?
+/sp_npos { dup bn_isneg exch bniszero or } bind def                        % bn -> bn <= 0?
+/sp_half { (0.5) setbn } bind def
+/sp_digpos { % x > 0 -> psi(x)   (at the current bnn)
+16 dict begin
+	/x exch def /z0 bnn 10 bn_max def
+	{
+		x z0 setbn gebn { /N 0 def }{ /N z0 x bncvr floor cvi sub def } ifelse
+		/z x N setbn addbn def
+		/main z lnbn 1 setbn z divbn 2 bn_divint subbn def
+		/zi2 1 setbn z z mulbn divbn def
+		/sum 0 setbn def /pw zi2 def /ok false def
+		0 1 59 { /k exch def
+			/term sp_bern k 2 mul get setbn sp_bern k 2 mul 1 add get setbn divbn
+			      k 1 add 2 mul bn_divint pw mulbn def
+			/sum sum term addbn def
+			term main bn_tiny { /ok true def exit } if
+			/pw pw zi2 mulbn def
+		} for
+		ok { exit } if
+		/z0 z0 2 mul def
+	} loop
+	main sum subbn
+	0 1 N 1 sub { setbn x addbn 1 setbn exch divbn subbn } for
+end
+} bind def
+/sp_euler { /euler { 1 setbn sp_digpos negbn } bn_cachedget } bind def   % Euler's constant
+/sp_digamma { % x -> psi(x)
+8 dict begin
+	setbn /x exch def
+	x sp_pole { x end /digamma errordict /undefinedresult get exec } if
+	x bn_isneg not { x 3 { sp_digpos } bn_prec }{
+		x dup sp_extra 2 mul 3 add {
+			/y exch def
+			1 setbn y subbn sp_digpos  y pibn mulbn dup cosbn exch sinbn divbn pibn mulbn subbn
+		} bn_prec
+	} ifelse
+end
+} bind def
+/sp_hint { % x -> true if 2x is an integer and 0 < x <= 1000
+	dup sp_npos { pop false }{ dup 1000 setbn gtbn { pop false }{ 2 setbn mulbn bn_isint } ifelse } ifelse
+} bind def
+/sp_gammah { % x (2x an integer, 0 < x <= 1000) -> Gamma(x), by products
+4 dict begin
+	2 setbn mulbn bn_toint /m exch def
+	m 2 mod 0 eq { m 2 idiv 1 sub factbn }{
+		m 3 idiv 3 add {
+			1 setbn 1 2 m 2 sub { setbn mulbn 2 bn_divint } for pibn sqrtbn mulbn
+		} sp_prec
+	} ifelse
+end
+} bind def
+/sp_lgf { dup sp_hint { sp_gammah lnbn }{ sp_lngamma } ifelse } bind def   % x -> ln Gamma(x), x > 0
+/sp_betaf { % a b (> 0) -> B(a,b)
+	2 copy addbn 2 index sp_hint 2 index sp_hint and 1 index sp_hint and {
+		3 { sp_gammah exch sp_gammah exch divbn exch sp_gammah mulbn } sp_prec
+	}{ pop 1 index 1 index addbn sp_extra 3 add { sp_lnbeta expbn } sp_prec } ifelse
+} bind def
+/sp_harm { 0 setbn exch 1 1 3 -1 roll { 1 setbn exch bn_divint addbn } for } bind def  % n -> H(n)
+/sp_lnbeta { % a b -> ln |B(a,b)|
+8 dict begin
+	setbn /b exch def setbn /a exch def /c a b addbn def
+	a sp_pole b sp_pole or c sp_pole or { a b end /lnbeta errordict /undefinedresult get exec } if
+	a sp_extra b sp_extra bn_max c sp_extra bn_max 2 add
+	a bn_isneg b bn_isneg or { { a sp_lngamma b sp_lngamma addbn c sp_lngamma subbn } }
+	{ { a sp_lgf b sp_lgf addbn c sp_lgf subbn } } ifelse sp_prec
+end
+} bind def
+/sp_beta { % a b -> B(a,b) = Gamma(a) Gamma(b) / Gamma(a+b)
+8 dict begin
+	setbn /b exch def setbn /a exch def /c a b addbn def
+	a sp_pole b sp_pole or { a b end /betafn errordict /undefinedresult get exec } if
+	c sp_pole { 0 setbn }{
+		a bn_isneg b bn_isneg or {
+			a sp_extra b sp_extra bn_max c sp_extra bn_max 2 mul 3 add
+			{ a sp_gamma b sp_gamma mulbn c sp_gamma divbn } sp_prec
+		}{ a b sp_betaf } ifelse
+	} ifelse
+end
+} bind def
+/sp_chooseL { % n k (limbs, k <= n, k < 100000) -> C(n,k) as limbs
+6 dict begin
+	/k exch def /n exch def
+	/ki 0 k { exch 10000 mul add } forall def
+	/m n k bn_Lsub def /c [ 1 ] def
+	1 1 ki { /i exch def                                    % C(n-k+i, i) = C(n-k+i-1, i-1) (n-k+i) / i
+		/m m [ 1 ] bn_Ladd def
+		/c c m bn_Lmul i bn_Ldivs pop def
+	} for
+	c
+end
+} bind def
+/sp_Lbig { dup length 2 gt { pop true }{ 0 exch { exch 10000 mul add } forall 100000 gt } ifelse } bind def
+/sp_choose { % n k -> n choose k: exact for integers, else Gamma(n+1) / (Gamma(k+1) Gamma(n-k+1))
+12 dict begin
+	/k0 exch def /n0 exch def
+	n0 bn_intL { /ns exch def /nl exch def /nint true def }{ /nint false def } ifelse
+	k0 bn_intL { /ks exch def /kl exch def /kint true def }{ /kint false def } ifelse
+	nint kint and {
+		ks not { 0 setbn }{
+		ns {
+			kl nl bn_natcmp 0 gt { 0 setbn }{
+				/d nl kl bn_Lsub def
+				d kl bn_natcmp 0 lt { /kl d def } if            % C(n, k) = C(n, n-k)
+				kl sp_Lbig { n0 k0 end /choose errordict /rangecheck get exec } if
+				nl kl sp_chooseL true bn_Lbn
+			} ifelse
+		}{
+			/m kl nl bn_Ladd [ 1 ] bn_Lsub def
+			kl sp_Lbig { n0 k0 end /choose errordict /rangecheck get exec } if
+			m kl sp_chooseL
+			kl length 0 eq { true }{ kl dup length 1 sub get 2 mod 0 eq } ifelse bn_Lbn
+		} ifelse } ifelse
+	}{
+		n0 setbn /n exch def k0 setbn /k exch def
+		k bn_isint {
+			k bn_isneg { 0 setbn }{
+				k bn_lead 4 gt { n0 k0 end /choose errordict /rangecheck get exec } if
+				/ki k bn_toint def
+				ki 20 string cvs length 1 add {
+					1 setbn 1 1 ki { /i exch def n k subbn i setbn addbn mulbn i bn_divint } for
+				} sp_prec
+			} ifelse
+		}{
+			/a n 1 setbn addbn def /b k 1 setbn addbn def /c n k subbn 1 setbn addbn def
+			a sp_pole { n0 k0 end /choose errordict /undefinedresult get exec } if
+			b sp_pole c sp_pole or { 0 setbn }{
+				a sp_extra b sp_extra bn_max c sp_extra bn_max 2 mul 3 add
+				{ a sp_gamma b sp_gamma c sp_gamma mulbn divbn } sp_prec
+			} ifelse
+		} ifelse
+	} ifelse
+end
+} bind def
+/digamma { 1 { sp_digamma } sp_calln } bind def    % x -> psi(x) = Gamma'(x)/Gamma(x)
+/betafn { 2 { sp_beta } sp_calln } bind def        % a b -> B(a,b)
+/lnbeta { 2 { sp_lnbeta } sp_calln } bind def      % a b -> ln |B(a,b)|
+/choose { 2 { sp_choose } sp_calln } bind def      % n k -> binomial coefficient
+/sp_ginc { % a x q -> P(a,x) for q false, Q(a,x) = 1 - P(a,x) for q true
+12 dict begin
+	/wantq exch def setbn /x exch def setbn /a exch def
+	/op wantq { /gammaincc }{ /gammainc } ifelse def
+	a sp_npos x bn_isneg or { a x op end errordict /rangecheck get exec } if
+	x bniszero { wantq { 1 }{ 0 } ifelse setbn }{
+		a sp_extra x sp_extra bn_max 3 add {
+			x a 1 setbn addbn ltbn {
+				/tm 1 setbn def /S tm def /ap a def /n 0 def
+				/a2 a 2 setbn mulbn def /fast a2 bn_isint a2 bn_lead 6 lt and def
+				fast { /a2 a2 bn_toint def /x2 x 2 setbn mulbn def } if
+				{ /n n 1 add def
+				  fast { /tm tm x2 mulbn a2 n 2 mul add bn_divint def }
+				       { /ap ap 1 setbn addbn def /tm tm x mulbn ap divbn def } ifelse
+				  /S S tm addbn def
+				  tm S bn_tiny { exit } if } loop
+				a x lnbn mulbn x subbn a sp_lgf subbn a lnbn subbn expbn S mulbn
+				wantq { 1 setbn exch subbn } if
+			}{
+				/b x 1 setbn addbn a subbn def
+				/A2 0 setbn def /B2 1 setbn def /A1 1 setbn def /B1 b def
+				/h 1 setbn b divbn def /i 0 def
+				{ /i i 1 add def
+				  /an i setbn a subbn i setbn mulbn negbn def
+				  /b b 2 setbn addbn def
+				  /A0 b A1 mulbn an A2 mulbn addbn def /B0 b B1 mulbn an B2 mulbn addbn def
+				  /A2 A1 def /B2 B1 def /A1 A0 def /B1 B0 def
+				  i 4 mod 0 eq {
+					/hn A1 B1 divbn def
+					hn h subbn hn bn_tiny i 100000 gt or { /h hn def exit } if
+					/h hn def } if
+				} loop
+				a x lnbn mulbn x subbn a sp_lgf subbn expbn h mulbn
+				wantq not { 1 setbn exch subbn } if
+			} ifelse
+		} sp_prec
+	} ifelse
+end
+} bind def
+/sp_bpart { % x y a b -> x^a y^b / (a B(a,b)) times the continued fraction   (y = 1 - x)
+16 dict begin
+	/b exch def /a exch def /y exch def /x exch def
+	/S0 0 setbn def /T0 1 setbn def /S1 1 setbn def /T1 1 setbn def /Dp 1 setbn def
+	/h 1 setbn def /j 0 def
+	{ /j j 1 add def
+	  j 1 eq { /N a b addbn x mulbn negbn def /D a 1 setbn addbn def }{
+	  j 2 mod 0 eq { /m j 2 idiv def
+		/N m setbn b m setbn subbn mulbn x mulbn def
+		/D a j 1 sub setbn addbn a j setbn addbn mulbn def }{
+		/m j 1 sub 2 idiv def
+		/N a m setbn addbn a b addbn m setbn addbn mulbn x mulbn negbn def
+		/D a j 1 sub setbn addbn a j setbn addbn mulbn def } ifelse } ifelse
+	  /ND N Dp mulbn def
+	  /S2 D S1 mulbn ND S0 mulbn addbn def /T2 D T1 mulbn ND T0 mulbn addbn def
+	  /S0 S1 def /T0 T1 def /S1 S2 def /T1 T2 def /Dp D def
+	  j 4 mod 0 eq {
+		/hn S1 T1 divbn def
+		hn h subbn hn bn_tiny j 200000 gt or { /h hn def exit } if
+		/h hn def } if
+	} loop
+	a x lnbn mulbn b y lnbn mulbn addbn expbn a b sp_betaf a mulbn divbn h mulbn
+end
+} bind def
+/sp_binc { % x y a b -> I_x(a,b), a b > 0; y = 1 - x, either x or y may be null
+12 dict begin
+	setbn /b exch def setbn /a exch def /y exch def /x exch def
+	a sp_extra b sp_extra bn_max 4 add {
+		x null eq { /y y setbn def /x 1 setbn y subbn def }{ /x x setbn def } ifelse
+		y null eq { /y 1 setbn x subbn def }{ /y y setbn def } ifelse
+		x bniszero { 0 setbn }{ y bniszero { 1 setbn }{
+			x a b addbn 2 setbn addbn mulbn a 1 setbn addbn gtbn
+			{ 1 setbn y x b a sp_bpart subbn }{ x y a b sp_bpart } ifelse
+		} ifelse } ifelse
+	} sp_prec
+end
+} bind def
+/sp_betainc { % x a b -> I_x(a,b)
+8 dict begin
+	setbn /b exch def setbn /a exch def setbn /x exch def
+	a sp_npos b sp_npos or x bn_isneg or x 1 setbn gtbn or { x a b end /betainc errordict /rangecheck get exec } if
+	x null a b sp_binc
+end
+} bind def
+/gammainc { 2 { false sp_ginc } sp_calln } bind def  % a x -> P(a,x), the regularized lower incomplete gamma function
+/gammaincc { 2 { true sp_ginc } sp_calln } bind def  % a x -> Q(a,x) = 1 - P(a,x), accurate in the tail
+/betainc { 3 { sp_betainc } sp_calln } bind def      % x a b -> I_x(a,b), the regularized incomplete beta function
+/sp_iser { % n x -> I_n(x), n >= 0, x > 0   (at the current bnn; positive terms)
+12 dict begin
+	/x exch def /n exch def
+	x 2 {
+		/h exch 2 bn_divint def /h2 h h mulbn def
+		/tm h n setbn powbn n factbn divbn def
+		/sum tm def /k 0 def
+		{ /k k 1 add def
+		  /tm tm h2 mulbn k k n add mul bn_divint def
+		  /sum sum tm addbn def
+		  tm sum bn_tiny { exit } if } loop
+		sum
+	} bn_prec
+end
+} bind def
+/sp_besseli { % n x -> I_n(x)
+8 dict begin
+	setbn /x exch def abs /n exch def
+	x bn_lead 3 gt { n x end /besseli errordict /rangecheck get exec } if
+	x bniszero { n 0 eq { 1 }{ 0 } ifelse setbn }{
+		n x absbn sp_iser
+		x bn_isneg n 2 mod 1 eq and { negbn } if
+	} ifelse
+end
+} bind def
+/sp_asy { % n x -> P Q S true, or false if the terms of the asymptotic series grow before
+12 dict begin
+	/x exch def /n exch def
+	/mu 4 n n mul mul def /x8 x 8 setbn mulbn def
+	/tm 1 setbn def /P tm def /S tm def /Q 0 setbn def /k 0 def /ok false def
+	{ /k k 1 add def
+	  /tn tm mu 2 k mul 1 sub dup mul sub setbn mulbn x8 k setbn mulbn divbn def
+	  tn absbn tm absbn gtbn { exit } if
+	  /tm tn def /S S tm addbn def
+	  k 2 mod 1 eq { /Q Q k 2 idiv 2 mod 0 eq { tm }{ tm negbn } ifelse addbn def }
+	               { /P P k 2 idiv 2 mod 0 eq { tm }{ tm negbn } ifelse addbn def } ifelse
+	  tm 1 setbn bn_tiny { /ok true def exit } if
+	} loop
+	ok { P Q S true }{ false } ifelse
+end
+} bind def
+/sp_bigx { bncvr bnn bn_guard add 2 add 1.2 mul ge } bind def   % x -> use the asymptotic series?
+/sp_kser { % n x -> K_n(x), n >= 0, x > 0, by its series   (at the current bnn)
+16 dict begin
+	/x exch def /n exch def
+	/h x 2 bn_divint def /h2 h h mulbn def /eg sp_euler 2 setbn mulbn def
+	/s1 0 setbn def
+	n 0 gt {
+		/tm n 1 sub factbn def /s1 tm def
+		1 1 n 1 sub { /k exch def
+			/tm tm h2 mulbn negbn n k sub bn_divint k bn_divint def
+			/s1 s1 tm addbn def } for
+		/s1 s1 h n setbn powbn divbn 2 bn_divint def
+	} if
+	/s2 h lnbn n x sp_iser mulbn def n 2 mod 0 eq { /s2 s2 negbn def } if
+	/Hk 0 setbn def /Hnk n sp_harm def
+	/tm 1 setbn n factbn divbn def
+	/s3 Hk Hnk addbn eg subbn tm mulbn def /k 0 def
+	{ /k k 1 add def
+	  /Hk Hk 1 setbn k bn_divint addbn def /Hnk Hnk 1 setbn n k add bn_divint addbn def
+	  /tm tm h2 mulbn k n k add mul bn_divint def
+	  /dl Hk Hnk addbn eg subbn tm mulbn def
+	  /s3 s3 dl addbn def
+	  dl s3 bn_tiny { exit } if } loop
+	/s3 s3 h n setbn powbn mulbn 2 bn_divint def n 2 mod 1 eq { /s3 s3 negbn def } if
+	s1 s2 addbn s3 addbn
+end
+} bind def
+/sp_besselk { % n x -> K_n(x), x > 0
+10 dict begin
+	setbn /x exch def abs /n exch def
+	x bn_isneg x bn_lead 5 gt or { n x end /besselk errordict /rangecheck get exec } if
+	x bniszero { n x end /besselk errordict /undefinedresult get exec } if
+	/r null def
+	x sp_bigx {
+		/outn bnn def /bnn bnn bn_guard add 2 add def /xx x bn_renorm def
+		n xx sp_asy {                                       % K_n(x) = sqrt(pi/(2x)) e^-x (t0 + t1 + ...)
+			/S exch def pop pop /r pibn xx 2 setbn mulbn divbn sqrtbn xx negbn expbn mulbn S mulbn def
+		} if
+		/bnn outn def r null ne { /r r bn_renorm def } if
+	} if
+	r null eq { /r x x bncvr 0.8686 mul ceiling cvi 3 add { n exch sp_kser } bn_prec def } if
+	r
+end
+} bind def
+/sp_yser { % n x -> Y_n(x), n >= 0, x > 0, by its series   (at the current bnn)
+16 dict begin
+	/x exch def /n exch def
+	/h x 2 bn_divint def /h2 h h mulbn def /eg sp_euler 2 setbn mulbn def
+	/s1 0 setbn def
+	n 0 gt {
+		/tm n 1 sub factbn def /s1 tm def
+		1 1 n 1 sub { /k exch def
+			/tm tm h2 mulbn n k sub bn_divint k bn_divint def
+			/s1 s1 tm addbn def } for
+		/s1 s1 h n setbn powbn divbn negbn def
+	} if
+	/s2 h lnbn n x sp_besselj mulbn 2 setbn mulbn def
+	/Hk 0 setbn def /Hnk n sp_harm def
+	/tm 1 setbn n factbn divbn def
+	/s3 Hk Hnk addbn eg subbn tm mulbn def /tmax tm def /k 0 def
+	{ /k k 1 add def
+	  /Hk Hk 1 setbn k bn_divint addbn def /Hnk Hnk 1 setbn n k add bn_divint addbn def
+	  /tm tm h2 mulbn negbn k n k add mul bn_divint def
+	  /dl Hk Hnk addbn eg subbn tm mulbn def
+	  /s3 s3 dl addbn def
+	  dl absbn tmax gtbn { /tmax dl absbn def } if
+	  dl tmax bn_tiny { exit } if } loop
+	/s3 s3 h n setbn powbn mulbn negbn def
+	s1 s2 addbn s3 addbn pibn divbn
+end
+} bind def
+/sp_bessely { % n x -> Y_n(x), x > 0
+10 dict begin
+	setbn /x exch def /n exch def
+	/sg n 0 lt n 2 mod 0 ne and def /n n abs def           % Y_-n = (-1)^n Y_n
+	x bn_isneg x bn_lead 5 gt or { n x end /bessely errordict /rangecheck get exec } if
+	x bniszero { n x end /bessely errordict /undefinedresult get exec } if
+	/r null def
+	x sp_bigx {
+		/outn bnn def /bnn bnn bn_guard add 2 add def /xx x bn_renorm def
+		n xx sp_asy {                                       % Y_n(x) = sqrt(2/(pi x)) (P sin chi + Q cos chi)
+			pop /Q exch def /P exch def
+			/chi xx pibn 2 n mul 1 add setbn mulbn 4 bn_divint subbn def    % x - (2n+1) pi/4
+			/r P chi sinbn mulbn Q chi cosbn mulbn addbn 2 setbn pibn xx mulbn divbn sqrtbn mulbn def
+		} if
+		/bnn outn def r null ne { /r r bn_renorm def } if
+	} if
+	r null eq { /r x x bncvr 0.4343 mul ceiling cvi 3 add { n exch sp_yser } bn_prec def } if
+	r sg { negbn } if
+end
+} bind def
+/besseli { % n x -> modified Bessel function I_n(x), for an integer n and |x| < 10^4
+	1 index type /integertype ne { /besseli errordict /typecheck get exec } if
+	2 { sp_besseli } sp_calln
+} bind def
+/besselk { % n x -> modified Bessel function K_n(x), for an integer n and 0 < x < 10^6
+	1 index type /integertype ne { /besselk errordict /typecheck get exec } if
+	2 { sp_besselk } sp_calln
+} bind def
+/bessely { % n x -> Bessel function Y_n(x) of the second kind, for an integer n and 0 < x < 10^6
+	1 index type /integertype ne { /bessely errordict /typecheck get exec } if
+	2 { sp_bessely } sp_calln
+} bind def
+/sp_mid { % lo hi -> a point between them, geometric when they are far apart and of one sign
+	dup 2 index 4 setbn mulbn gtbn 2 index bn_isneg not and 2 index bniszero not and
+	{ mulbn sqrtbn }{
+		2 copy 4 setbn mulbn ltbn 1 index bn_isneg and { mulbn sqrtbn negbn }{ addbn 2 bn_divint } ifelse
+	} ifelse
+} bind def
+/sp_solve { % lo hi x0 q inc {f} tol -> x with G(x) = q
+16 dict begin
+	/tol exch def /f exch def /inc exch def /q exch def /x exch def /hi exch def /lo exch def
+	/lq q lnbn def
+	0 1 200 { pop
+		x f /g exch def /G exch def
+		G q ltbn inc eq { /lo x def }{ /hi x def } ifelse
+		/newton G bniszero g bniszero or not def
+		newton {
+			/xn x G lnbn lq subbn G mulbn g divbn subbn def /dx xn x subbn def
+			dx bniszero { exit } if
+			dx bn_lead x bn_lead tol sub lt { /x xn def exit } if
+			xn lo lebn xn hi gebn or { /newton false def } if
+		} if
+		newton not { /xn lo hi sp_mid def } if
+		/x xn def
+		hi lo subbn bn_lead hi absbn lo absbn maxbn bn_lead bnn 1 sub sub lt { exit } if
+	} for
+	x
+end
+} bind def
+/sp_inv { % s q inc {f} x0|null -> x > 0 with G(x) = q
+16 dict begin
+	/x0 exch def /f exch def /inc exch def /q exch def /s exch def
+	/nout bnn def /tol nout 2 add def
+	/below { f pop q ltbn inc eq } def                     % x -> is x below the root?
+	/bnn nout 12 bn_min def
+	/sixteen 16 setbn def
+	s bn_renorm below {
+		/lo s bn_renorm def /hi lo sixteen mulbn def
+		0 1 3000 { pop hi below not { exit } if /lo hi def /hi hi sixteen mulbn def } for
+	}{
+		/hi s bn_renorm def /lo hi 16 bn_divint def
+		0 1 3000 { pop lo below { exit } if /hi lo def /lo lo 16 bn_divint def } for
+	} ifelse
+	x0 null eq { true }{ /x0 x0 bn_renorm def x0 lo lebn x0 hi gebn or } ifelse { /x0 lo hi sp_mid def } if
+	/x lo hi x0 q bn_renorm inc /f load bnn 3 sub sp_solve def
+	/bnn nout def
+	nout 12 gt { 2 { lo hi x q inc /f load tol sp_solve } sp_prec }{ x } ifelse
+end
+} bind def
+/sp_p01 { dup sp_npos exch 1 setbn gebn or } bind def   % p -> true unless 0 < p < 1
+/sp_zg { dup bn_lead -30 lt { pop null }{ bncvr sp_acklam } ifelse } bind def   % p <= 1/2 -> z or null
+/sp_zguess { % p (bignum, 0 < p < 1) -> normal quantile as a real, or null in the far tails
+	dup sp_half gtbn { 1 setbn exch subbn sp_zg dup null ne { neg } if }{ sp_zg } ifelse
+} bind def
+/sp_rexp { dup -87 lt { pop 0.0 }{ dup 88 gt { pop 1e38 }{ 2.718281828 exch exp } ifelse } ifelse } bind def
+/sp_rlg { % x > 0 -> ln Gamma(x): Stirling's series after shifting x to 10 or more
+4 dict begin
+	/z exch def /s 0 def
+	{ z 10 ge { exit } if /s s z ln add def /z z 1 add def } loop
+	/r 1 z div def /r2 r r mul def
+	z 0.5 sub z ln mul z sub 0.9189385332 add
+	r 12 div add r r2 mul 360 div sub r r2 r2 mul mul 1260 div add
+	s sub
+end
+} bind def
+/sp_rlnb { 2 copy add sp_rlg neg 3 1 roll sp_rlg exch sp_rlg add add } bind def   % a b -> ln B(a,b)
+/sp_rbcf { % x a b -> the continued fraction of I_x(a,b) (modified Lentz)
+10 dict begin
+	/b exch def /a exch def /x exch def
+	/qab a b add def /qap a 1 add def /qam a 1 sub def
+	/c 1 def /d 1 qab x mul qap div sub def d abs 1e-30 lt { /d 1e-30 def } if
+	/d 1 d div def /h d def
+	1 1 500 { /m exch def /m2 m 2 mul def
+		/aa m b m sub mul x mul qam m2 add a m2 add mul div def
+		/d aa d mul 1 add def d abs 1e-30 lt { /d 1e-30 def } if
+		/c aa c div 1 add def c abs 1e-30 lt { /c 1e-30 def } if
+		/d 1 d div def /h h d mul c mul def
+		/aa a m add qab m add mul x mul neg a m2 add qap m2 add mul div def
+		/d aa d mul 1 add def d abs 1e-30 lt { /d 1e-30 def } if
+		/c aa c div 1 add def c abs 1e-30 lt { /c 1e-30 def } if
+		/d 1 d div def /dl d c mul def /h h dl mul def
+		dl 1 sub abs 1e-7 lt { exit } if
+	} for
+	h
+end
+} bind def
+/sp_rbinc { % x y a b -> I_x(a,b) with y = 1 - x
+8 dict begin
+	/b exch def /a exch def /y exch def /x exch def
+	x 0 le { 0.0 }{ y 0 le { 1.0 }{
+		/lf a x ln mul b y ln mul add a b sp_rlnb sub def
+		x a 1 add a b add 2 add div lt
+		{ lf sp_rexp x a b sp_rbcf mul a div }
+		{ 1 lf sp_rexp y b a sp_rbcf mul b div sub } ifelse
+	} ifelse } ifelse
+end
+} bind def
+/sp_rginc { % a x -> P(a,x) Q(a,x)
+10 dict begin
+	/x exch def /a exch def
+	x 0 le { 0.0 1.0 }{
+		/lf a x ln mul x sub a sp_rlg sub def
+		x a 1 add lt {
+			/ap a def /del 1 a div def /sum del def
+			1 1 5000 { pop /ap ap 1 add def /del del x mul ap div def /sum sum del add def
+				del abs sum abs 1e-8 mul lt { exit } if } for
+			sum lf sp_rexp mul dup 1 exch sub
+		}{
+			/b x 1 add a sub def /c 1e30 def /d 1 b div def /h d def
+			1 1 5000 { /i exch def /an i neg i a sub mul def /b b 2 add def
+				/d an d mul b add def d abs 1e-30 lt { /d 1e-30 def } if
+				/c an c div b add def c abs 1e-30 lt { /c 1e-30 def } if
+				/d 1 d div def /dl d c mul def /h h dl mul def
+				dl 1 sub abs 1e-7 lt { exit } if } for
+			lf sp_rexp h mul dup 1 exch sub exch
+		} ifelse
+	} ifelse
+end
+} bind def
+/sp_rsolve { % lo hi x0 q inc {f} -> x, as sp_solve in real arithmetic
+12 dict begin
+	/f exch def /inc exch def /q exch def /x exch def /hi exch def /lo exch def
+	/lq q ln def
+	1 1 100 { pop
+		x f /g exch def /G exch def
+		G q lt inc eq { /lo x def }{ /hi x def } ifelse
+		/nw G 0 gt g 0 ne and def
+		nw {
+			/xn x G ln lq sub G mul g div sub def
+			xn x sub abs x abs 1e-7 mul le { /x xn def exit } if
+			xn lo le xn hi ge or { /nw false def } if
+		} if
+		nw not { /xn lo 0 gt hi lo 4 mul gt and { lo hi mul sqrt }{ lo hi add 2 div } ifelse def } if
+		/x xn def
+		hi lo sub hi abs 1e-7 mul le { exit } if
+	} for
+	x
+end
+} bind def
+/sp_rinv { % s q inc {f} x0|null -> x > 0 with G(x) = q, as sp_inv in real arithmetic
+12 dict begin
+	/x0 exch def /f exch def /inc exch def /q exch def /s exch def
+	/below { f pop q lt inc eq } def
+	s below {
+		/lo s def /hi s 16 mul def
+		0 1 25 { pop hi below not { exit } if /lo hi def /hi hi 16 mul def } for
+	}{
+		/hi s def /lo s 16 div def
+		0 1 25 { pop lo below { exit } if /hi lo def /lo lo 16 div def } for
+	} ifelse
+	x0 null eq { true }{ x0 lo le x0 hi ge or } ifelse { /x0 lo hi mul sqrt def } if
+	lo hi x0 q inc /f load sp_rsolve
+end
+} bind def
+/sp_rnum { % a1 ... an n -> a1 ... an bool: true if all are numbers
+	true 1 1 4 -1 roll { index type dup /integertype eq exch /realtype eq or and } for
+} bind def
+/sp_rtcdf { % t nu -> P(T <= t)
+	1 index 0 eq { pop pop 0.5 }{
+		1 index dup mul 1 index add                     % t nu t^2+nu
+		1 index 1 index div 3 index dup mul 2 index div  % t nu w x y
+		3 index 2 div 0.5 sp_rbinc 2 div 4 1 roll pop pop
+		0 lt { }{ 1 exch sub } ifelse
+	} ifelse
+} bind def
+/sp_rtpdf { % t nu -> density
+	exch dup mul 1 index div 1 add ln 1 index 1 add 2 div mul neg      % nu -(nu+1)/2 ln(1+t^2/nu)
+	1 index 2 div 0.5 sp_rlnb sub exch sqrt ln sub sp_rexp
+} bind def
+/sp_rtinv { % p nu -> t
+12 dict begin
+	/nu exch def /p exch def
+	nu 0 le p 0 le or p 1 ge or { p nu end /tinv errordict /rangecheck get exec } if
+	p 0.5 eq { 0.0 }{
+	/sg p 0.5 gt def sg { /p 1 p sub def } if
+	nu 1 eq { 180 p mul dup cos exch sin div neg }{
+	nu 2 eq { 2 p mul 1 sub 2 p mul 1 p sub mul sqrt div }{
+		/z p sp_acklam def
+		/u0 z z z mul 1 add mul 4 div nu div z add
+			5 z 4 exp mul 16 z z mul mul add 3 add z mul 96 div nu nu mul div add neg def
+		u0 0 le { /u0 null def } if
+		1 p false { /tu exch def tu neg nu sp_rtcdf tu nu sp_rtpdf neg } u0 sp_rinv neg
+	} ifelse } ifelse
+	sg { neg } if
+	} ifelse
+end
+} bind def
+/sp_rchi2pdf { % x k (x > 0) -> density
+	2 div dup 1 sub 2 index ln mul 2 index 2 div sub 1 index 0.6931471806 mul sub exch sp_rlg sub sp_rexp exch pop
+} bind def
+/sp_rchi2inv { % p k -> x
+12 dict begin
+	/k exch def /p exch def
+	k 0 le p 0 le or p 1 ge or { p k end /chi2inv errordict /rangecheck get exec } if
+	/h k 2 div def
+	/z p 0.5 gt { 1 p sub sp_acklam neg }{ p sp_acklam } ifelse def
+	/x0 2 9 div k div dup sqrt z mul exch 1 exch sub add dup dup mul mul k mul def
+	x0 0 le { /x0 null def } if
+	p 0.5 le {
+		k p true { /xx exch def h xx 2 div sp_rginc pop xx k sp_rchi2pdf } x0 sp_rinv
+	}{
+		k 1 p sub false { /xx exch def h xx 2 div sp_rginc exch pop xx k sp_rchi2pdf neg } x0 sp_rinv
+	} ifelse
+end
+} bind def
+/sp_rfpdf { % x d1 d2 (x > 0) -> density
+6 dict begin
+	/d2 exch def /d1 exch def /x exch def /u d1 x mul def
+	d1 u ln mul d2 d2 ln mul add d1 d2 add u d2 add ln mul sub 2 div x ln sub
+	d1 2 div d2 2 div sp_rlnb sub sp_rexp
+end
+} bind def
+/sp_rfinv { % p d1 d2 -> x
+12 dict begin
+	/d2 exch def /d1 exch def /p exch def
+	d1 0 le d2 0 le or p 0 le or p 1 ge or { p d1 d2 end /finv errordict /rangecheck get exec } if
+	/a d1 2 div def /b d2 2 div def
+	p 0.5 le {
+		1 p true { /xx exch def /uu d1 xx mul def /ww uu d2 add def
+			uu ww div d2 ww div a b sp_rbinc xx d1 d2 sp_rfpdf } null sp_rinv
+	}{
+		1 1 p sub false { /xx exch def /uu d1 xx mul def /ww uu d2 add def
+			d2 ww div uu ww div b a sp_rbinc xx d1 d2 sp_rfpdf neg } null sp_rinv
+	} ifelse
+end
+} bind def
+/sp_rbinominv { % q n p -> smallest integer k with P(X <= k) >= q
+12 dict begin
+	/p exch def /n exch def /q exch def
+	q 0 le q 1 ge or n dup cvi ne or n 0 lt or p 0 lt or p 1 gt or { q n p end /binominv errordict /rangecheck get exec } if
+	/n n cvi def /lo -1 def /hi n def
+	{ hi lo sub 1 le { exit } if
+	  /mid lo hi add 2 idiv def
+	  p 0 eq { 1 }{ p 1 eq { 0 }{ 1 p sub p n mid sub mid 1 add sp_rbinc } ifelse } ifelse
+	  q ge { /hi mid def }{ /lo mid def } ifelse } loop
+	hi
+end
+} bind def
+/sp_rpoissoninv { % q lambda -> smallest integer k with P(X <= k) >= q
+12 dict begin
+	/lam exch def /q exch def
+	q 0 le q 1 ge or lam 0 le or lam 1e7 ge or { q lam end /poissoninv errordict /rangecheck get exec } if
+	/cdf { 1 add lam sp_rginc exch pop } def
+	/hi lam lam sqrt 6 mul add 10 add ceiling cvi def
+	{ hi cdf q ge { exit } if /hi hi 2 mul def } loop
+	/lo -1 def
+	{ hi lo sub 1 le { exit } if
+	  /mid lo hi add 2 idiv def
+	  mid cdf q ge { /hi mid def }{ /lo mid def } ifelse } loop
+	hi
+end
+} bind def
+/sp_rchk { % args n /op -> args; rangecheck unless the parameters (all but the first) are > 0
+	exch 1 sub true exch 1 1 3 -1 roll { 1 add index 0 gt and } for
+	{ pop }{ errordict /rangecheck get exec } ifelse
+} bind def
+/sp_rtpdf1 { 2 /tpdf sp_rchk sp_rtpdf } bind def
+/sp_rtcdf1 { 2 /tcdf sp_rchk sp_rtcdf } bind def
+/sp_rchi2pdf1 { % x k -> density
+	2 /chi2pdf sp_rchk
+	1 index 0 lt { pop pop 0.0 }{
+	1 index 0 eq {
+		dup 2 lt { /chi2pdf errordict /undefinedresult get exec } if
+		2 eq { pop 0.5 }{ pop 0.0 } ifelse
+	}{ sp_rchi2pdf } ifelse } ifelse
+} bind def
+/sp_rchi2cdf1 { % x k -> P(k/2, x/2)
+	2 /chi2cdf sp_rchk
+	1 index 0 le { pop pop 0.0 }{ 2 div exch 2 div sp_rginc pop } ifelse
+} bind def
+/sp_rfpdf1 { % x d1 d2 -> density
+	3 /fpdf sp_rchk
+	2 index 0 lt { pop pop pop 0.0 }{
+	2 index 0 eq {
+		1 index 2 lt { /fpdf errordict /undefinedresult get exec } if
+		pop 2 eq { pop 1.0 }{ pop 0.0 } ifelse
+	}{ sp_rfpdf } ifelse } ifelse
+} bind def
+/sp_rfcdf1 { % x d1 d2 -> I_(d1 x/(d1 x + d2))(d1/2, d2/2)
+	3 /fcdf sp_rchk
+	2 index 0 le { pop pop pop 0.0 }{
+		3 dict begin /d2 exch def /d1 exch def d1 mul /u exch def
+		u u d2 add div d2 u d2 add div d1 2 div d2 2 div sp_rbinc
+		end
+	} ifelse
+} bind def
+/sp_rexppdf1 { % x lambda -> lambda e^(-lambda x)
+	2 /exppdf sp_rchk
+	1 index 0 lt { pop pop 0.0 }{ dup 3 1 roll mul neg sp_rexp mul } ifelse
+} bind def
+/sp_rexpcdf1 { % x lambda -> 1 - e^(-lambda x), with a series for small lambda x
+	2 /expcdf sp_rchk
+	1 index 0 le { pop pop 0.0 }{
+		mul dup 1e-3 lt { dup dup mul dup 2 index mul 6 div exch 2 div sub add }{ neg sp_rexp 1 exch sub } ifelse
+	} ifelse
+} bind def
+/sp_rexpinv1 { % p lambda -> -ln(1 - p) / lambda, with a series for small p
+	1 index 0 le 2 index 1 ge or 1 index 0 le or { /expinv errordict /rangecheck get exec } if
+	exch dup 1e-3 lt { dup dup mul dup 2 index mul 3 div exch 2 div add add }{ 1 exch sub ln neg } ifelse
+	exch div
+} bind def
+/sp_tpdf { % t nu -> density
+10 dict begin
+	setbn /nu exch def setbn /t exch def
+	nu sp_npos { t nu end /tpdf errordict /rangecheck get exec } if
+	nu sp_extra t sp_extra 2 mul bn_max 3 add {
+		1 setbn t t mulbn nu divbn addbn lnbn nu 1 setbn addbn 2 bn_divint mulbn negbn expbn
+		nu sqrtbn nu 2 bn_divint sp_half sp_betaf mulbn divbn
+	} sp_prec
+end
+} bind def
+/sp_tcdf { % t nu -> P(T <= t) = I_(nu/(nu+t^2))(nu/2, 1/2) / 2 for t < 0
+10 dict begin
+	setbn /nu exch def setbn /t exch def
+	nu sp_npos { t nu end /tcdf errordict /rangecheck get exec } if
+	t bniszero { sp_half }{
+		/bnn bnn 4 add def
+		/t2 t t mulbn def /den nu t2 addbn def /xx nu den divbn def /yy t2 den divbn def
+		/bnn bnn 4 sub def
+		xx yy nu 2 bn_divint sp_half sp_binc 2 bn_divint
+		t bn_isneg not { 1 setbn exch subbn } if
+	} ifelse
+end
+} bind def
+/sp_tinv { % p nu -> t with P(T <= t) = p
+12 dict begin
+	setbn /nu exch def setbn /p exch def
+	nu sp_npos p sp_p01 or { p nu end /tinv errordict /rangecheck get exec } if
+	p sp_half eqbn { 0 setbn }{
+	p sp_half gtbn { 1 setbn p subbn nu sp_tinv negbn }{
+	nu 1 setbn eqbn { p 2 { pibn mulbn dup cosbn exch sinbn divbn negbn } bn_prec }{     % -cot(pi p)
+	nu 2 setbn eqbn {                                      % (2p - 1) / sqrt(2 p (1 - p))
+		p 2 { /pp exch def pp 2 setbn mulbn 1 setbn subbn pp 2 setbn mulbn 1 setbn pp subbn mulbn sqrtbn divbn } bn_prec
+	}{
+		/z p sp_zguess def
+		/u0 z null eq { null }{
+			/nr nu bncvr def
+			z z z mul 1 add mul 4 div nr div z add
+			5 z 4 exp mul 16 z z mul mul add 3 add z mul 96 div nr nr mul div add neg
+			dup 0 le { pop null }{ setbn } ifelse } ifelse def
+		1 setbn p false { /tu exch def tu negbn nu sp_tcdf tu nu sp_tpdf negbn } u0 sp_inv negbn
+	} ifelse } ifelse } ifelse } ifelse
+end
+} bind def
+/tpdf { 2 sp_rnum { sp_rtpdf1 }{ 2 { sp_tpdf } sp_calln } ifelse } bind def    % t nu -> density of Student's t distribution, nu > 0 degrees of freedom
+/tcdf { 2 sp_rnum { sp_rtcdf1 }{ 2 { sp_tcdf } sp_calln } ifelse } bind def    % t nu -> its distribution function
+/tinv { 2 sp_rnum { sp_rtinv }{ 2 { sp_tinv } sp_calln } ifelse } bind def    % p nu -> its quantile; rangecheck unless 0 < p < 1
+/sp_chi2pdf { % x k -> density
+10 dict begin
+	setbn /k exch def setbn /x exch def
+	k sp_npos { x k end /chi2pdf errordict /rangecheck get exec } if
+	x bn_isneg { 0 setbn }{
+	x bniszero {
+		k 2 setbn cmpbn dup 0 lt { pop x k end /chi2pdf errordict /undefinedresult get exec } if
+		0 eq { sp_half }{ 0 setbn } ifelse
+	}{
+		x sp_extra k sp_extra bn_max 3 add {
+			/h k 2 bn_divint def
+			h 1 setbn subbn x lnbn mulbn x 2 bn_divint subbn h 2 setbn lnbn mulbn subbn h sp_lgf subbn expbn
+		} sp_prec
+	} ifelse } ifelse
+end
+} bind def
+/sp_chi2cdf { % x k -> P(k/2, x/2)
+8 dict begin
+	setbn /k exch def setbn /x exch def
+	k sp_npos { x k end /chi2cdf errordict /rangecheck get exec } if
+	x sp_npos { 0 setbn }{ k 2 bn_divint x 2 bn_divint false sp_ginc } ifelse
+end
+} bind def
+/sp_chi2inv { % p k -> x with P(X <= x) = p
+12 dict begin
+	setbn /k exch def setbn /p exch def
+	k sp_npos p sp_p01 or { p k end /chi2inv errordict /rangecheck get exec } if
+	/h k 2 bn_divint def
+	/z p sp_zguess def
+	/x0 z null eq { null }{
+		/kr k bncvr def 2 9 div kr div
+		dup sqrt z mul exch 1 exch sub add dup dup mul mul kr mul
+		dup 0 le { pop null }{ setbn } ifelse } ifelse def
+	p sp_half lebn {
+		k p true { /xx exch def h xx 2 bn_divint false sp_ginc xx k sp_chi2pdf } x0 sp_inv
+	}{
+		k 1 setbn p subbn false { /xx exch def h xx 2 bn_divint true sp_ginc xx k sp_chi2pdf negbn } x0 sp_inv
+	} ifelse
+end
+} bind def
+/chi2pdf { 2 sp_rnum { sp_rchi2pdf1 }{ 2 { sp_chi2pdf } sp_calln } ifelse } bind def    % x k -> density of the chi-squared distribution, k > 0 degrees of freedom
+/chi2cdf { 2 sp_rnum { sp_rchi2cdf1 }{ 2 { sp_chi2cdf } sp_calln } ifelse } bind def    % x k -> its distribution function
+/chi2inv { 2 sp_rnum { sp_rchi2inv }{ 2 { sp_chi2inv } sp_calln } ifelse } bind def    % p k -> its quantile
+/sp_fchk { % x d1 d2 /op -> x d1 d2 (bignums), rangecheck unless d1, d2 > 0
+	4 1 roll setbn 3 1 roll setbn 3 1 roll setbn 3 1 roll
+	1 index sp_npos 1 index sp_npos or { 4 -1 roll errordict /rangecheck get exec } if 4 -1 roll pop
+} bind def
+/sp_fpdf { % x d1 d2 -> density
+	/fpdf sp_fchk
+10 dict begin
+	/d2 exch def /d1 exch def /x exch def
+	x bn_isneg { 0 setbn }{
+	x bniszero {
+		d1 2 setbn cmpbn dup 0 lt { pop x d1 d2 end /fpdf errordict /undefinedresult get exec } if
+		0 eq { 1 }{ 0 } ifelse setbn
+	}{
+		x sp_extra d1 sp_extra bn_max d2 sp_extra bn_max 3 add {
+			/u d1 x mulbn def
+			d1 u lnbn mulbn d2 d2 lnbn mulbn addbn d1 d2 addbn u d2 addbn lnbn mulbn subbn 2 bn_divint
+			x lnbn subbn expbn d1 2 bn_divint d2 2 bn_divint sp_betaf divbn
+		} sp_prec
+	} ifelse } ifelse
+end
+} bind def
+/sp_fcdf { % x d1 d2 -> I_(d1 x/(d1 x + d2))(d1/2, d2/2)
+	/fcdf sp_fchk
+10 dict begin
+	/d2 exch def /d1 exch def /x exch def
+	x sp_npos { 0 setbn }{
+		/bnn bnn 4 add def
+		/u d1 x mulbn def /w u d2 addbn def /xx u w divbn def /yy d2 w divbn def
+		/bnn bnn 4 sub def
+		xx yy d1 2 bn_divint d2 2 bn_divint sp_binc
+	} ifelse
+end
+} bind def
+/sp_finv { % p d1 d2 -> x with P(X <= x) = p
+12 dict begin
+	setbn /d2 exch def setbn /d1 exch def setbn /p exch def
+	d1 sp_npos d2 sp_npos or p sp_p01 or { p d1 d2 end /finv errordict /rangecheck get exec } if
+	/a d1 2 bn_divint def /b d2 2 bn_divint def
+	p sp_half lebn {
+		1 setbn p true {
+			/xx exch def /uu d1 xx mulbn def /ww uu d2 addbn def
+			uu ww divbn d2 ww divbn a b sp_binc xx d1 d2 sp_fpdf } null sp_inv
+	}{
+		1 setbn 1 setbn p subbn false {
+			/xx exch def /uu d1 xx mulbn def /ww uu d2 addbn def
+			d2 ww divbn uu ww divbn b a sp_binc xx d1 d2 sp_fpdf negbn } null sp_inv
+	} ifelse
+end
+} bind def
+/fpdf { 3 sp_rnum { sp_rfpdf1 }{ 3 { sp_fpdf } sp_calln } ifelse } bind def    % x d1 d2 -> density of the F distribution
+/fcdf { 3 sp_rnum { sp_rfcdf1 }{ 3 { sp_fcdf } sp_calln } ifelse } bind def    % x d1 d2 -> its distribution function
+/finv { 3 sp_rnum { sp_rfinv }{ 3 { sp_finv } sp_calln } ifelse } bind def    % p d1 d2 -> its quantile
+/sp_expchk { % x lambda /op -> x lambda (bignums), rangecheck unless lambda > 0
+	3 1 roll setbn exch setbn exch
+	dup sp_npos { 3 -1 roll errordict /rangecheck get exec } if 3 -1 roll pop
+} bind def
+/sp_exppdf { % x lambda -> lambda e^(-lambda x) for x >= 0
+	/exppdf sp_expchk
+	1 index bn_isneg { pop pop 0 setbn }{ 2 copy mulbn sp_extra 1 add { dup 3 1 roll mulbn negbn expbn mulbn } sp_prec } ifelse
+} bind def
+/sp_expcdf { % x lambda -> 1 - e^(-lambda x), accurate for small x
+	/expcdf sp_expchk
+	1 index sp_npos { pop pop 0 setbn }{
+		mulbn dup bn_lead neg 0 bn_max 1 add { 1 setbn exch negbn expbn subbn } sp_prec } ifelse
+} bind def
+/sp_expinv { % p lambda -> -ln(1 - p) / lambda
+	exch setbn exch setbn
+	1 index sp_p01 1 index sp_npos or { /expinv errordict /rangecheck get exec } if
+	1 index bn_lead neg 0 bn_max 1 add { exch 1 setbn exch subbn lnbn negbn exch divbn } sp_prec
+} bind def
+/exppdf { 2 sp_rnum { sp_rexppdf1 }{ 2 { sp_exppdf } sp_calln } ifelse } bind def    % x lambda -> density of the exponential distribution, rate lambda > 0
+/expcdf { 2 sp_rnum { sp_rexpcdf1 }{ 2 { sp_expcdf } sp_calln } ifelse } bind def    % x lambda -> its distribution function
+/expinv { 2 sp_rnum { sp_rexpinv1 }{ 2 { sp_expinv } sp_calln } ifelse } bind def    % p lambda -> its quantile
+/sp_binchk { % k n p /op -> k n p (bignums); rangecheck unless k, n integers, n >= 0, 0 <= p <= 1
+	4 1 roll setbn 3 1 roll setbn 3 1 roll setbn 3 1 roll
+	2 index bn_isint not 2 index bn_isint not or 2 index bn_isneg or
+	1 index bn_isneg or 1 index 1 setbn gtbn or { 4 -1 roll errordict /rangecheck get exec } if 4 -1 roll pop
+} bind def
+/sp_binompdf { % k n p -> P(X = k)
+	/binompdf sp_binchk
+12 dict begin
+	/p exch def /n exch def /k exch def
+	k bn_isneg k n gtbn or { 0 setbn }{
+	p bniszero { k bniszero { 1 }{ 0 } ifelse setbn }{
+	p 1 setbn eqbn { k n eqbn { 1 }{ 0 } ifelse setbn }{
+		n sp_extra 3 add {
+			n 1 setbn addbn sp_lngamma k 1 setbn addbn sp_lngamma subbn n k subbn 1 setbn addbn sp_lngamma subbn
+			k p lnbn mulbn addbn n k subbn 1 setbn p subbn lnbn mulbn addbn expbn
+		} sp_prec
+	} ifelse } ifelse } ifelse
+end
+} bind def
+/sp_binomcdf { % k n p -> P(X <= k) = I_(1-p)(n-k, k+1)
+	/binomcdf sp_binchk
+12 dict begin
+	/p exch def /n exch def /k exch def
+	k bn_isneg { 0 setbn }{
+	k n gebn p bniszero or { 1 setbn }{
+	p 1 setbn eqbn { 0 setbn }{
+		null p n k subbn k 1 setbn addbn sp_binc
+	} ifelse } ifelse } ifelse
+end
+} bind def
+/sp_binominv { % q n p -> smallest integer k with P(X <= k) >= q
+12 dict begin
+	setbn /p exch def setbn /n exch def setbn /q exch def
+	q sp_p01 n bn_isint not or n bn_isneg or n bn_lead 8 gt or p bn_isneg or p 1 setbn gtbn or
+	{ q n p end /binominv errordict /rangecheck get exec } if
+	/lo -1 def /hi n bn_toint def
+	{ hi lo sub 1 le { exit } if
+	  /mid lo hi add 2 idiv def
+	  mid n p sp_binomcdf q gebn { /hi mid def }{ /lo mid def } ifelse } loop
+	hi
+end
+} bind def
+/binompdf { 3 { sp_binompdf } sp_calln } bind def    % k n p -> P(X = k) for the binomial distribution
+/binomcdf { 3 { sp_binomcdf } sp_calln } bind def    % k n p -> P(X <= k)
+/binominv { 3 sp_rnum { sp_rbinominv }{ 3 { sp_binominv } sp_calln } ifelse } bind def    % q n p -> smallest k with P(X <= k) >= q (an integer)
+/sp_poichk { % k lambda /op -> k lambda (bignums); rangecheck unless k an integer, lambda > 0
+	3 1 roll setbn exch setbn exch
+	1 index bn_isint not 1 index sp_npos or { 3 -1 roll errordict /rangecheck get exec } if 3 -1 roll pop
+} bind def
+/sp_poissonpdf { % k lambda -> e^-lambda lambda^k / k!
+	/poissonpdf sp_poichk
+8 dict begin
+	/lam exch def /k exch def
+	k bn_isneg { 0 setbn }{
+		k sp_extra lam sp_extra bn_max 3 add {
+			k lam lnbn mulbn lam subbn k 1 setbn addbn sp_lgf subbn expbn
+		} sp_prec
+	} ifelse
+end
+} bind def
+/sp_poissoncdf { % k lambda -> P(X <= k) = Q(k+1, lambda)
+	/poissoncdf sp_poichk
+	1 index bn_isneg { pop pop 0 setbn }{ exch 1 setbn addbn exch true sp_ginc } ifelse
+} bind def
+/sp_poissoninv { % q lambda -> smallest integer k with P(X <= k) >= q
+12 dict begin
+	setbn /lam exch def setbn /q exch def
+	q sp_p01 lam sp_npos or lam bn_lead 7 gt or { q lam end /poissoninv errordict /rangecheck get exec } if
+	/lr lam bncvr def
+	/hi lr lr sqrt 6 mul add 10 add ceiling cvi def
+	{ hi lam sp_poissoncdf q gebn { exit } if /hi hi 2 mul def } loop
+	/lo -1 def
+	{ hi lo sub 1 le { exit } if
+	  /mid lo hi add 2 idiv def
+	  mid lam sp_poissoncdf q gebn { /hi mid def }{ /lo mid def } ifelse } loop
+	hi
+end
+} bind def
+/poissonpdf { 2 { sp_poissonpdf } sp_calln } bind def    % k lambda -> P(X = k) for the Poisson distribution
+/poissoncdf { 2 { sp_poissoncdf } sp_calln } bind def    % k lambda -> P(X <= k)
+/poissoninv { 2 sp_rnum { sp_rpoissoninv }{ 2 { sp_poissoninv } sp_calln } ifelse } bind def    % q lambda -> smallest k with P(X <= k) >= q (an integer)
 end % tx@NumericDict

@@ -77,7 +77,7 @@ the linear algebra and numerical methods built on them.
 \end{pspicture}
 \end{LTXexample}
 
-The library has six parts, each a dvips header that the package options
+The library has seven parts, each a dvips header that the package options
 choose:
 
 \medskip
@@ -86,19 +86,26 @@ choose:
 bignum  & pst-numeric-bignum.pro  & decimal numbers of any precision: arithmetic,
   comparisons, roots, exponentials, logarithms, trigonometric and hyperbolic
   functions and their inverses, $\pi$, $e$, factorials, binomial
-  coefficients, integer division and remainder\\
+  coefficients, integer division and remainder, modular powers, primality,
+  factorization\\
 trig    & pst-numeric-trig.pro    & trigonometric functions of reals by the
   CORDIC algorithm\\
 matrix  & pst-numeric-matrix.pro  & matrices of reals or bignums: products,
-  determinant, inverse, linear systems, least squares, LU decomposition, rank,
-  norms, eigenvalues\\
+  determinant, inverse, linear systems, least squares, LU, Cholesky, QR and
+  singular value decompositions, rank, norms, eigenvalues and eigenvectors,
+  matrix exponential\\
 complex & pst-numeric-complex.pro & complex numbers of reals or bignums, with
   their elementary functions\\
 calc    & pst-numeric-calc.pro    & roots of functions, integrals, polynomials,
   interpolation and splines, minima, derivatives, systems of equations,
-  statistics, differential equations, Fourier transform\\
-special & pst-numeric-special.pro & gamma, error and Bessel functions, normal
-  distribution\\\bottomrule
+  statistics, regression with bands, random numbers, differential
+  equations, Fourier transform\\
+special & pst-numeric-special.pro & gamma, beta, error, incomplete gamma and
+  beta, and Bessel functions; normal, $t$, $\chi^2$, $F$, exponential,
+  binomial and Poisson distributions\\
+tensor  & pst-numeric-tensor.pro  & tensors of any rank: products,
+  contractions, Einstein summation, symmetric parts, Levi-Civita symbol,
+  metrics\\\bottomrule
 \end{tabularx}
 
 
@@ -109,12 +116,13 @@ special & pst-numeric-special.pro & gamma, error and Bessel functions, normal
 \Lcs{input} \texttt{pst-numeric.tex}
 \end{BDef}
 
-With no option, all six parts are loaded. The options \Loption{bignum},
-\Loption{trig}, \Loption{matrix}, \Loption{complex}, \Loption{calc} and
-\Loption{special} load only the parts named, and \Loption{all} loads every
+With no option, all seven parts are loaded. The options \Loption{bignum},
+\Loption{trig}, \Loption{matrix}, \Loption{complex}, \Loption{calc},
+\Loption{special} and \Loption{tensor} load only the parts named, and \Loption{all} loads every
 part. A part that another needs is loaded with it: \Loption{complex} loads
-\texttt{matrix}, \Loption{calc} loads \texttt{matrix} and \texttt{complex},
-and \Loption{special} loads \texttt{bignum}.
+\texttt{matrix}, \Loption{calc} loads \texttt{matrix}, \texttt{complex} and
+\texttt{special}, \Loption{special} loads \texttt{bignum}, and
+\Loption{tensor} loads \texttt{matrix}.
 
 \begin{verbatim}
 \usepackage{pst-numeric}                 % every part
@@ -122,7 +130,7 @@ and \Loption{special} loads \texttt{bignum}.
 \usepackage[bignum,calc]{pst-numeric}    % numerical methods with bignums
 \end{verbatim}
 
-Matrices, complex numbers and \texttt{calc} work on reals without
+Matrices, tensors and complex numbers work on reals without
 \texttt{bignum}; load it too to use them with bignums. Instead of options, a
 document, or a \TeX{} format other than \LaTeX, can define
 \Lcs{pstNumericParts} before loading the package, as a list without spaces:
@@ -229,6 +237,132 @@ Anything the code defines with \texttt{def} goes into
 are kept for later code on the page (see section~\ref{sec:plots}), but avoid
 the names of the library's procedures.
 
+
+\section{Presenting results}\label{sec:present}
+
+\subsection{Number formats}
+
+\begin{BDef}
+\Lkeyword{numFormat}\texttt{=raw|auto|fixed|sci}\quad Default: \texttt{raw}\\
+\Lkeyword{numDigits}\texttt{=}\textit{integer}\quad Default: \texttt{6}\\
+\Lkeyword{numTrim}\texttt{=false|true}\quad Default: \texttt{false}\\
+\Lkeyword{numDecimal}\texttt{=}\textit{character}\quad Default: \texttt{.}\\
+\Lkeyword{sciStyle}\texttt{=times|e}\quad Default: \texttt{times}\\
+\Lkeyword{numFont}\texttt{=}\textit{\PS font}\quad Default: \texttt{Courier}\\
+\Lkeyword{numFontSize}\texttt{=}\textit{size in pt}\quad Default: \texttt{10}
+\end{BDef}
+
+With \Lkeyword{numFormat}\texttt{=raw} \Lcs{psNumericShow} prints a result
+as it was computed, every digit of a bignum included. The other formats
+round it, which is usually what a document wants:
+
+\begin{description}
+\item[\texttt{auto}] like \texttt{\%g} in C: \Lkeyword{numDigits}
+  significant digits, scientific notation only for very large or small
+  numbers, trailing zeros dropped;
+\item[\texttt{fixed}] \Lkeyword{numDigits} digits after the decimal
+  separator;
+\item[\texttt{sci}] \Lkeyword{numDigits} significant digits in scientific
+  notation.
+\end{description}
+
+Rounding is done on the decimal digits, half away from zero, so a bignum is
+rounded correctly however many digits it has; reals carry about seven
+significant digits. \Lkeyword{numTrim} drops trailing zeros,
+\Lkeyword{numDecimal} sets the decimal separator (\texttt{numDecimal=\{,\}}
+for a comma), and \Lkeyword{sciStyle}\texttt{=times} draws a power of ten
+as $\times10$ with a raised exponent instead of \texttt{e}. Complex numbers
+are formatted part by part. The keys also set the font:
+\Lkeyword{numFont} and \Lkeyword{numFontSize} are the same as redefining
+\Lcs{psNumericFont} and \Lcs{psNumericFontSize}.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(12,2)
+\psset{numFont=Times-Roman,numFontSize=11}
+\rput[l](0,1.5){\psNumericShow{(2) setbn (3) setbn divbn}}
+\rput[l](0,1.0){\psNumericShow[numFormat=fixed,numDigits=3]{(2) setbn (3) setbn divbn}}
+\rput[l](0,0.5){\psNumericShow[numFormat=sci,numDigits=4]{(1e-30) setbn sqrtbn}}
+\rput[l](0,0.0){\psNumericShow[numFormat=auto,numDecimal={,}]{[1.25 -0.5]}}
+\end{pspicture}
+\end{LTXexample}
+
+\Lps{pstnum\_fmtnum} formats a number in \PS code the same way, with the
+settings \Lps{pstnum\_format}, \Lps{pstnum\_digits}, \Lps{pstnum\_trim} and
+\Lps{pstnum\_dsep}, for labels drawn by your own code.
+
+\subsection{Matrices, vectors and tensors}
+
+\begin{BDef}
+\Lcs{psNumericMatrix}\OptArgs\Largb{PostScript code}\\
+\Lkeyword{matrixDelim}\texttt{=bracket|paren|bar|dbar|none}\quad Default: \texttt{bracket}\\
+\Lkeyword{matrixAlign}\texttt{=decimal|right|center|left}\quad Default: \texttt{decimal}\\
+\Lkeyword{colSep}\texttt{=}\textit{number}\quad Default: \texttt{1}\\
+\Lkeyword{rowSep}\texttt{=}\textit{number}\quad Default: \texttt{1.4}\\
+\Lkeyword{vector}\texttt{=column|row}\quad Default: \texttt{column}\\
+\Lkeyword{label}\texttt{=}\textit{text}\quad Default: empty\\
+\Lkeyword{tensorLabels}\texttt{=true|false}\quad Default: \texttt{true}\\
+\Lkeyword{matrixFont}\texttt{=}\textit{\PS font}\quad Default: \texttt{Times-Roman}
+\end{BDef}
+
+\Lcs{psNumericMatrix} lays the result out as mathematics usually is. A
+matrix is drawn with delimiters and columns aligned at the decimal
+separator; a list of numbers as a column vector (\texttt{vector=row} for a
+row); a tensor of rank~2 as a matrix, of rank~3 as its slices side by side
+and of rank~4 as a grid of slices, each labelled with its fixed indices
+when \Lkeyword{tensorLabels} is \texttt{true}. Anything else is drawn as
+text. The left end of the math axis is at the current point, so
+\Lcs{rput}\texttt{[l]} places it like a formula. The default format here is
+\texttt{auto}; all the keys of the previous section apply.
+\Lkeyword{colSep} and \Lkeyword{rowSep} are the column gap and the row
+pitch in units of the font size. \Lkeyword{label} is drawn first, followed
+by ``='': in it, \verb+^{...}+ raises and \verb+_{...}+ lowers text.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-1.6)(12,1.6)
+\rput[l](0,0.6){\psNumericMatrix[label=A]{[[1 2] [3 4]] mfromrows}}
+\rput[l](3.6,0.6){\psNumericMatrix[label=A^{-1},matrixDelim=paren]{[[1 2] [3 4]] mfromrows minv}}
+\rput[l](8.4,0.6){\psNumericMatrix[label=x,numFormat=fixed,numDigits=3]{[[2 1] [1 3]] mfromrows [[3] [5]] mfromrows msolve}}
+\rput[l](0,-1){\psNumericMatrix[vector=row,label=v^{T}]{[1 -2.5 3.125]}}
+\rput[l](5.4,-1){\psNumericMatrix[matrixDelim=bar,numFormat=sci,numDigits=2]{[[1e-6 2] [3 4e5]] mfromrows}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-1.2)(12,1.4)
+\rput[l](0,0){\psNumericMatrix[label=T]{[[[1 2] [3 4]] [[5 6] [7 8]]] tensor}}
+\end{pspicture}
+\end{LTXexample}
+
+\subsection{Regression results}
+
+\begin{BDef}
+\Lcs{psNumericRegression}\OptArgs\Largb{PostScript code}\\
+\Lcs{psNumericDef}\Largb{name}\Largb{PostScript code}\\
+\Lcs{psNumericRegPlot}\OptArgs\Largb{name}\Largb{$x_0$}\Largb{$x_1$}\\
+\Lkeyword{regShow}\texttt{=}\textit{list}\quad Default: \texttt{eq r2 s}\\
+\Lkeyword{regPlot}\texttt{=fit|ci|pi|data|residuals|stdresiduals}\quad Default: \texttt{fit}
+\end{BDef}
+
+\Lcs{psNumericRegression} prints a regression result (section~\ref{sec:regression})
+as lines of text, the first baseline at the current point. \Lkeyword{regShow}
+lists the lines, separated by spaces: \texttt{eq} the fitted equation,
+\texttt{params} the natural parameters of the model, \texttt{coef} every
+coefficient $\pm$ its standard error, \texttt{r2} and \texttt{adjr2} the
+coefficient of determination and its adjusted value, \texttt{s} the
+residual standard error, \texttt{n}, \texttt{dof}, \texttt{tval} the
+$t$~quantile used for the bands, \texttt{sse} the sum of squared residuals.
+Numbers are printed in the current format, \texttt{auto} with four digits
+when \Lkeyword{numFormat} is \texttt{raw}.
+
+A fit is needed for every point of a plot, so compute it once:
+\Lcs{psNumericDef}\verb+{name}{code}+ runs the code once, in the \texttt{dvips}
+header, and stores the result as \texttt{name} in the library's dictionary,
+for every page (it needs the \texttt{latex}--\texttt{dvips} route).
+\Lcs{psNumericRegPlot} then plots it from $x_0$ to $x_1$:
+\texttt{regPlot=fit} the curve, \texttt{ci} or \texttt{pi} both limits of
+the confidence band of the mean or of the prediction band, \texttt{data},
+\texttt{residuals} or \texttt{stdresiduals} dots at the data's $x$~values.
+All other options go to \Lcs{psplot} or \Lcs{listplot}.
 
 \section{Decimal numbers of any precision}\label{sec:bignum}
 
@@ -417,6 +551,187 @@ that are larger than the working tolerance times the largest element.
 \end{LTXexample}
 
 
+\subsection{Decompositions, eigenvectors and functions of matrices}
+
+Version 1.4 adds the common matrix decompositions, eigenvectors of any
+square matrix and the matrix exponential. Like the other matrix operations
+they work on reals and, when any element is a bignum or a string, on
+bignums at the working precision.
+
+\begin{reference}
+\Lps{mchol} & \Larg{A} \To{} \Larg{L} with $A=LL^{\mathsf T}$, for a
+  symmetric positive definite $A$\\
+\Lps{mqr} & \Larg{A} \To{} \Larg{Q R} with $A=QR$, $Q$ $m\times n$ with
+  orthonormal columns, $R$ upper triangular, for $m\ge n$\\
+\Lps{msvd} & \Larg{A} \To{} \Larg{U S V} with $A=U\operatorname{diag}(S)V^{\mathsf T}$,
+  $S$ the list of singular values, largest first\\
+\Lps{msingular} & \Larg{A} \To{} \texttt{[}$\sigma_1\ \sigma_2\ \dots$\texttt{]}\\
+\Lps{mpinv} & \Larg{A} \To{} pseudo-inverse $A^+$\\
+\Lps{mnull} & \Larg{A} \To{} \Larg{N}, an orthonormal basis of the null
+  space as columns (\texttt{[]} if it is $\{0\}$)\\
+\Lps{meigsymv} & \Larg{A} \To{} \texttt{[}\Larg{eigenvalues}\texttt{]}
+  \Larg{V}, the same as \Lps{meigsym}\\
+\Lps{meigvec} & \Larg{A} \To{} \texttt{[[}\Larg{z v}\texttt{]} \dots\texttt{]},
+  every eigenvalue $z$ with a unit eigenvector $v$ (a list of complex numbers)\\
+\Lps{mexp} & \Larg{A} \To{} $e^A$\\
+\Lps{mpow} & \Larg{A k} \To{} $A^k$ for an integer $k$ (negative: of $A^{-1}$)\\
+\Lps{mkron} & \Larg{A B} \To{} Kronecker product $A\otimes B$\\
+\Lps{mdiag} & \Larg{list} \To{} diagonal matrix; \Larg{M} \To{} list of
+  its diagonal\\
+\end{reference}
+
+\Lps{mqr} orthogonalises each column twice by Gram-Schmidt, which keeps
+$Q$ orthonormal to the working precision. \Lps{msvd} uses one-sided Jacobi
+rotations on the columns~\cite{golub13}; a singular value below the largest
+one times the zero tolerance (as for \Lps{mrank}) is given as~0, and the
+matching columns of $U$ are completed to an orthonormal set. \Lps{mpinv} and
+\Lps{mnull} are built on it, so they also work for rank-deficient matrices.
+\Lps{meigvec} takes the eigenvalues from \Lps{meig} and finds each vector by
+inverse iteration in complex arithmetic; the largest component of each
+vector is made real and positive. A repeated eigenvalue gets orthogonal
+vectors when there are that many independent ones; for a defective matrix
+such as \texttt{[[1 1] [0 1]] mfromrows} the one eigenvector is
+repeated. \Lps{mexp} halves $A$ until its norm is at most $\frac12$, sums the
+Taylor series and squares the result back.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,3.0)
+\rput[l](0,2.5){\psNumericShow{[[4 2] [2 3]] mfromrows mchol}}
+\rput[l](0,2.0){\psNumericShow{[[3 0] [4 5]] mfromrows msingular pstnum_list}}
+\rput[l](0,1.5){\psNumericShow{[[1 2] [2 4]] mfromrows mpinv}}
+\rput[l](0,1.0){\psNumericShow{[[1 2 3] [4 5 6]] mfromrows mnull}}
+\rput[l](0,0.5){\psNumericShow{[[0 -1] [1 0]] mfromrows meigvec 1 get 1 get pstnum_list}}
+\rput[l](0,0.0){\psNumericShow{20 setbnsize [[(0) -1] [1 0]] mfromrows mexp 2 1 mget}}
+\end{pspicture}
+\end{LTXexample}
+
+The last line is $\sin 1$ to 20 digits: $e^A$ of the generator of
+rotations is the rotation by one radian.
+
+\section{Tensors}\label{sec:tensor}
+
+The part \texttt{tensor} works with tensors of any rank, of reals or of
+bignums. A tensor is a dictionary with \texttt{/shape}, the list of its
+dimensions $[d_1\ \dots\ d_r]$, and \texttt{/data}, its elements in row-major
+order (the last index runs fastest). As with matrices, a tensor with a bignum
+or a string such as \texttt{(0.1)} among its elements is worked on with
+bignums at the current precision, any other with reals. Indices count from
+1, and a result of rank~0 is a plain number or bignum. The part needs
+\texttt{matrix}, which the package loads with it.
+
+\subsection{Building and reading tensors}
+
+\Lps{tensor} makes a tensor from a nested list, in which the lists at each
+level must all have the same length. \Lps{tzeros} and \Lps{tfill} make one of
+a given shape, \Lps{tdelta} the Kronecker delta $\delta_{ij}$ and
+\Lps{tlevi} the Levi-Civita symbol $\varepsilon_{i_1\dots i_n}$, whose
+element is the sign of the permutation $(i_1,\dots,i_n)$ and 0 when an index
+repeats. \Lps{tfrommatrix} and \Lps{ttomatrix} convert between matrices and
+tensors of rank~2, and \Lps{tolist} gives the nested list back.
+\Lps{tshape}, \Lps{trank} and \Lps{tsize} give the dimensions, the rank and
+the number of elements; \Lps{tget} reads one element, \Lps{tput} returns a
+new tensor with one element replaced, and \Lps{tslice} fixes one index,
+which lowers the rank by one.
+
+\Lps{tcvs} turns a tensor into a string: rank~1 as \texttt{[a, b, c]},
+rank~2 as \texttt{[a b; c d]}, and higher ranks as the list of the slices
+along the first index. \Lps{tPrint} prints a tensor on the terminal.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,2.5)
+\rput[l](0,2.0){\psNumericShow{[[[1 2][3 4]][[5 6][7 8]]] tensor tcvs}}
+\rput[l](0,1.5){\psNumericShow{[[[1 2][3 4]][[5 6][7 8]]] tensor 1 2 tslice tcvs}}
+\rput[l](0,1.0){\psNumericShow{[[[1 2][3 4]][[5 6][7 8]]] tensor [2 1 2] tget}}
+\rput[l](0,0.5){\psNumericShow{3 tlevi tcvs}}
+\rput[l](0,0.0){\psNumericShow{[2 3] tzeros tcvs}}
+\end{pspicture}
+\end{LTXexample}
+
+\subsection{Algebra}
+
+\Lps{tadd}, \Lps{tsub} and \Lps{thadamard} add, subtract and multiply two
+tensors of the same shape element by element, and \Lps{tscale} multiplies a
+tensor by a number. \Lps{tnorm} is the Frobenius norm, the square root of
+the sum of the squares of the elements.
+
+\Lps{touter} is the outer product $(A\otimes B)_{i\dots j\dots} =
+A_{i\dots}B_{j\dots}$, of rank $r_A+r_B$. \Lps{tdot} multiplies two tensors
+and sums over the pairs of axes it is given, like numpy's
+\texttt{tensordot}: \verb|A B [2] [1] tdot| is the matrix product when $A$
+and $B$ have rank~2. \Lps{tinner} sums $A_{i\dots}B_{i\dots}$ over all
+indices. \Lps{tcontract} contracts one tensor over two of its indices,
+$\sum_k T_{\dots k\dots k\dots}$, and \Lps{ttrace} contracts an even-rank
+tensor over consecutive pairs, $\sum T_{iijj\dots}$, which for rank~2 is the
+trace. \Lps{tpermute} reorders the axes (axis $k$ of the result is axis
+$p_k$ of $T$), \Lps{ttranspose} reverses them, and \Lps{tsym} and
+\Lps{tantisym} give the symmetric and antisymmetric parts, the average over
+all permutations of the indices, with their signs for the antisymmetric
+part.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,3.0)
+\rput[l](0,2.5){\psNumericShow{[[1 2][3 4]] tensor [[5 6][7 8]] tensor [2] [1] tdot tcvs}}
+\rput[l](0,2.0){\psNumericShow{[1 2] tensor [3 4 5] tensor touter tcvs}}
+\rput[l](0,1.5){\psNumericShow{[[1 2][3 4]] tensor ttrace}}
+\rput[l](0,1.0){\psNumericShow{[[1 2][3 4]] tensor tsym tcvs}}
+\rput[l](0,0.5){\psNumericShow{[[1 2][3 4]] tensor tantisym tcvs}}
+\rput[l](0,0.0){\psNumericShow{[[(0.1) (0.2)][(0.3) 4]] tensor tnorm}}
+\end{pspicture}
+\end{LTXexample}
+
+\subsection{Einstein summation}
+
+\Lps{teinsum} takes a string that names the indices of each operand with one
+letter each, and a list of the operands. An index that appears in the output,
+after \texttt{->}, is kept; every other index is summed over. Without
+\texttt{->}, the output is the indices that appear only once, in
+alphabetical order, as in numpy's \texttt{einsum}, and no output index at all
+gives a number. Some examples:
+
+\begin{center}
+\begin{tabular}{ll}
+\texttt{(ij,jk->ik)} & matrix product\\
+\texttt{(ii)} & trace\\
+\texttt{(ii->i)} & diagonal\\
+\texttt{(ij->ji)} & transpose\\
+\texttt{(i,i)} & dot product\\
+\texttt{(ij,j->i)} & matrix times vector\\
+\texttt{(i,j->ij)} & outer product\\
+\texttt{(ijk,j,k->i)} & with \texttt{3 tlevi}: the cross product\\
+\end{tabular}
+\end{center}
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,1.5)
+\rput[l](0,1.0){\psNumericShow{(ij,jk->ik) [ [[1 2][3 4]] tensor [[5 6][7 8]] tensor ] teinsum tcvs}}
+\rput[l](0,0.5){\psNumericShow{(ii->i) [ [[1 2][3 4]] tensor ] teinsum tcvs}}
+\rput[l](0,0.0){\psNumericShow{(ijk,j,k->i) [ 3 tlevi [1 2 3] tensor [4 5 6] tensor ] teinsum tcvs}}
+\end{pspicture}
+\end{LTXexample}
+
+\subsection{Vectors and metrics}
+
+\Lps{tcross} is the cross product of two 3-vectors, given as tensors of
+rank~1 or as lists of three numbers, and \Lps{ttriple} the scalar triple
+product $u\cdot(v\times w)$, the determinant of the three vectors.
+\Lps{tlower} lowers an index with a metric $g$, given as a matrix or a
+tensor of rank~2: $T'_{\dots a\dots} = \sum_b g_{ab}\,T_{\dots b\dots}$.
+\Lps{traise} raises it with the inverse metric $g^{-1}$.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,2.0)
+\rput[l](0,1.5){\psNumericShow{[1 2 3] [4 -5 6] tcross pstnum_list}}
+\rput[l](0,1.0){\psNumericShow{[1 2 3] [4 -5 6] [2 0 7] ttriple}}
+\rput[l](0,0.5){\psNumericShow{[3 5] tensor [[2 1][1 3]] mfromrows 1 tlower tcvs}}
+\rput[l](0,0.0){\psNumericShow{[11 18] tensor [[2 1][1 3]] mfromrows 1 traise tcvs}}
+\end{pspicture}
+\end{LTXexample}
+
+The operations that sum go through one general Einstein summation, whose
+time grows with the product of all the dimensions involved: a product of two
+$3\times3$ matrices takes under a millisecond, one of two
+$10\times10\times10$ tensors over one index about a second.
+
 \section{Complex numbers}
 
 A complex number is the array \texttt{[}\Larg{re im}\texttt{]}. Wherever one
@@ -603,6 +918,181 @@ A data set is a list of numbers, bignums or strings. \Lps{variance} and
 \end{reference}
 
 
+\section{More statistics}
+
+\Lps{quantile} interpolates between the sorted values like R's default
+(type~7) and Excel's \texttt{PERCENTILE.INC}, so \texttt{0.5 quantile} is the
+median. \Lps{skewness} and \Lps{kurtosis} are the adjusted sample values
+$G_1$ and $G_2$ of Excel's \texttt{SKEW} and \texttt{KURT}; the kurtosis is the
+excess over the normal distribution. \Lps{histogram} counts the values in $k$
+equal bins, ready for \Lcs{psbar} or \Lcs{listplot}.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,2)
+\rput[l](0,1.5){\psNumericShow{[7 1 3 10 4 2] 0.9 quantile}}
+\rput[l](0,1.0){\psNumericShow{[2 4 4 4 5 5 7 9] skewness}}
+\rput[l](0,0.5){\psNumericShow{[(0.1) (0.2)] [1 3] wmean}}
+\rput[l](0,0.0){\psNumericShow{[1 2 3 4 5 9] 0 10 5 histogram pstnum_list}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{listmin} \Lps{listmax} \Lps{listsum} & \texttt{[}\Larg{x}\dots\texttt{]}
+  \To{} smallest, largest, sum\\
+\Lps{mode} & \texttt{[}\Larg{x}\dots\texttt{]} \To{} the most frequent value
+  (the smallest on a tie)\\
+\Lps{wmean} & \texttt{[}\Larg{x}\dots\texttt{] [}\Larg{w}\dots\texttt{]} \To{}
+  $\sum wx/\sum w$\\
+\Lps{skewness} \Lps{kurtosis} & \texttt{[}\Larg{x}\dots\texttt{]} \To{}
+  $G_1$, $G_2$ (at least 3 and 4 values)\\
+\Lps{quantile} & \texttt{[}\Larg{x}\dots\texttt{]} \Larg{p} \To{} the
+  $p$-quantile, $0\le p\le1$\\
+\Lps{histogram} & \texttt{[}\Larg{x}\dots\texttt{]} \Larg{a b k} \To{}
+  \texttt{[}\Larg{c1}\dots\Larg{ck}\texttt{]}, the last bin closed\\
+\end{reference}
+
+
+\section{Regression}\label{sec:regression}
+
+\Lps{regress} fits a model to data by linear least squares and returns a
+dictionary with the coefficients and their statistics. It brings the GLLSR
+code of \LPack{pst-fit}'s thesis example into the library: polynomials,
+linearizing transforms, a forced intercept, $r^2$, the standard error of the
+fit and confidence and prediction bands, now with weights, your own basis
+functions, the exact $t$ value for any number of degrees of freedom, and
+bands that are right for every model. The coefficients come from a Householder
+QR factorization, so with bignums every digit is right.
+
+The model is one of
+\begin{itemize}
+\item an integer $d$: the polynomial $c_0+c_1x+\dots+c_dx^d$ (\texttt{/linear} is 1);
+\item a procedure \texttt{\{}\Larg{x} \To{} \texttt{[}$b_1(x)$\dots$b_k(x)$\texttt{]\}}:
+  the combination $c_1b_1(x)+\dots+c_kb_k(x)$ of your own basis functions;
+\item \texttt{/power} ($y=ax^b$, fitted as $\ln y=\ln a+b\ln x$),
+  \texttt{/exp} ($y=ae^{bx}$), \texttt{/log10} ($y=a+b\log_{10}x$),
+  \texttt{/ln} ($y=a+b\ln x$), \texttt{/recip} ($y=a+b/x$) or
+  \texttt{/gauss} ($y=Ae^{-(x-\mu)^2/2\sigma^2}$, fitted as a quadratic in
+  $\ln y$);
+\item a dictionary with \texttt{/model} and any of \texttt{/weights [}\Larg{w}\dots\texttt{]},
+  \texttt{/intercept} \Larg{c} (the constant term fixed at $c$, so the curve
+  passes through $(0,c)$; in the space of the fit) and \texttt{/level}
+  \Larg{p} (the confidence level of the bands, default 0.95).
+\end{itemize}
+The transforms are fitted in the transformed space, and their statistics
+are those of that fit. Data a transform cannot take, such as $x\le0$ for
+\texttt{/power}, give \texttt{rangecheck}; they are not left out silently.
+
+The result \Larg{R} holds, among others:
+\begin{reference}
+\texttt{/coef} \texttt{/se} & coefficients (constant term first) and their standard errors\\
+\texttt{/params} & natural parameters: \texttt{/a /b}, or \texttt{/A /mu /sigma} for \texttt{/gauss}\\
+\texttt{/cov} & covariance matrix $s^2(X^{\mathsf T}WX)^{-1}$\\
+\texttt{/r2} \texttt{/adjr2} & $1-\mathrm{SSE}/\mathrm{SST}$ and its adjusted value\\
+\texttt{/s} \texttt{/dof} & residual standard error $\sqrt{\mathrm{SSE}/(n-k)}$, degrees of freedom\\
+\texttt{/sse} \texttt{/sst} \texttt{/ssr} & sums of squares\\
+\texttt{/tval} \texttt{/level} & the $t$ value of the bands and their level\\
+\texttt{/fitted} \texttt{/resid} \texttt{/stdresid} & fitted values, residuals, studentized residuals\\
+\texttt{/model} \texttt{/intercept} \texttt{/x} \texttt{/y} \texttt{/weights} & the input, normalized\\
+\end{reference}
+
+Compute the fit once, with \Lcs{psNumericDef}, and draw it with
+\Lcs{psNumericRegPlot} and
+\Lcs{psNumericRegression} (section~\ref{sec:present}).
+Here a straight line through eight points with its 95\,\% prediction band,
+the confidence band of the mean, and the report:
+
+\begin{LTXexample}[pos=t]
+\psNumericDef{myfit}{[1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress}
+\psset{xunit=0.7cm,yunit=0.3cm}
+\begin{pspicture}(-0.5,-1)(20,19)
+\psaxes[Dy=5]{->}(0,0)(-0.5,-1)(9,19)
+\psNumericRegPlot[regPlot=pi,linestyle=dashed]{myfit}{0.5}{8.5}
+\psNumericRegPlot[regPlot=ci,linestyle=dotted]{myfit}{0.5}{8.5}
+\psNumericRegPlot[linecolor=red]{myfit}{0.5}{8.5}
+\psNumericRegPlot[regPlot=data,dotstyle=*]{myfit}{0}{0}
+\rput[l](10,16){\psNumericRegression[regShow=eq coef r2 s dof tval]{myfit}}
+\end{pspicture}
+\end{LTXexample}
+
+The residuals show whether a straight line suits the data;
+\texttt{regPlot=stdresiduals} plots them studentized:
+
+\begin{LTXexample}[pos=l,preset=\centering,width=7cm]
+\psset{xunit=0.7cm,yunit=0.8cm}
+\begin{pspicture}(-0.5,-2.5)(9,2.5)
+\psaxes{->}(0,0)(-0.5,-2.5)(9,2.5)
+\psline[linestyle=dashed](0,2)(8.5,2)\psline[linestyle=dashed](0,-2)(8.5,-2)
+\psNumericRegPlot[regPlot=stdresiduals,dotstyle=o]{myfit}{0}{0}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,1.5)
+\rput[l](0,1.0){\psNumericShow{[1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1]
+  /power regress /params get dup /a get exch /b get 2 array astore pstnum_list}}
+\rput[l](0,0.5){\psNumericShow{[(1) 2 3 4 5] [2.1 3.9 6.2 7.8 10.1] linreg /coef get pstnum_list}}
+\rput[l](0,0.0){\psNumericShow{[1 2 3 4] [3 5 7 10]
+  << /model 1 /intercept 1 >> regress /coef get pstnum_list}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{regress} & \texttt{[}\Larg{x}\dots\texttt{] [}\Larg{y}\dots\texttt{]}
+  \Larg{model} \To{} \Larg{R}\\
+\Lps{linreg} & \texttt{[}\Larg{x}\dots\texttt{] [}\Larg{y}\dots\texttt{]} \To{}
+  \Larg{R}, the straight line\\
+\Lps{regeval} & \Larg{R x} \To{} the fitted curve at $x$\\
+\Lps{regci} & \Larg{R x} \To{} \texttt{[}\Larg{lo hi}\texttt{]}, confidence
+  band of the mean, $\hat y\pm t\,s\sqrt{b(x)^{\mathsf T}(X^{\mathsf T}WX)^{-1}b(x)}$\\
+\Lps{regpi} & \Larg{R x} \To{} \texttt{[}\Larg{lo hi}\texttt{]}, prediction
+  band for a new value, with $1+b(x)^{\mathsf T}(X^{\mathsf T}WX)^{-1}b(x)$\\
+\end{reference}
+
+
+\section{Random numbers}
+
+\Lps{rnguniform} gives the same sequence in every \PS interpreter: it is the
+``minimal standard'' generator of Park and Miller, with Schrage's method so
+that no product needs more than 31~bits. \Lps{rngseed} starts a sequence;
+the state lives in the library's dictionary, which \texttt{dvips} restores
+at the end of every page, so seed in the page that uses the numbers. The
+operators \texttt{rand}, \texttt{srand} and \texttt{rrand} are left alone.
+
+\begin{LTXexample}[pos=l,preset=\centering,width=7cm]
+\begin{pspicture}(0,0)(5,5)
+\psframe(0,0)(5,5)
+\pstVerb{tx@NumericDict begin 7 rngseed end}
+\multido{\i=1+1}{300}{%
+  \psdot[dotsize=2pt](!\pstNumeric{rngnormal 0.8 mul 2.5 add
+    rngnormal 0.8 mul 2.5 add})}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{rngseed} & \Larg{n} \To{} --, any integer\\
+\Lps{rnguniform} & -- \To{} a real in $(0,1)$\\
+\Lps{rngnormal} & -- \To{} a standard normal real (Box--Muller)\\
+\end{reference}
+
+
+\section{Gauss--Legendre integration}
+
+\Lps{fgauss} applies the $n$-point Gauss--Legendre rule once: exact for
+polynomials of degree up to $2n-1$ and very accurate for smooth functions,
+with one evaluation per node and no error control (use \Lps{fintegrate} for
+that).
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,1)
+\rput[l](0,0.5){\psNumericShow{{ 2.718281828 exch exp } 0 1 5 fgauss}}
+\rput[l](0,0.0){\psNumericShow{{ expbn } (0) (1) 12 fgauss}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{fgauss} & \Larg{\{f\} a b n} \To{} $\int_a^b f$ by $n$ nodes\\
+\end{reference}
+
 \section{Differential equations}
 
 The solvers integrate $y'=f(t,y)$ from $t_0$ to $t_1$, where $y$ is a number
@@ -731,6 +1221,114 @@ Acklam's approximation.
 \end{reference}
 
 
+\subsection{More special functions}
+
+\Lps{digamma}, the beta function \Lps{betafn} and its logarithm
+\Lps{lnbeta}, the binomial coefficient \Lps{choose}, the regularized
+incomplete gamma and beta functions \Lps{gammainc}, \Lps{gammaincc} and
+\Lps{betainc}, and the Bessel functions $I_n$, $K_n$ and $Y_n$. Functions
+of several arguments give a bignum if any argument is a bignum or a string.
+With integers, \Lps{choose} is exact and keeps every digit, even beyond the
+precision.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,3.0)
+\rput[l](0,2.5){\psNumericShow{(1) digamma}}
+\rput[l](0,2.0){\psNumericShow{(0.5) (0.5) betafn}}
+\rput[l](0,1.5){\psNumericShow{(100) (50) choose}}
+\rput[l](0,1.0){\psNumericShow{(3) (7) gammaincc}}
+\rput[l](0,0.5){\psNumericShow{(0.3) (2) (3) betainc}}
+\rput[l](0,0.0){\psNumericShow{0 (1) besselk}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{digamma} & \Larg{x} \To{} $\psi(x)=\Gamma'(x)/\Gamma(x)$;
+  \texttt{undefinedresult} at $0,-1,-2,\dots$\\
+\Lps{betafn} \Lps{lnbeta} & \Larg{a b} \To{} $B(a,b)$, $\ln|B(a,b)|$\\
+\Lps{choose} & \Larg{n k} \To{} $\binom nk$; exact for integers ($k<10^5$),
+  else through $\Gamma$\\
+\Lps{gammainc} \Lps{gammaincc} & \Larg{a x} \To{} $P(a,x)$,
+  $Q(a,x)=1-P(a,x)$, for $a>0$, $x\ge0$\\
+\Lps{betainc} & \Larg{x a b} \To{} $I_x(a,b)$, for $0\le x\le1$, $a,b>0$\\
+\Lps{besseli} & \Larg{n x} \To{} $I_n(x)$, integer $n$, $|x|<10^4$\\
+\Lps{besselk} \Lps{bessely} & \Larg{n x} \To{} $K_n(x)$, $Y_n(x)$, integer
+  $n$, $0<x<10^6$\\
+\end{reference}
+
+\subsection{Distributions}
+
+Density, distribution function and quantile of Student's $t$, the $\chi^2$,
+the $F$, the exponential, the binomial and the Poisson distribution, named
+like \Lps{normpdf}, \Lps{normcdf} and \Lps{norminv}: the argument comes
+first, then the parameters. With numbers only, the continuous distributions
+and all the quantiles work in real arithmetic, with about six digits, fast
+enough for plots; with bignums they are correct to the precision. The
+quantiles of the discrete distributions are integers.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,2.5)
+\rput[l](0,2.0){\psNumericShow{(0.975) 10 tinv}}
+\rput[l](0,1.5){\psNumericShow{0.975 10 tinv}}
+\rput[l](0,1.0){\psNumericShow{(0.95) 3 chi2inv}}
+\rput[l](0,0.5){\psNumericShow{(2) 3 7 fcdf}}
+\rput[l](0,0.0){\psNumericShow{3 10 (0.3) binompdf}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{LTXexample}[pos=t,preset=\centering]
+\psset{xunit=1.5cm,yunit=6cm}
+\begin{pspicture}(-4.5,-0.08)(4.5,0.45)
+\psaxes[Dy=0.1]{->}(0,0)(-4.3,0)(4.4,0.44)
+\psplot[linecolor=blue,plotpoints=80]{-4}{4}{\pstNumeric{x normpdf}}
+\psplot[linecolor=red,plotpoints=80]{-4}{4}{\pstNumeric{x 1 tpdf}}
+\psplot[linecolor=Green,plotpoints=80]{-4}{4}{\pstNumeric{x 4 tpdf}}
+\rput[l](0.3,0.41){\blue normal}\rput[l](1.4,0.2){\textcolor{Green}{$t_4$}}
+\rput[l](2.2,0.08){\red $t_1$}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{tpdf} \Lps{tcdf} & \Larg{t $\nu$} \To{} density, distribution function
+  of Student's $t$, $\nu>0$\\
+\Lps{tinv} & \Larg{p $\nu$} \To{} $t$ with $P(T\le t)=p$, $0<p<1$\\
+\Lps{chi2pdf} \Lps{chi2cdf} & \Larg{x k} \To{} $\chi^2$ distribution\\
+\Lps{chi2inv} & \Larg{p k} \To{} its quantile\\
+\Lps{fpdf} \Lps{fcdf} & \Larg{x d1 d2} \To{} $F$ distribution\\
+\Lps{finv} & \Larg{p d1 d2} \To{} its quantile\\
+\Lps{exppdf} \Lps{expcdf} \Lps{expinv} & \Larg{x $\lambda$},
+  \Larg{p $\lambda$} \To{} exponential distribution with rate $\lambda>0$\\
+\Lps{binompdf} \Lps{binomcdf} & \Larg{k n p} \To{} binomial distribution\\
+\Lps{binominv} & \Larg{q n p} \To{} smallest $k$ with $P(X\le k)\ge q$\\
+\Lps{poissonpdf} \Lps{poissoncdf} & \Larg{k $\lambda$} \To{} Poisson
+  distribution\\
+\Lps{poissoninv} & \Larg{q $\lambda$} \To{} smallest $k$ with
+  $P(X\le k)\ge q$\\
+\end{reference}
+
+\subsection{Number theory}
+
+The part \texttt{bignum} works with exact integers of any size for
+\Lps{powmodbn}, \Lps{isprime} and \Lps{factor}. A string of digits keeps
+all its digits whatever the precision. \Lps{isprime} uses trial division
+below $2^{31}$ and Miller--Rabin above, deterministic below
+$3.3\cdot10^{24}$; \Lps{factor} uses trial division and Pollard's rho method.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,1.5)
+\rput[l](0,1.0){\psNumericShow{(2) (1000) (1000000007) powmodbn}}
+\rput[l](0,0.5){\psNumericShow{(170141183460469231731687303715884105727) isprime}}
+\rput[l](0,0.0){\psNumericShow{600851475143 factor}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{powmodbn} & \Larg{a b m} \To{} $a^b\bmod m$, exact\\
+\Lps{isprime} & \Larg{n} \To{} \texttt{true} if $n$ is a prime\\
+\Lps{factor} & \Larg{n} \To{} \texttt{[}$p_1$ $p_2$ \dots\texttt{]}, the
+  prime factors with multiplicity; \texttt{[]} for 1\\
+\end{reference}
+
 \section{Plots}\label{sec:plots}
 
 The procedures work anywhere \PST takes \PS code. Below, the parabola is
@@ -788,7 +1386,7 @@ the limit of \PS's single-precision reals, and \Lps{fmin} about three.
 
 The parts are also ordinary \PS files, in the folder \texttt{source} of the
 package's repository and of its CTAN archive, and can be used with
-Ghostscript as a calculator. \LFile{Load.ps} loads all six and leaves the
+Ghostscript as a calculator. \LFile{Load.ps} loads all seven and leaves the
 dictionary open:
 
 \begin{verbatim}

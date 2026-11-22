@@ -1,6 +1,36 @@
 pst-numeric: changes
 
-1.3  2026/11/21  first release on CTAN
+1.4  2026/11/22  first release on CTAN
+                 - presentation: number formats (numFormat=auto, fixed,
+                   sci; numDigits, numTrim, numDecimal, sciStyle) for
+                   \psNumericShow; \psNumericMatrix lays out matrices,
+                   vectors and tensor slices with delimiters and decimal
+                   alignment; \psNumericRegression prints a fit,
+                   \psNumericRegPlot plots it with its bands, data and
+                   residuals; \psNumericDef computes a result once
+                 - regression (the GLLSR code of pst-fit's example):
+                   regress, linreg, regeval, regci, regpi with
+                   polynomials, own basis functions, power, exp, log,
+                   reciprocal and Gauss models, weights, a fixed
+                   intercept, exact t values and studentized residuals
+                 - statistics: listmin, listmax, listsum, mode, wmean,
+                   skewness, kurtosis, quantile, histogram; rngseed,
+                   rnguniform, rngnormal; fgauss (Gauss-Legendre)
+                 - new part tensor (option tensor): tensors of any rank,
+                   touter, tcontract, tdot, teinsum, tpermute, tsym,
+                   tantisym, tlevi, tdelta, tcross, tlower, traise and more
+                 - matrices: mchol, mqr, msvd, msingular, mpinv, mnull,
+                   meigvec, meigsymv, mexp, mpow, mkron, mdiag
+                 - special: digamma, betafn, lnbeta, choose, gammainc,
+                   gammaincc, betainc, besseli, besselk, bessely; t,
+                   chi-squared, F, exponential, binomial and Poisson
+                   distributions (pdf, cdf, inv)
+                 - bignums: powmodbn, isprime, factor
+                 - calc now loads special; procedures that raise an
+                   error close their dictionaries first
+                 - 623 new tests (1512 in all)
+
+1.3  2026/11/21  (not released on CTAN)
                  - bignums: ebn, rootbn, minbn, maxbn, idivbn, modbn; a
                    faster division by small integers makes exp, sin, atan
                    and the other series up to 8 times faster

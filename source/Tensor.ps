@@ -26,5 +26,669 @@
 % on its own, use  tx@NumericDict begin ... end  around calls.
 /tx@NumericDict where { pop }{ /tx@NumericDict 1000 dict def } ifelse
 tx@NumericDict begin
+% A tensor of rank r >= 1 is a dictionary with /shape [d1 ... dr], the
+% dimensions, and /data, the d1 x ... x dr elements in row-major order (the
+% last index runs fastest). Elements are numbers, bignums or strings such as
+% (0.1); as for matrices, a tensor with any bignum or string element is
+% worked on with bignum arithmetic at the current precision bnn, one of
+% plain numbers with reals. Indices count from 1. A result of rank 0 is a
+% plain number (or a bignum). Needs Matrix.ps; bignumlibrary.ps only for
+% bignums. Names starting with t_ are internal.
+
+% ---------------------------------------------------------------- internals
+/t_isT { dup type /dicttype eq { /shape known }{ pop false } ifelse } bind def   % any -> bool
+/t_mk { 2 dict begin /data exch def /shape exch def currentdict end } bind def   % shape data -> T
+/t_numel { 1 exch { mul } forall } bind def   % shape -> number of elements
+/t_strides { % shape -> [s1 ... sr], the step in /data of each index
+	5 dict begin
+	/s exch def /st s length array def /acc 1 def
+	s length 1 sub -1 0 { /i exch def st i acc put /acc acc s i get mul def } for
+	st
+	end
+} bind def
+/t_hasbn { false exch /data get { m_isstrbn or } forall } bind def   % T -> bool
+/t_okshape { % any -> bool: a non-empty list of positive integers
+	dup type /arraytype eq {
+		dup length 0 gt {
+			true exch { dup type /integertype eq { 0 gt }{ pop false } ifelse and } forall
+		}{ pop false } ifelse
+	}{ pop false } ifelse
+} bind def
+/t_samesh { % shape1 shape2 -> bool
+	2 copy length exch length eq {
+		true 0 1 3 index length 1 sub { 3 index 1 index get 3 index 3 -1 roll get eq and } for
+		3 1 roll pop pop
+	}{ pop pop false } ifelse
+} bind def
+/t_isel { % any -> bool: a number, a bignum or a string
+	dup type dup /integertype eq exch /realtype eq or { pop true }{ m_isstrbn } ifelse
+} bind def
+% shape proc t_forall -> runs proc once for each element of a tensor of that
+% shape, in row-major order, with the 0-based index list on the stack (proc
+% must consume it and leave nothing; the list is reused). Keeps 3 items on
+% the operand stack while it runs, so proc stores its results with put.
+/t_forall {
+	exch dup length array
+	0 1 2 index length 1 sub { 1 index exch 0 put } for
+	1 2 index { mul } forall
+	{
+		dup 3 index exec
+		dup length 1 sub
+		{
+			dup 0 lt { pop exit } if
+			1 index 1 index 2 copy get 1 add put
+			1 index 1 index get 3 index 2 index get lt { pop exit } if
+			1 index 1 index 0 put
+			1 sub
+		} loop
+	} repeat
+	pop pop pop
+} bind def
+/t_dot0 { % [i ...] [s ...] -> sum of i_k s_k
+	0 0 1 3 index length 1 sub { 3 index 1 index get 3 index 3 -1 roll get mul add } for
+	3 1 roll pop pop
+} bind def
+/t_gather { % data base shape strides -> new data: data[base + idx.strides] for each idx of shape
+	10 dict begin
+	/g_st exch def /g_s exch def /g_b exch def /g_d exch def
+	/g_out g_s t_numel array def /g_k 0 def
+	g_s { g_st t_dot0 g_b add g_d exch get g_out g_k 3 -1 roll put /g_k g_k 1 add def } t_forall
+	g_out
+	end
+} bind def
+/t_sign { % [p ...] (0-based) -> sign of the permutation, 0 if an entry repeats
+	5 dict begin
+	/p exch def /sg 1 def
+	0 1 p length 1 sub { /i exch def
+		i 1 add 1 p length 1 sub { /j exch def
+			p i get p j get 2 copy eq { pop pop /sg 0 def }{ gt { /sg sg neg def } if } ifelse
+		} for
+	} for
+	sg
+	end
+} bind def
+/t_perms { % r -> [ [[p1 ... pr] sign] ... ], the permutations of 1 ... r
+	10 dict begin
+	/r exch def /nf 1 def 1 1 r { nf mul /nf exch def } for
+	/pl nf array def /k 0 def
+	[ r { r } repeat ] {
+		dup t_sign dup 0 ne {
+			exch [ exch { 1 add } forall ] exch 2 array astore pl k 3 -1 roll put /k k 1 add def
+		}{ pop pop } ifelse
+	} t_forall
+	pl
+	end
+} bind def
+/t_cat { % s1 s2 -> s1s2
+	1 index length 1 index length add string
+	dup 0 4 index putinterval dup 3 index length 3 index putinterval
+	3 1 roll pop pop
+} bind def
+/t_join { % [s ...] sep -> s1 sep s2 ...   (at least one string)
+	5 dict begin
+	/sp exch def /arr exch def
+	arr 0 get 1 1 arr length 1 sub { arr exch get sp exch t_cat t_cat } for
+	end
+} bind def
+/t_codes { 1 sub [ exch 0 1 3 -1 roll { 1 add } for ] } bind def   % r -> [1 ... r]
+
+% Einstein summation, the engine of the products and contractions below.
+% [T ...] [[c ...] ...] [o ...] t_es -> result true   or   false
+% Each operand has a list of index codes (integers 0-255), one per axis; a
+% code shared by several axes is summed over unless it is in the output list
+% [o ...], whose order gives the axes of the result. false if an operand's
+% rank does not match its codes, a shared code joins axes of different
+% dimensions, or an output code appears in no operand. Output codes must be
+% distinct. With no output codes the result is a number.
+/t_es {
+	2 index false exch { t_hasbn or } forall m_ops begin
+	25 dict begin
+	/eo exch def /el exch def /eT exch def
+	/lid 256 array def /nl 0 def
+	eo { lid exch nl put /nl nl 1 add def } forall
+	/nout nl def
+	el { { dup lid exch get null eq { lid exch nl put /nl nl 1 add def }{ pop } ifelse } forall } forall
+	/dims nl array def /ok true def
+	0 1 eT length 1 sub { /o exch def
+		/S eT o get /shape get def /L el o get def
+		L length S length ne { /ok false def }{
+			0 1 L length 1 sub { /a exch def
+				/id lid L a get get def
+				dims id get null eq { dims id S a get put }{
+					dims id get S a get ne { /ok false def } if } ifelse
+			} for
+		} ifelse
+	} for
+	ok { 0 1 nout 1 sub { dims exch get null eq { /ok false def } if } for } if
+	ok {
+		/coef [ 0 1 eT length 1 sub { /o exch def
+			/C nl array def 0 1 nl 1 sub { C exch 0 put } for
+			/ST eT o get /shape get t_strides def /L el o get def
+			0 1 L length 1 sub { /a exch def
+				/id lid L a get get def C id C id get ST a get add put } for
+			C } for ] def
+		/Ds [ eT { /data get } forall ] def
+		/oshape [ 0 1 nout 1 sub { dims exch get } for ] def
+		/sshape [ nout 1 nl 1 sub { dims exch get } for ] def
+		/V nl array def
+		/R oshape t_numel array def
+		m_guard
+		/rk 0 def
+		oshape {
+			/oi exch def
+			0 1 nout 1 sub { /q exch def V q oi q get put } for
+			/acc m_zero def
+			sshape {
+				/si exch def
+				0 1 nl nout sub 1 sub { /q exch def V q nout add si q get put } for
+				m_one 0 1 eT length 1 sub { /o exch def Ds o get V coef o get t_dot0 get m_cv m_mul } for
+				/acc exch acc m_add def
+			} t_forall
+			R rk acc put /rk rk 1 add def
+		} t_forall
+		m_unguard
+		/R [ R { m_fin } forall ] def
+		nout 0 eq { R 0 get }{ oshape R t_mk } ifelse true
+	}{ false } ifelse
+	end end
+} bind def
+
+% ---------------------------------------------------------------- building
+
+%[[...] ...] tensor -> T   (a nested list, the sublists at each level all of
+% one length; elements numbers, bignums or strings; ragged lists give
+% rangecheck)
+/tensor {
+10 dict begin
+	/L exch def
+	L type /arraytype ne { L end /tensor errordict /typecheck get exec } if
+	L m_isbn { L end /tensor errordict /typecheck get exec } if
+	/S [ L {
+		dup type /arraytype eq 1 index m_isbn not and {
+			dup length dup 0 eq { pop pop 0 exit } if exch 0 get
+		}{ pop exit } ifelse
+	} loop ] def
+	S t_okshape not { L end /tensor errordict /rangecheck get exec } if
+	/D S t_numel array def /k 0 def /bad false def
+	L 0 t_fl
+	bad { L end /tensor errordict /rangecheck get exec } if
+	S D t_mk
+end
+} bind def
+/t_fl { % x level -> stores the elements of x in D (uses S D k bad of tensor)
+	3 dict begin
+	/lv exch def /x exch def
+	lv S length lt {
+		x type /arraytype eq x m_isbn not and { x length S lv get eq }{ false } ifelse
+		{ x { lv 1 add t_fl } forall }{ /bad true store } ifelse
+	}{
+		x t_isel { D k x put /k k 1 add store }{ /bad true store } ifelse
+	} ifelse
+	end
+} bind def
+
+%[d1 ... dr] tzeros -> T of zeros
+/tzeros {
+	dup t_okshape not { /tzeros errordict /rangecheck get exec } if
+	[ exch aload pop ] dup t_numel [ exch { 0 } repeat ] t_mk
+} bind def
+
+%[d1 ... dr] x tfill -> T with every element x
+/tfill {
+	1 index t_okshape not { /tfill errordict /rangecheck get exec } if
+	dup t_isel not { /tfill errordict /typecheck get exec } if
+	5 dict begin
+	/v exch def /s exch def
+	[ s aload pop ] [ s t_numel { v } repeat ] t_mk
+	end
+} bind def
+
+%M tfrommatrix -> rank-2 T
+/tfrommatrix {
+	dup type /arraytype ne { /tfrommatrix errordict /typecheck get exec } if
+	mtorows tensor
+} bind def
+
+%T ttomatrix -> M   (rank 2 only, else rangecheck)
+/ttomatrix {
+	dup t_isT not { /ttomatrix errordict /typecheck get exec } if
+	dup /shape get length 2 ne { /ttomatrix errordict /rangecheck get exec } if
+	tolist mfromrows
+} bind def
+
+%T tolist -> nested lists, the inverse of tensor
+/tolist {
+	dup t_isT not { /tolist errordict /typecheck get exec } if
+	10 dict begin
+	/T exch def /S T /shape get def /D T /data get def /ST S t_strides def
+	0 0 t_tl
+	end
+} bind def
+/t_tl { % offset level -> nested list (uses S D ST)
+	3 dict begin
+	/lv exch def /o exch def
+	lv S length 1 sub eq { [ D o S lv get getinterval aload pop ] }
+	{ [ 0 1 S lv get 1 sub { ST lv get mul o add lv 1 add t_tl } for ] } ifelse
+	end
+} bind def
+
+%n tdelta -> n x n Kronecker delta (the identity) as a rank-2 T
+/tdelta {
+	dup type /integertype ne { /tdelta errordict /typecheck get exec } if
+	dup 1 lt { /tdelta errordict /rangecheck get exec } if
+	5 dict begin
+	/n exch def
+	[ n n ] [ 0 1 n n mul 1 sub { n 1 add mod 0 eq { 1 }{ 0 } ifelse } for ] t_mk
+	end
+} bind def
+
+%n tlevi -> Levi-Civita symbol: rank n, every dimension n; the element
+% [i1 ... in] is the sign of that permutation, 0 if an index repeats.
+% 1 <= n <= 6
+/tlevi {
+	dup type /integertype ne { /tlevi errordict /typecheck get exec } if
+	dup 1 lt 1 index 6 gt or { /tlevi errordict /rangecheck get exec } if
+	10 dict begin
+	/n exch def /S [ n { n } repeat ] def /D S t_numel array def /k 0 def
+	S { t_sign D k 3 -1 roll put /k k 1 add def } t_forall
+	S D t_mk
+	end
+} bind def
+
+/tshape { dup t_isT not { /tshape errordict /typecheck get exec } if /shape get [ exch aload pop ] } bind def   % T -> [d1 ... dr]
+/trank { dup t_isT not { /trank errordict /typecheck get exec } if /shape get length } bind def   % T -> r
+/tsize { dup t_isT not { /tsize errordict /typecheck get exec } if /data get length } bind def   % T -> number of elements
+
+% ---------------------------------------------------------------- access
+
+/t_off { % T [i ...] -> offset in /data, or -1 if the index list is wrong
+	5 dict begin
+	/ix exch def /T exch def /S T /shape get def
+	ix type /arraytype ne { -1 }{
+		ix length S length ne { -1 }{
+			true 0 1 S length 1 sub { /i exch def
+				ix i get dup type /integertype eq { dup 1 ge exch S i get le and }{ pop false } ifelse and
+			} for
+			{ [ ix { 1 sub } forall ] S t_strides t_dot0 }{ -1 } ifelse
+		} ifelse
+	} ifelse
+	end
+} bind def
+
+%T [i1 ... ir] tget -> the element, as it is stored
+/tget {
+	1 index t_isT not { /tget errordict /typecheck get exec } if
+	2 copy t_off dup 0 lt { pop /tget errordict /rangecheck get exec } if
+	3 1 roll pop /data get exch get
+} bind def
+
+%T [i1 ... ir] x tput -> a new T with that element replaced
+/tput {
+	2 index t_isT not { /tput errordict /typecheck get exec } if
+	dup t_isel not { /tput errordict /typecheck get exec } if
+	3 copy pop t_off dup 0 lt { pop /tput errordict /rangecheck get exec } if
+	5 dict begin
+	/o exch def /x exch def pop /T exch def
+	[ T /shape get aload pop ] [ T /data get aload pop ] dup o x put t_mk
+	end
+} bind def
+
+%T axis k tslice -> the tensor of rank r-1 with index number axis fixed at k
+% (a rank-1 T gives its k-th element)
+/tslice {
+	2 index t_isT not { /tslice errordict /typecheck get exec } if
+	10 dict begin
+	/k exch def /ax exch def /T exch def /S T /shape get def
+	ax type /integertype ne k type /integertype ne or { T ax k end /tslice errordict /typecheck get exec } if
+	ax 1 lt ax S length gt or { T ax k end /tslice errordict /rangecheck get exec } if
+	k 1 lt k S ax 1 sub get gt or { T ax k end /tslice errordict /rangecheck get exec } if
+	S length 1 eq { T /data get k 1 sub get }{
+		/ST S t_strides def
+		/S2 [ 0 1 S length 1 sub { dup ax 1 sub eq { pop }{ S exch get } ifelse } for ] def
+		/ST2 [ 0 1 S length 1 sub { dup ax 1 sub eq { pop }{ ST exch get } ifelse } for ] def
+		S2 T /data get k 1 sub ST ax 1 sub get mul S2 ST2 t_gather t_mk
+	} ifelse
+	end
+} bind def
+
+% ---------------------------------------------------------------- algebra
+
+/t_ew { % A B /op /caller -> elementwise result
+	4 2 roll
+	2 copy t_isT exch t_isT and not { 4 2 roll exch pop errordict /typecheck get exec } if
+	2 copy /shape get exch /shape get t_samesh not { 4 2 roll exch pop errordict /rangecheck get exec } if
+	2 copy t_hasbn exch t_hasbn or m_ops begin
+	10 dict begin
+	/B exch def /A exch def pop /op exch def
+	/DA A /data get def /DB B /data get def
+	[ A /shape get aload pop ] [ 0 1 DA length 1 sub { /i exch def DA i get m_cv DB i get m_cv op load exec } for ] t_mk
+	end end
+} bind def
+/tadd { /m_add /tadd t_ew } bind def             % A B -> A+B   (same shapes)
+/tsub { /m_sub /tsub t_ew } bind def             % A B -> A-B
+/thadamard { /m_mul /thadamard t_ew } bind def   % A B -> elementwise product
+
+%T s tscale -> s times T   (s a number, a bignum or a string)
+/tscale {
+	1 index t_isT not { /tscale errordict /typecheck get exec } if
+	dup t_isel not { /tscale errordict /typecheck get exec } if
+	2 copy m_isstrbn exch t_hasbn or m_ops begin
+	10 dict begin
+	/s exch m_cv def /T exch def
+	[ T /shape get aload pop ] [ T /data get { m_cv s m_mul } forall ] t_mk
+	end end
+} bind def
+
+%T tnorm -> Frobenius norm, the square root of the sum of the squares
+/tnorm {
+	dup t_isT not { /tnorm errordict /typecheck get exec } if
+	dup t_hasbn m_ops begin m_guard
+	m_zero exch /data get { m_cv dup m_mul m_add } forall m_sqrt
+	m_unguard m_fin end
+} bind def
+
+% A B [axesA] [axesB] t_dot2 -> result true | false   (no type checks)
+/t_dot2 {
+	10 dict begin
+	/xb exch def /xa exch def /B exch def /A exch def
+	/rA A /shape get length def /rB B /shape get length def
+	/ca rA t_codes def
+	/cb [ rB { 0 } repeat ] def
+	0 1 rB 1 sub { /i exch def cb i rA i add 1 add put } for
+	/ok xa length xb length eq def
+	ok { 0 1 xa length 1 sub { /i exch def
+		xa i get xb i get
+		2 copy type /integertype eq exch type /integertype eq and {
+			2 copy 1 ge exch 1 ge and 1 index rB le and 2 index rA le and {
+				cb exch 1 sub 3 -1 roll 1 sub ca exch get
+				2 index 2 index get rA gt { put }{ pop pop pop /ok false def } ifelse
+			}{ pop pop /ok false def } ifelse
+		}{ pop pop /ok false def } ifelse
+	} for } if
+	ok xa length 0 gt and {
+		/seen 256 array def
+		xa { dup seen exch get null ne { /ok false def } if seen exch true put } forall
+	} if
+	ok {
+		% the codes of A that B shares are summed; the others form the output
+		/used 256 array def cb { used exch true put } forall
+		/outc [ ca { dup used exch get null ne { pop } if } forall
+		        cb { dup rA le { pop } if } forall ] def
+		[ A B ] [ ca cb ] outc t_es
+	}{ false } ifelse
+	end
+} bind def
+
+%A B touter -> A (x) B, the outer product: rank rA + rB, element
+% [i ... j ...] = A[i ...] B[j ...]
+/touter {
+	2 copy t_isT exch t_isT and not { /touter errordict /typecheck get exec } if
+	[] [] t_dot2 pop
+} bind def
+
+%A B [a1 ...] [b1 ...] tdot -> product of A and B summed over axis a1 of A
+% with axis b1 of B, and so on (numpy's tensordot); the axes left over form
+% the result, those of A first. Two empty lists give the outer product.
+/tdot {
+	3 index t_isT 3 index t_isT and not { /tdot errordict /typecheck get exec } if
+	2 copy type /arraytype eq exch type /arraytype eq and not { /tdot errordict /typecheck get exec } if
+	4 copy t_dot2 { 5 1 roll pop pop pop pop }{ /tdot errordict /rangecheck get exec } ifelse
+} bind def
+
+%A B tinner -> the sum of A[i ...] B[i ...] over all indices (same shapes)
+/tinner {
+	2 copy t_isT exch t_isT and not { /tinner errordict /typecheck get exec } if
+	2 copy /shape get exch /shape get t_samesh not { /tinner errordict /rangecheck get exec } if
+	1 index trank t_codes dup t_dot2 pop
+} bind def
+
+%T i j tcontract -> contraction over indices i and j (i <> j, of equal
+% dimensions): the sum over k of T[... k ... k ...]. Rank 2 gives a number.
+/tcontract {
+	2 index t_isT not { /tcontract errordict /typecheck get exec } if
+	10 dict begin
+	/j exch def /i exch def /T exch def /r T /shape get length def
+	i type /integertype ne j type /integertype ne or { T i j end /tcontract errordict /typecheck get exec } if
+	i 1 lt j 1 lt or i r gt or j r gt or i j eq or { T i j end /tcontract errordict /rangecheck get exec } if
+	/c r t_codes def c j 1 sub i put
+	/oc [ 0 1 r 1 sub { dup i 1 sub eq 1 index j 1 sub eq or { pop }{ 1 add } ifelse } for ] def
+	[ T ] [ c ] oc t_es { end }{ T i j end /tcontract errordict /rangecheck get exec } ifelse
+} bind def
+
+%T ttrace -> full contraction over consecutive pairs of indices, the sum of
+% T[i i j j ...]: for rank 2 the ordinary trace. Odd rank, or a pair of
+% indices with different dimensions, gives rangecheck.
+/ttrace {
+	dup t_isT not { /ttrace errordict /typecheck get exec } if
+	dup /shape get length 2 mod 0 ne { /ttrace errordict /rangecheck get exec } if
+	dup [ exch ] 1 index trank 2 idiv [ exch 1 exch 1 exch { dup } for ] [ exch ] [] t_es
+	{ exch pop }{ /ttrace errordict /rangecheck get exec } ifelse
+} bind def
+
+/t_permok { % T p -> bool: p a permutation of 1 ... rank
+	exch /shape get length 1 index length ne { pop false }{
+		dup length 1 add array exch true exch {
+			dup type /integertype eq {
+				dup 1 ge 1 index 4 index length 1 sub le and {
+					2 index 1 index get null eq { 2 index exch true put }{ pop pop false } ifelse
+				}{ pop pop false } ifelse
+			}{ pop pop false } ifelse
+		} forall exch pop
+	} ifelse
+} bind def
+
+%T [p1 ... pr] tpermute -> T with its axes reordered: axis k of the result
+% is axis p_k of T (p a permutation of 1 ... r)
+/tpermute {
+	1 index t_isT not { /tpermute errordict /typecheck get exec } if
+	dup type /arraytype ne { /tpermute errordict /typecheck get exec } if
+	2 copy t_permok not { /tpermute errordict /rangecheck get exec } if
+	10 dict begin
+	/p exch def /T exch def /S T /shape get def /ST S t_strides def
+	/S2 [ p { 1 sub S exch get } forall ] def
+	/ST2 [ p { 1 sub ST exch get } forall ] def
+	S2 T /data get 0 S2 ST2 t_gather t_mk
+	end
+} bind def
+
+%T ttranspose -> T with all axes reversed (the transpose for rank 2)
+/ttranspose {
+	dup t_isT not { /ttranspose errordict /typecheck get exec } if
+	dup trank [ exch -1 1 { } for ]
+	tpermute
+} bind def
+
+/t_symm { % T anti caller -> average of T over the permutations of its axes
+	2 index t_isT not { exch pop errordict /typecheck get exec } if
+	2 index /shape get dup 0 get exch true exch { 2 index eq and } forall exch pop
+	3 index /shape get length 6 le and not { exch pop errordict /rangecheck get exec } if
+	pop
+	1 index t_hasbn m_ops begin
+	10 dict begin
+	/anti exch def /T exch def /r T /shape get length def
+	/acc T /data get length array def
+	0 1 acc length 1 sub { acc exch m_zero put } for
+	m_guard
+	r t_perms { aload pop /sg exch def T exch tpermute /data get
+		0 1 acc length 1 sub { /i exch def
+			dup i get m_cv anti sg 0 lt and { m_neg } if acc i get m_add acc i 3 -1 roll put
+		} for pop
+	} forall
+	/nf 1 def 1 1 r { /nf exch nf mul def } for
+	/nf nf m_cv def
+	[ acc { nf m_div } forall ]
+	m_unguard
+	[ exch { m_fin } forall ] [ T /shape get aload pop ] exch t_mk
+	end end
+} bind def
+%T tsym -> symmetric part: the average of T over all permutations of its
+% indices (all dimensions equal, rank at most 6, else rangecheck)
+/tsym { false /tsym t_symm } bind def
+%T tantisym -> antisymmetric part: the same with the sign of each permutation
+/tantisym { true /tantisym t_symm } bind def
+
+% ---------------------------------------------------------------- vectors, metrics
+
+/t_vec3 { % any -> [a b c] or null: a rank-1 T or a list of 3 elements
+	dup t_isT {
+		dup /shape get dup length 1 eq exch 0 get 3 eq and { /data get }{ pop null } ifelse
+	}{
+		dup type /arraytype eq {
+			dup m_isbn { pop null }{
+				dup length 3 eq { dup true exch { t_isel and } forall not { pop null } if }{ pop null } ifelse
+			} ifelse
+		}{ pop null } ifelse
+	} ifelse
+} bind def
+/t_cross0 { % [a1 a2 a3] [b1 b2 b3] -> [c1 c2 c3]   (ops current)
+	10 dict begin
+	/b exch def /a exch def
+	/a1 a 0 get m_cv def /a2 a 1 get m_cv def /a3 a 2 get m_cv def
+	/b1 b 0 get m_cv def /b2 b 1 get m_cv def /b3 b 2 get m_cv def
+	[ a2 b3 m_mul a3 b2 m_mul m_sub  a3 b1 m_mul a1 b3 m_mul m_sub  a1 b2 m_mul a2 b1 m_mul m_sub ]
+	end
+} bind def
+/t_anybn { false exch { m_isstrbn or } forall } bind def   % [x ...] -> bool
+
+%u v tcross -> u x v, the cross product of two 3-vectors (rank-1 tensors or
+% lists of 3); a list if both are lists, else a rank-1 T
+/tcross {
+	2 copy t_vec3 null eq exch t_vec3 null eq or { /tcross errordict /rangecheck get exec } if
+	2 copy t_isT exch t_isT or 3 1 roll
+	t_vec3 exch t_vec3 exch
+	2 copy t_anybn exch t_anybn or m_ops begin t_cross0 end
+	exch { [ 3 ] exch t_mk } if
+} bind def
+
+%u v w ttriple -> u . (v x w), the scalar triple product (the determinant
+% of the three vectors)
+/ttriple {
+	3 copy t_vec3 null eq exch t_vec3 null eq or exch t_vec3 null eq or { /ttriple errordict /rangecheck get exec } if
+	t_vec3 exch t_vec3 exch 3 -1 roll t_vec3
+	3 copy t_anybn exch t_anybn or exch t_anybn or m_ops begin
+	3 1 roll t_cross0
+	m_zero 0 1 2 { 3 index 1 index get m_cv 3 index 3 -1 roll get m_mul m_add } for
+	3 1 roll pop pop
+	end
+} bind def
+
+/t_low { % T g k -> T' true | false   (g a rank-2 T; no type checks)
+	10 dict begin
+	/k exch def /g exch def /T exch def /r T /shape get length def
+	k type /integertype eq { k 1 ge k r le and }{ false } ifelse
+	g /shape get length 2 eq and {
+		/c r t_codes def
+		/oc [ c aload pop ] def oc k 1 sub r 1 add put
+		[ g T ] [ [ r 1 add k ] c ] oc t_es
+	}{ false } ifelse
+	end
+} bind def
+/t_asT { dup t_isT not { tfrommatrix } if } bind def   % rank-2 T or matrix -> T
+
+%T g k tlower -> index k of T lowered with the metric g (a matrix or a
+% rank-2 T): result[... a ...] = sum over b of g[a b] T[... b ...]
+/tlower {
+	2 index t_isT not { /tlower errordict /typecheck get exec } if
+	1 index dup t_isT exch type /arraytype eq or not { /tlower errordict /typecheck get exec } if
+	3 copy exch t_asT exch t_low { 4 1 roll pop pop pop }{ /tlower errordict /rangecheck get exec } ifelse
+} bind def
+
+%T g k traise -> index k of T raised with the inverse of the metric g
+% (minv raises undefinedresult if g is singular)
+/traise {
+	2 index t_isT not { /traise errordict /typecheck get exec } if
+	1 index dup t_isT exch type /arraytype eq or not { /traise errordict /typecheck get exec } if
+	1 index dup t_isT { dup /shape get length 2 ne { pop /traise errordict /rangecheck get exec } if ttomatrix } if
+	dup msize ne { pop /traise errordict /rangecheck get exec } if
+	minv tfrommatrix 1 index 4 index 3 1 roll
+	t_low { 4 1 roll pop pop pop }{ /traise errordict /rangecheck get exec } ifelse
+} bind def
+
+% ---------------------------------------------------------------- einsum
+
+/t_letters { % string -> [codes] or null: letters a-z, A-Z; spaces skipped
+	[ exch {
+		dup 32 eq { pop }{
+			dup dup 65 ge exch 90 le and 1 index dup 97 ge exch 122 le and or not { pop /t_bad } if
+		} ifelse
+	} forall ]
+	dup true exch { type /integertype eq and } forall not { pop null } if
+} bind def
+/t_einparse { % spec ops -> [[codes] ...] [out] true | false
+	10 dict begin
+	/ops exch def /spec exch def
+	/ok true def
+	spec (->) search { /ins exch def pop /outs exch def /expl true def }{ /ins exch def /expl false def } ifelse
+	/parts [ ins { (,) search { exch pop exch }{ exit } ifelse } loop ] def
+	parts length ops length ne { /ok false def } if
+	/cl [ parts { t_letters dup null eq { /ok false def } if } forall ] def
+	ok {
+		expl {
+			/oc outs t_letters def
+			oc null eq { /ok false def }{
+				/seen 256 array def
+				oc { dup seen exch get null ne { /ok false def } if seen exch true put } forall
+			} ifelse
+		}{
+			/cnt 256 array def 0 1 255 { cnt exch 0 put } for
+			cl { { cnt exch 2 copy get 1 add put } forall } forall
+			/oc [ 0 1 255 { dup cnt exch get 1 ne { pop } if } for ] def
+		} ifelse
+	} if
+	ok { cl oc true }{ false } ifelse
+	end
+} bind def
+
+%(ij,jk->ik) [A B ...] teinsum -> Einstein summation: each operand is named
+% by a string of one-letter indices; an index in the output (after ->) is
+% kept, any other is summed over. Without ->, the output is the indices
+% that appear only once, in alphabetical order (as in numpy). No output
+% indices give a number. Examples: (ii) trace, (ij->ji) transpose, (i,i)
+% dot product, (ij,j->i) matrix times vector, (i,j->ij) outer product.
+/teinsum {
+	1 index type /stringtype ne { /teinsum errordict /typecheck get exec } if
+	dup type /arraytype ne { /teinsum errordict /typecheck get exec } if
+	dup true exch { t_isT and } forall not { /teinsum errordict /typecheck get exec } if
+	2 copy t_einparse not { /teinsum errordict /rangecheck get exec } if
+	2 index 3 1 roll t_es not { /teinsum errordict /rangecheck get exec } if
+	3 1 roll pop pop
+} bind def
+
+% ---------------------------------------------------------------- output
+
+%T tcvs -> string: rank 1 as [a, b, c], rank 2 as [a b; c d], higher ranks
+% as the list of slices along the first index, [[a b; c d], [e f; g h]]
+/tcvs {
+	dup t_isT not { /tcvs errordict /typecheck get exec } if
+	dup t_hasbn m_ops begin
+	10 dict begin
+	/T exch def /S T /shape get def /D T /data get def /ST S t_strides def
+	0 0 t_cv
+	end end
+} bind def
+/t_cv { % offset level -> string (uses S D ST; ops current)
+	5 dict begin
+	/lv exch def /o exch def
+	S length lv sub 1 eq {
+		[ 0 1 S lv get 1 sub { o add D exch get m_cv m_str } for ] (, ) t_join
+	}{
+		S length lv sub 2 eq {
+			[ 0 1 S lv get 1 sub { ST lv get mul o add /ro exch def
+				[ 0 1 S lv 1 add get 1 sub { ro add D exch get m_cv m_str } for ] ( ) t_join
+			} for ] (; ) t_join
+		}{
+			[ 0 1 S lv get 1 sub { ST lv get mul o add lv 1 add t_cv } for ] (, ) t_join
+		} ifelse
+	} ifelse
+	([) exch t_cat (]) t_cat
+	end
+} bind def
+
+%T tPrint -> prints T on the terminal: rank 2 one row per line, any other
+% rank as tcvs gives it
+/tPrint {
+	dup t_isT not { /tPrint errordict /typecheck get exec } if
+	dup /shape get length 2 eq { ttomatrix mPrint }{ tcvs = } ifelse
+} bind def
 
 end % tx@NumericDict

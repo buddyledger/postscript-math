@@ -1085,6 +1085,699 @@ count /bnt_junk exch def clear
 (besselj 2 15) { 2 (15) besselj bnt_str } (+4.157167797525047472014925888876322472620e-2) check
 (norminv 0.01) { (0.01) norminv bnt_str } (-2.326347874040841100885606163346911723352e0) check
 
+(Numeric.ps 1.4 statistics) bnt_section  20 setbnsize
+(listmin) { [5 3 8 -2 7] listmin } (-2) check
+(listmax) { [5 3 8 -2 7] listmax } (8) check
+(listsum) { [2 4 4 4 5 5 7 9] listsum } (40) check
+(listsum of nothing) { [] listsum } (0) check
+(listmin of nothing) { [] listmin } (ERR:rangecheck) check
+(listmin bignums) { [(0.3) (0.1) (0.2)] listmin bnt_str } (+1.0000000000000000000e-1) check
+(listmax bignums) { [(0.3) (0.1) (0.2)] listmax bnt_str } (+3.0000000000000000000e-1) check
+(listsum bignums) { [(0.1) (0.2) (0.3)] listsum bnt_str } (+6.0000000000000000000e-1) check
+(mode) { [3 1 3 2 2] tx@NumericDict /mode get exec } (2) check
+(mode one value) { [5] tx@NumericDict /mode get exec } (5) check
+(mode all different) { [3 1 2] tx@NumericDict /mode get exec } (1) check
+(mode of S8) { [2 4 4 4 5 5 7 9] tx@NumericDict /mode get exec } (4) check
+(mode bignums) { [(0.5) (0.25) (0.5)] tx@NumericDict /mode get exec bnt_str } (+5.0000000000000000000e-1) check
+(mode of nothing) { [] tx@NumericDict /mode get exec } (ERR:rangecheck) check
+(wmean) { [1 2 3] [1 1 2] wmean } 2.25 approx
+(wmean bignums) { [(0.1) (0.2)] [1 3] wmean bnt_str } (+1.7500000000000000000e-1) check
+(wmean lengths differ) { [1 2 3] [1 1] wmean } (ERR:rangecheck) check
+(wmean weights add to 0) { [1 2] [1 -1] wmean } (ERR:undefinedresult) check
+(skewness) { [2 4 4 4 5 5 7 9] skewness } 0.818487553 approx
+(kurtosis) { [2 4 4 4 5 5 7 9] kurtosis } 0.940625 approx
+(skewness bignums) { [(0.5) (1.25) (0.75) (3) (2.5) (0.125)] skewness } (+6.394702649859769859372756296794971663328e-1) 18 bnapprox
+(kurtosis bignums) { [(0.5) (1.25) (0.75) (3) (2.5) (0.125)] kurtosis } (-1.480334983172502359020168218030563297540e0) 18 bnapprox
+(skewness of 2 values) { [1 2] skewness } (ERR:rangecheck) check
+(kurtosis of 3 values) { [1 2 3] kurtosis } (ERR:rangecheck) check
+(skewness of a constant) { [5 5 5] skewness } (ERR:undefinedresult) check
+(skewness symmetric) { [1 2 3 4 5] skewness } (0.0) check
+(quantile 0) { [7 1 3 10 4 2] 0 quantile } 1 approx
+(quantile 0.25) { [7 1 3 10 4 2] 0.25 quantile } 2.25 approx
+(quantile 0.5) { [7 1 3 10 4 2] 0.5 quantile } 3.5 approx
+(quantile 0.9) { [7 1 3 10 4 2] 0.9 quantile } 8.5 approx
+(quantile 1) { [7 1 3 10 4 2] 1 quantile } 10 approx
+(quantile 0.5 is the median) { [7 1 3 10 4 2] 0.5 quantile [7 1 3 10 4 2] median eq } (true) check
+(quantile bignums) { [(0.7) (0.1) (0.3) (1.0) (0.4)] (0.3) quantile bnt_str } (+3.2000000000000000000e-1) check
+(quantile one value) { [4] 0.3 quantile } (4) check
+(quantile p < 0) { [7 1 3 10 4 2] -0.1 quantile } (ERR:rangecheck) check
+(quantile p > 1) { [7 1 3 10 4 2] 1.5 quantile } (ERR:rangecheck) check
+(quantile of nothing) { [] 0.5 quantile } (ERR:rangecheck) check
+(histogram) { [1 2 3 4 5 9] 0 10 5 histogram bnt_list } (1 2 2 0 1) check
+(histogram last bin closed) { [0 5 10 10] 0 10 2 histogram bnt_list } (1 3) check
+(histogram outside ignored) { [-1 11 5 4.99] 0 10 2 histogram bnt_list } (1 1) check
+(histogram bignums) { [(0.1) (0.5) (0.9) (0.49999999999)] (0) (1) 2 histogram bnt_list } (2 2) check
+(histogram k = 0) { [1 2] 0 10 0 histogram } (ERR:rangecheck) check
+(histogram k not an integer) { [1 2] 0 10 2.5 histogram } (ERR:rangecheck) check
+(histogram a = b) { [1 2] 3 3 2 histogram } (ERR:rangecheck) check
+
+(Numeric.ps 1.4 regression) bnt_section  20 setbnsize
+(linear coef) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /coef get } [0.214285714 1.97738095] lapprox
+(linear se) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /se get } [0.20300499 0.0402009785] lapprox
+(linear cov) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /cov get } [0.0412110261 -0.00727253401 -0.00727253401 0.00161611867] lapprox
+(linear r2) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /r2 get } 0.99752618 approx
+(linear adjr2) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /adjr2 get } 0.997113877 approx
+(linear s) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /s get } 0.260532117 approx
+(linear sse) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /sse get } 0.407261905 1e-4 bnt_approx
+(linear sst) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /sst get } 164.62875 1e-3 bnt_approx
+(linear ssr) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /ssr get } 164.221488 1e-3 bnt_approx
+(linear n) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /n get } (8) check
+(linear k) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /k get } (2) check
+(linear dof) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /dof get } (6) check
+(linear tval) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /tval get } 2.44691185 1e-4 bnt_approx
+(linear level) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /level get } 0.95 approx
+(linear fitted) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /fitted get } [2.19166667 4.16904762 6.14642857 8.12380952 10.1011905 12.0785714 14.0559524 16.0333333] lapprox
+(linear resid) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /resid get } [0.108333333 -0.069047619 0.253571429 -0.423809524 0.0988095238 0.0214285714 -0.255952381 0.266666667] lapprox
+(linear stdresid) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress /stdresid get } [0.544430491 -0.311001271 1.07387602 -1.74496876 0.406832604 0.0907500865 -1.15284954 1.34013659] lapprox
+(GLLSR example regeval at 4.5) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress 4.5 regeval } 9.1125 approx
+(GLLSR example regci at 4.5) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress 4.5 regci } [8.88711002 9.33788998] lapprox
+(GLLSR example regpi at 4.5) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress 4.5 regpi } [8.43633007 9.78866993] lapprox
+(GLLSR example regeval at 10.0) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress 10.0 regeval } 19.9880952 approx
+(GLLSR example regci at 10.0) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress 10.0 regci } [19.4019987 20.5741917] lapprox
+(GLLSR example regpi at 10.0) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] 1 regress 10.0 regpi } [19.1221194 20.8540711] lapprox
+(linreg is 1 regress) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] linreg /coef get } [0.214285714 1.97738095] lapprox
+(model of linreg) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] linreg /model get } (1) check
+(model /linear is 1) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] /linear regress /model get } (1) check
+(intercept null) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] linreg /intercept get null eq } (true) check
+(weights null) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] linreg /weights get null eq } (true) check
+(x kept as given) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] linreg /x get bnt_list } (1 2 3 4 5 6 7 8) check
+(y kept as given) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] linreg /y get 1 get } (4.1) check
+(params of a polynomial) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] linreg /params get /coef get length } (2) check
+(level 0.99) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /level 0.99 >> regress /tval get } [3.70742802] lapprox
+(quadratic coef) { [0 1 2 3 4 5 6] [1.2 1.9 4.1 7.8 13.2 20.5 28.9] 2 regress /coef get } [1.23333333 -0.192857143 0.802380952] lapprox
+(quadratic se) { [0 1 2 3 4 5 6] [1.2 1.9 4.1 7.8 13.2 20.5 28.9] 2 regress /se get } [0.102574568 0.0800722463 0.012821821] lapprox
+(quadratic r2) { [0 1 2 3 4 5 6] [1.2 1.9 4.1 7.8 13.2 20.5 28.9] 2 regress /r2 get } 0.999915298 approx
+(quadratic regpi at 2.5 \(general formula\)) { [0 1 2 3 4 5 6] [1.2 1.9 4.1 7.8 13.2 20.5 28.9] 2 regress 2.5 regpi } [5.39132873 6.14081412] lapprox
+(quadratic regci at 2.5) { [0 1 2 3 4 5 6] [1.2 1.9 4.1 7.8 13.2 20.5 28.9] 2 regress 2.5 regci } [5.58173658 5.95040628] lapprox
+(quadratic stdresid) { [0 1 2 3 4 5 6] [1.2 1.9 4.1 7.8 13.2 20.5 28.9] 2 regress /stdresid get } [-0.581318359 0.575355962 0.431516971 -0.794066667 -1.00687293 1.72606789 -1.07959124] lapprox
+(own basis x, x^2 coef) { [1 2 3 4 5] [1.1 3.9 9.2 15.8 25.1] { dup dup mul 2 array astore } regress /coef get } [0.0049068323 0.999689441] lapprox
+(own basis se) { [1 2 3 4 5] [1.1 3.9 9.2 15.8 25.1] { dup dup mul 2 array astore } regress /se get } [0.10523191 0.0249423547] lapprox
+(own basis regeval) { [1 2 3 4 5] [1.1 3.9 9.2 15.8 25.1] { dup dup mul 2 array astore } regress 2.5 regeval } 6.26032609 approx
+(own basis model) { [1 2 3 4 5] [1.1 3.9 9.2 15.8 25.1] { dup dup mul 2 array astore } regress /model get } (basis) check
+(own basis kept) { [1 2 3 4 5] [1.1 3.9 9.2 15.8 25.1] { dup dup mul 2 array astore } regress /basis get xcheck } (true) check
+(own basis in a dict) { [1 2 3 4 5] [1.1 3.9 9.2 15.8 25.1] << /model { dup dup mul 2 array astore } >> regress /k get } (2) check
+(weighted coef) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /weights [1 2 1 2 4 1 1 3] >> regress /coef get } [0.0823420074 2.00910781] lapprox
+(weighted se) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /weights [1 2 1 2 4 1 1 3] >> regress /se get } [0.212600475 0.0398470268] lapprox
+(weighted s) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /weights [1 2 1 2 4 1 1 3] >> regress /s get } 0.337486518 approx
+(weighted r2) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /weights [1 2 1 2 4 1 1 3] >> regress /r2 get } 0.997645423 approx
+(weighted stdresid) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /weights [1 2 1 2 4 1 1 3] >> regress /stdresid get } [0.725793354 -0.00292645349 0.914597452 -1.90819575 0.499420131 -0.114551925 -1.09953532 1.19085396] lapprox
+(weights kept) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /weights [1 2 1 2 4 1 1 3] >> regress /weights get length } (8) check
+(intercept 1: coef) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /intercept 1 >> regress /coef get } [1 1.83872549] lapprox
+(intercept 1: se) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /intercept 1 >> regress /se get } [0 0.0315792169] lapprox
+(intercept 1: dof) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /intercept 1 >> regress /dof get } (7) check
+(intercept 1: k) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /intercept 1 >> regress /k get } (1) check
+(intercept kept) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /intercept 1 >> regress /intercept get } (1) check
+(intercept 1: regeval at 0) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /intercept 1 >> regress 0 regeval } 1 approx
+(intercept 1: regpi at 4) { [1 2 3 4 5 6 7 8] [2.3 4.1 6.4 7.7 10.2 12.1 13.8 16.3] << /model 1 /intercept 1 >> regress 4 regpi } [7.24732265 9.46248127] lapprox
+(quadratic through \(0, 1\)) { [0 1 2 3 4 5 6] [1.2 1.9 4.1 7.8 13.2 20.5 28.9] << /model 2 /intercept 1 >> regress /coef get } [1 -0.0506696429 0.784151786] lapprox
+(power coef \(ln a, b\)) { [1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1] /power regress /coef get } [0.72151076 1.478462] lapprox
+(power a) { [1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1] /power regress /params get /a get } 2.05753931 approx
+(power b) { [1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1] /power regress /params get /b get } 1.478462 approx
+(power regeval at 3.5) { [1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1] /power regress 3.5 regeval } 13.1139061 1e-4 bnt_approx
+(power r2 \(of ln y\)) { [1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1] /power regress /r2 get } 0.999420694 approx
+(power regpi transformed back) { [1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1] /power regress 3.5 regpi } [12.1122039 14.198451] lapprox
+(power model) { [1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1] /power regress /model get } (power) check
+(exp a) { [1 2 3 4 5 6] [2.7 7.6 19.8 55.1 147.0 405.0] /exp regress /params get /a get } 1.00542348 1e-4 bnt_approx
+(exp b) { [1 2 3 4 5 6] [2.7 7.6 19.8 55.1 147.0 405.0] /exp regress /params get /b get } 0.998957065 approx
+(exp regeval at 2.5) { [1 2 3 4 5 6] [2.7 7.6 19.8 55.1 147.0 405.0] /exp regress 2.5 regeval } 12.2166709 1e-4 bnt_approx
+(log10 coef) { [1 2 3 4 5 6] [1.1 2.9 4.1 4.8 5.6 6.1] /log10 regress /coef get } [1.03519892 6.43565512] lapprox
+(log10 params) { [1 2 3 4 5 6] [1.1 2.9 4.1 4.8 5.6 6.1] /log10 regress /params get dup /a get exch /b get 2 array astore } [1.03519892 6.43565512] lapprox
+(ln coef) { [1 2 3 4 5 6] [1.1 2.9 4.1 4.8 5.6 6.1] /ln regress /coef get } [1.03519892 2.79496951] lapprox
+(ln regeval at 10) { [1 2 3 4 5 6] [1.1 2.9 4.1 4.8 5.6 6.1] /ln regress 10 regeval } 7.47085403 approx
+(recip coef) { [1 2 3 4 5 6] [5.1 3.4 2.9 2.7 2.6 2.45] /recip regress /coef get } [1.90221122 3.15785007] lapprox
+(gauss sigma) { [-1 -0.5 0 0.5 1 1.5 2 2.5 3] [0.1292 0.5173 1.401 2.4431 3.03 2.4184 1.3735 0.5276 0.1305] /gauss regress /params get /sigma get } 0.79879518 1e-4 bnt_approx
+(gauss mu) { [-1 -0.5 0 0.5 1 1.5 2 2.5 3] [0.1292 0.5173 1.401 2.4431 3.03 2.4184 1.3735 0.5276 0.1305] /gauss regress /params get /mu get } 1.00105034 1e-4 bnt_approx
+(gauss A) { [-1 -0.5 0 0.5 1 1.5 2 2.5 3] [0.1292 0.5173 1.401 2.4431 3.03 2.4184 1.3735 0.5276 0.1305] /gauss regress /params get /A get } 3.00827293 1e-4 bnt_approx
+(gauss regeval at 1.2) { [-1 -0.5 0 0.5 1 1.5 2 2.5 3] [0.1292 0.5173 1.401 2.4431 3.03 2.4184 1.3735 0.5276 0.1305] /gauss regress 1.2 regeval } 2.91640051 1e-4 bnt_approx
+(gauss k) { [-1 -0.5 0 0.5 1 1.5 2 2.5 3] [0.1292 0.5173 1.401 2.4431 3.03 2.4184 1.3735 0.5276 0.1305] /gauss regress /k get } (3) check
+(power with x = 0) { [0 1 2] [1 2 3] /power regress } (ERR:rangecheck) check
+(exp with y < 0) { [0 1 2] [1 -2 3] /exp regress } (ERR:rangecheck) check
+(log10 with x < 0) { [-1 1 2] [1 2 3] /log10 regress } (ERR:rangecheck) check
+(recip with x = 0) { [0 1 2] [1 2 3] /recip regress } (ERR:rangecheck) check
+(gauss with y = 0) { [0 1 2 3] [1 0 3 1] /gauss regress } (ERR:rangecheck) check
+(gauss opening upwards) { [0 1 2 3] [4 1 1 4] /gauss regress } (ERR:undefinedresult) check
+(no degrees of freedom) { [1 2] [1 2] 1 regress } (ERR:rangecheck) check
+(negative degree) { [1 2 3] [1 2 3] -1 regress } (ERR:rangecheck) check
+(unknown model) { [1 2 3] [1 2 3] /cubic regress } (ERR:rangecheck) check
+(model a string) { [1 2 3] [1 2 3] (1) regress } (ERR:typecheck) check
+(dict without model) { [1 2 3] [1 2 3] << /level 0.9 >> regress } (ERR:typecheck) check
+(lengths differ) { [1 2 3] [1 2] 1 regress } (ERR:rangecheck) check
+(weight 0) { [1 2 3] [1 2 4] << /model 1 /weights [1 0 1] >> regress } (ERR:rangecheck) check
+(weights too few) { [1 2 3] [1 2 4] << /model 1 /weights [1 1] >> regress } (ERR:rangecheck) check
+(level 1) { [1 2 3] [1 2 4] << /model 1 /level 1 >> regress } (ERR:rangecheck) check
+(intercept with own basis) { [1 2 3] [1 2 4] << /model { dup dup mul 2 array astore } /intercept 0 >> regress } (ERR:rangecheck) check
+(intercept leaves nothing to fit) { [1 2 3] [1 2 4] << /model 0 /intercept 0 >> regress } (ERR:rangecheck) check
+(dependent columns) { [1 1 1] [1 2 3] 1 regress } (ERR:undefinedresult) check
+(basis not a list) { [1 2 3] [1 2 4] { } regress } (ERR:typecheck) check
+(basis of unequal lengths) { [1 2 3 4] [1 2 4 5] { dup 2 gt { 1 2 array astore }{ 1 array astore } ifelse } regress } (ERR:rangecheck) check
+(error leaves the operands) { { [1 2] [1 2] 1 regress } stopped pop pop length exch length add } (4) check
+(errors keep the dictionary stack) { countdictstack { [0 1 2] [1 2 3] /power regress } stopped pop pop pop pop { [1 1 1] [1 2 3] 1 regress } stopped pop pop pop pop { [1 2] [1 2] 1 regress } stopped pop pop pop pop countdictstack exch sub } (0) check
+(regeval power at x < 0) { [1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1] /power regress -1 regeval } (ERR:rangecheck) check
+(regeval error keeps the dictionary stack) { countdictstack { [1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1] /power regress -1 regeval } stopped pop pop pop countdictstack exch sub } (0) check
+(regeval of a number) { 3 4 regeval } (ERR:typecheck) check
+(bignum line coef) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] 1 regress /coef get bnt_list } (+5.0000000000000000000e-2 +1.9900000000000000000e0) check
+(bignum line se of the slope) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] 1 regress /se get 1 get } (+5.972157622389639061548771700217364018981e-2) 18 bnapprox
+(bignum line s) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] 1 regress /s get } (+1.888562063228705933084911348989230098464e-1) 18 bnapprox
+(bignum line sse) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] 1 regress /sse get bnt_str } (+1.0700000000000000000e-1) check
+(bignum line r2) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] 1 regress /r2 get } (+9.973053289009771330714213760451294449481e-1) 18 bnapprox
+(bignum line regeval) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] 1 regress (2.5) regeval bnt_str } (+5.0250000000000000000e0) check
+(bignum line regpi) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] 1 regress (2.5) regpi 0 get typchk } (bignumtype) check
+(bignum line regpi upper) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] 1 regress (2.5) regpi 1 get } (+5.690212483598104100434659798953384439189e0) 5 bnapprox
+(bignum quadratic coef) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] 2 regress /coef get bnt_list } (+2.0000000000000000000e-1 +1.8614285714285714286e0 +2.1428571428571428571e-2) check
+(bignum weighted coef) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] << /model 1 /weights [1 2 3 2 1] >> regress /coef get bnt_list } (+7.2222222222222222222e-2 +1.9833333333333333333e0) check
+(bignum intercept coef) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] << /model 1 /intercept (0) >> regress /coef get 1 get bnt_str } (+2.0036363636363636364e0) check
+(bignum mode from the intercept) { [1 2 3] [2 4 7] << /model 1 /intercept (0) >> regress /coef get 1 get typchk } (bignumtype) check
+(bignum power a) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] /power regress /params get /a get } (+2.064514817764872396613855231121864622770e0) 17 bnapprox
+(bignum power b) { [(1) (2) (3) (4) (5)] [(2.1) (3.9) (6.2) (7.8) (10.1)] /power regress /params get /b get } (+9.753846856975044774989638706418104488682e-1) 17 bnapprox
+
+(Numeric.ps 1.4 random numbers, Gauss-Legendre) bnt_section  20 setbnsize
+(rngseed repeats) { 7 rngseed rnguniform 7 rngseed rnguniform eq } (true) check
+(different seeds differ) { 7 rngseed rnguniform 8 rngseed rnguniform ne } (true) check
+(first value after 0 rngseed) { 0 rngseed rnguniform } 7.82636926e-06 1e-9 bnt_approx
+(Park-Miller check: state 1043618065 after 10000 steps) { 0 rngseed 10000 { rnguniform pop } repeat n_rngs } (1043618065) check
+(rnguniform in \(0, 1\)) { 1 rngseed true 1000 { rnguniform dup 0 gt exch 1 lt and and } repeat } (true) check
+(rngnormal mean near 0) { 3 rngseed 0 1000 { rngnormal add } repeat 1000 div abs 0.1 lt } (true) check
+(rngnormal variance near 1) { 3 rngseed 0 1000 { rngnormal dup mul add } repeat 1000 div 1 sub abs 0.15 lt } (true) check
+(rngseed of a real) { 1.5 rngseed } (ERR:typecheck) check
+(fgauss x^3 with 2 nodes) { { dup dup mul mul } 0 1 2 fgauss } 0.25 approx
+(fgauss x^5 with 3 nodes) { { dup dup mul dup mul mul } 0 1 3 fgauss } 0.166666667 approx
+(fgauss e^x with 5 nodes) { { 2.718281828 exch exp } 0 1 5 fgauss } 1.71828183 approx
+(fgauss sin on [0, pi], 10 nodes) { { 57.29577951 mul sin } 0 3.14159265 10 fgauss } 2 approx
+(fgauss 1 node is the midpoint rule) { { dup mul } 0 2 1 fgauss } 2 approx
+(fgauss reversed limits) { { dup mul } 1 0 3 fgauss } -0.333333333 approx
+(fgauss bignums x^5, 3 nodes) { { dup dup mulbn dup mulbn mulbn } (0) (1) 3 fgauss } (+1.666666666666666666666666667000000000000e-1) 18 bnapprox
+(fgauss bignums e^x, 12 nodes) { { expbn } (0) (1) 12 fgauss } (+1.718281828459045235360287471352662497757e0) 18 bnapprox
+(fgauss n = 0) { { } 0 1 0 fgauss } (ERR:rangecheck) check
+(fgauss n not an integer) { { } 0 1 2.5 fgauss } (ERR:rangecheck) check
+
+/tm_mdiff { 4 dict begin mtorows /tm_b exch def mtorows /tm_a exch def
+	0 setbn 0 1 tm_a length 1 sub { /tm_i exch def 0 1 tm_a 0 get length 1 sub { /tm_j exch def
+		tm_a tm_i get tm_j get setbn tm_b tm_i get tm_j get setbn subbn absbn
+		2 copy gtbn { pop }{ exch pop } ifelse } for } for end } def
+/tm_mmax { 0 setbn exch { { setbn absbn 2 copy gtbn { pop }{ exch pop } ifelse } forall } forall } def
+/tm_le { setbn lebn } def   % bn (tol) -> bool
+/tm_eigres { % A [[z v] ...] -> largest |(A v - z v)_i| and ||v| - 1| over all pairs
+	8 dict begin /tm_P exch def mtorows /tm_A exch def
+	0 setbn tm_P { aload pop /tm_v exch def aload pop setbn /tm_zi exch def setbn /tm_zr exch def
+		0 setbn tm_v { aload pop setbn dup mulbn exch setbn dup mulbn addbn addbn } forall
+		sqrtbn 1 setbn subbn absbn 2 copy gtbn { pop }{ exch pop } ifelse
+		0 1 tm_A length 1 sub { /tm_i exch def
+			0 setbn 0 setbn
+			0 1 tm_v length 1 sub { /tm_j exch def
+				tm_A tm_i get tm_j get setbn /tm_a exch def
+				tm_v tm_j get aload pop setbn tm_a mulbn 3 -1 roll addbn
+				3 1 roll setbn tm_a mulbn addbn exch
+			} for
+			tm_v tm_i get aload pop setbn /tm_wi exch def setbn /tm_wr exch def
+			tm_zr tm_wi mulbn tm_zi tm_wr mulbn addbn subbn absbn exch
+			tm_zr tm_wr mulbn tm_zi tm_wi mulbn subbn subbn absbn
+			addbn 2 copy gtbn { pop }{ exch pop } ifelse
+		} for
+	} forall
+	end } def
+
+
+(Matrix.ps 1.4: Kronecker product, diagonal, powers) bnt_section  30 setbnsize
+(mkron 2x2 \(x\) 2x2) { [[1 2][3 4]] mfromrows [[0 1][1 0]] mfromrows mkron bnt_mstr } (0 1 0 2; 1 0 2 0; 0 3 0 4; 3 0 4 0) check
+(mkron 1x2 \(x\) 2x1) { [[1 2]] mfromrows [[3][4]] mfromrows mkron bnt_mstr } (3 6; 4 8) check
+(mkron decimals) { [[(0.5)]] mfromrows [[2 (0.1)]] mfromrows mkron bnt_mstr } (+1.00000000000000000000000000000e0 +5.00000000000000000000000000000e-2) check
+(mdiag list) { [1 2 3] mdiag bnt_mstr } (1 0 0; 0 2 0; 0 0 3) check
+(mdiag of a matrix) { [[1 2 3][4 5 6]] mfromrows mdiag bnt_list } (1 5) check
+(mdiag of bignums) { [(1.5) (2)] mdiag mdiag bnt_list } (1.5 2) check
+(mdiag of a non-array) { 5 mdiag } (ERR:typecheck) check
+(mdiag of []) { [] mdiag } (ERR:rangecheck) check
+(mpow 3) { [[1 2][3 4]] mfromrows 3 mpow bnt_mstr } (37 54; 81 118) check
+(mpow 0 is the identity) { [[1 2][3 4]] mfromrows 0 mpow bnt_mstr } (1 0; 0 1) check
+(mpow 1) { [[1 2][3 4]] mfromrows 1 mpow bnt_mstr } (1 2; 3 4) check
+(mpow 30 of the Fibonacci matrix) { [[1 1][1 0]] mfromrows 30 mpow bnt_mstr } (1346269 832040; 832040 514229) check
+(mpow -2, reals) { [[1 2][3 4]] mfromrows -2 mpow } [5.5 -2.5 -3.75 1.75] mapprox
+(mpow -2, bignums) { [[(1) 2][3 4]] mfromrows -2 mpow bnt_mstr } (+5.50000000000000000000000000000e0 -2.50000000000000000000000000000e0; -3.75000000000000000000000000000e0 +1.75000000000000000000000000000e0) check
+(mpow of a singular matrix to -1) { [[1 2][2 4]] mfromrows -1 mpow } (ERR:undefinedresult) check
+(mpow with a real exponent) { [[1 2][3 4]] mfromrows 1.5 mpow } (ERR:typecheck) check
+(mpow of a non-square matrix) { [[1 2 3][4 5 6]] mfromrows 2 mpow } (ERR:rangecheck) check
+
+(Matrix.ps 1.4: Cholesky and QR) bnt_section  30 setbnsize
+(mchol 2x2) { [[4 2][2 3]] mfromrows mchol } [2 0 1 1.41421356] mapprox
+(mchol 3x3 with an integer factor) { [[25 15 -5][15 18 0][-5 0 11]] mfromrows mchol bnt_mstr } (5.0 0 0; 3.0 3.0 0; -1.0 1.0 3.0) check
+(mchol bignums: l22 = sqrt 2) { [[(4) 2][2 3]] mfromrows mchol 2 2 mget } (+1.414213562373095048801688724209698078570e0) 28 bnapprox
+(mchol bignums: L L^T = A) { [[(2.5) 1 (0.5)][1 3 (-0.25)][(0.5) (-0.25) 4]] mfromrows dup mchol dup mtranspose mmul tm_mdiff (1e-26) tm_le } (true) check
+(mchol of an indefinite matrix) { [[1 2][2 1]] mfromrows mchol } (ERR:rangecheck) check
+(mchol of a non-symmetric matrix) { [[2 1][0 2]] mfromrows mchol } (ERR:rangecheck) check
+(mchol of a non-square matrix) { [[1 2 3][4 5 6]] mfromrows mchol } (ERR:rangecheck) check
+(mqr 3x2: Q) { [[1 2][3 4][5 6]] mfromrows mqr pop } [0.169030851 0.897085227 0.507092553 0.276026224 0.845154255 -0.34503278] mapprox
+(mqr 3x2: R) { [[1 2][3 4][5 6]] mfromrows mqr exch pop } [5.91607978 7.43735744 0 0.828078671] mapprox
+(mqr reals: Q R = A) { [[1 2][3 4][5 6]] mfromrows mqr mmul } [1 2 3 4 5 6] mapprox
+(mqr square: Q^T Q = I) { [[2 -1 0][-1 2 -1][0 -1 2]] mfromrows mqr pop dup mtranspose exch mmul } [1 0 0 0 1 0 0 0 1] mapprox
+(mqr bignums: Q R = A) { [[(0.1) (0.2) (0.3)][(1.5) (-2) (0.25)][(3) (1) (-1)][(0.5) (0.5) (7)]] mfromrows dup mqr mmul tm_mdiff (1e-26) tm_le } (true) check
+(mqr bignums: Q^T Q = I) { [[(0.1) (0.2) (0.3)][(1.5) (-2) (0.25)][(3) (1) (-1)][(0.5) (0.5) (7)]] mfromrows mqr pop dup mtranspose exch mmul 3 midentity tm_mdiff (1e-26) tm_le } (true) check
+(mqr bignums: R upper triangular, positive diagonal) { [[(0.1) (0.2) (0.3)][(1.5) (-2) (0.25)][(3) (1) (-1)][(0.5) (0.5) (7)]] mfromrows mqr exch pop dup 2 1 mget bniszero 1 index 3 1 mget bniszero and 1 index 3 2 mget bniszero and exch mdiag { bn_isneg not and } forall } (true) check
+(mqr of a wide matrix) { [[1 2 3][4 5 6]] mfromrows mqr } (ERR:rangecheck) check
+(mqr of dependent columns) { [[1 2][2 4][3 6]] mfromrows mqr } (ERR:undefinedresult) check
+
+(Matrix.ps 1.4: singular values, pseudo-inverse, null space) bnt_section  30 setbnsize
+(msingular 2x2) { [[3 0][4 5]] mfromrows msingular } [6.70820393 2.23606798] lapprox
+(msingular bignums: 3 sqrt 5) { [[(3) 0][4 5]] mfromrows msingular 0 get } (+6.708203932499369089227521006193828706322e0) 28 bnapprox
+(msingular bignums: sqrt 5) { [[(3) 0][4 5]] mfromrows msingular 1 get } (+2.236067977499789696409173668731276235441e0) 28 bnapprox
+(msingular 3x4 \(wide\)) { [[1 2 3 4][2 0 1 -1][0 1 1 2]] mfromrows msingular } [5.97501044 2.50627475 0.133555768] lapprox
+(msingular 4x3 bignums, largest) { [[1 2 0][2 0 1][3 1 1][4 -1 2]] mfromrows 1 setbn mscale msingular 0 get } (+5.975010437194855529735253504000000000000e0) 26 bnapprox
+(msingular 4x3 bignums, smallest) { [[1 2 0][2 0 1][3 1 1][4 -1 2]] mfromrows 1 setbn mscale msingular 2 get } (+1.335557677807203056433217742000000000000e-1) 26 bnapprox
+(msvd reals: U diag\(S\) V^T = A) { [[1 2 3 4][2 0 1 -1][0 1 1 2]] mfromrows msvd mtranspose exch mdiag exch mmul mmul } [1 2 3 4 2 0 1 -1 0 1 1 2] mapprox
+(msvd reals: U^T U = I \(wide\)) { [[1 2 3 4][2 0 1 -1][0 1 1 2]] mfromrows msvd pop pop dup mtranspose exch mmul } [1 0 0 0 1 0 0 0 1] mapprox
+(msvd reals: V^T V = I \(wide\)) { [[1 2 3 4][2 0 1 -1][0 1 1 2]] mfromrows msvd exch pop exch pop dup mtranspose exch mmul } [1 0 0 0 1 0 0 0 1] mapprox
+(msvd bignums: U diag\(S\) V^T = A) { [[(0.5) (1) (-2)][(3) (0.25) (1)][(1) (1) (1)][(2) (-1) (0.5)]] mfromrows dup msvd mtranspose exch mdiag exch mmul mmul tm_mdiff (1e-26) tm_le } (true) check
+(msvd bignums: V^T V = I) { [[(0.5) (1) (-2)][(3) (0.25) (1)][(1) (1) (1)][(2) (-1) (0.5)]] mfromrows msvd exch pop exch pop dup mtranspose exch mmul 3 midentity tm_mdiff (1e-26) tm_le } (true) check
+(msvd rank 1: second singular value 0) { [[1 2][2 4]] mfromrows msingular 1 get } (0) check
+(msvd rank 1, bignums: U still orthonormal) { [[(1) 2][2 4]] mfromrows msvd pop pop dup mtranspose exch mmul 2 midentity tm_mdiff (1e-26) tm_le } (true) check
+(msvd of the zero matrix) { [[0 0][0 0]] mfromrows msingular bnt_list } (0 0) check
+(mpinv full column rank = \(A^T A\)^-1 A^T) { [[1 2][3 4][5 7]] mfromrows mpinv } [-2.07142857 0.785714286 0.142857143 1.5 -0.5 0] mapprox
+(mpinv bignums, full column rank) { [[(1) 2][3 4][5 7]] mfromrows mpinv [[(-2.071428571428571428571428571428571428571) (0.7857142857142857142857142857142857142857) (0.1428571428571428571428571428571428571429)][(1.5) (-0.5) (0)]] mfromrows tm_mdiff (1e-26) tm_le } (true) check
+(mpinv rank 1: A / 25) { [[1 2][2 4]] mfromrows mpinv } [0.04 0.08 0.08 0.16] mapprox
+(mpinv bignums rank 1: A A+ A = A) { [[(1) 2][2 4][3 6]] mfromrows dup dup mpinv mmul 1 index mmul tm_mdiff (1e-26) tm_le } (true) check
+(mpinv of a square invertible matrix is the inverse) { [[1 2][3 4]] mfromrows mpinv } [-2 1 1.5 -0.5] mapprox
+(mpinv wide) { [[1 0 1][0 1 1]] mfromrows mpinv } [0.666666667 -0.333333333 -0.333333333 0.666666667 0.333333333 0.333333333] mapprox
+(mpinv of the zero matrix) { [[0 0 0][0 0 0]] mfromrows mpinv } [0 0 0 0 0 0] mapprox
+(mnull 2x3: +-\(1, -2, 1\)/sqrt 6, squared) { [[1 2 3][4 5 6]] mfromrows mnull mtorows { 0 get dup mul } forall 3 array astore } [0.166666667 0.666666667 0.166666667] lapprox
+(mnull 2x3: A N = 0) { [[1 2 3][4 5 6]] mfromrows dup mnull mmul } [0 0] mapprox
+(mnull of an invertible matrix is []) { [[1 2][3 4]] mfromrows mnull length } (0) check
+(mnull of rank 1 3x3 has 2 columns) { [[1 2 3][2 4 6][3 6 9]] mfromrows mnull msize exch pop } (2) check
+(mnull bignums: A N = 0) { [[(1) 2 3][2 4 6][1 1 1]] mfromrows dup mnull mmul tm_mmax (1e-26) tm_le } (true) check
+(mnull bignums: N^T N = I) { [[(1) 2 3 4][2 4 6 8]] mfromrows mnull dup mtranspose exch mmul 3 midentity tm_mdiff (1e-26) tm_le } (true) check
+(mnull of the zero matrix is everything) { [[0 0][0 0]] mfromrows mnull bnt_mstr } (1 0; 0 1) check
+
+(Matrix.ps 1.4: eigenvectors) bnt_section  30 setbnsize
+(meigsymv is meigsym) { [[2 1][1 2]] mfromrows meigsymv pop bnt_list } (1.0 3.0) check
+(meigvec 2x2 values and vectors) { [[2 1][1 2]] mfromrows meigvec } [1 0 0.707106781 0 -0.707106781 0 3 0 0.707106781 0 0.707106781 0] lapprox
+(meigvec rotation: complex vectors) { [[0 -1][1 0]] mfromrows meigvec } [0 -1 0.707106781 0 0 0.707106781 0 1 0.707106781 0 0 -0.707106781] lapprox
+(meigvec non-symmetric 3x3, reals: residual) { [[1 1 0][0 1 1][1 0 1]] mfromrows dup meigvec tm_eigres (1e-4) tm_le } (true) check
+(meigvec 4x4 reals: residual) { [[4 1 0 2][1 3 1 0][0 2 5 1][1 0 1 2]] mfromrows dup meigvec tm_eigres (1e-4) tm_le } (true) check
+(meigvec bignums, 3x3 complex pair: residual) { [[(1) 1 0][0 1 1][1 0 1]] mfromrows dup meigvec tm_eigres (1e-24) tm_le } (true) check
+(meigvec bignums, symmetric 3x3: residual) { [[4 1 2][1 3 0][2 0 5]] mfromrows 1 setbn mscale dup meigvec tm_eigres (1e-24) tm_le } (true) check
+(meigvec repeated eigenvalue: orthogonal vectors) { [[2 0][0 2]] mfromrows meigvec dup 0 get 1 get exch 1 get 1 get /tm_v2 exch def /tm_v1 exch def 0 0 1 1 { dup tm_v1 exch get 0 get exch tm_v2 exch get 0 get mul add } for abs 1e-5 lt } (true) check
+(meigvec defective matrix: \(1, 0\) twice) { [[1 1][0 1]] mfromrows meigvec } [1 0 1 0 0 0 1 0 1 0 0 0] lapprox
+(meigvec bignums: largest component real and positive) { [[(0) -1][1 0]] mfromrows meigvec 0 get 1 get 0 get 0 get } (+7.071067811865475244008443621048490392848e-1) 28 bnapprox
+(meigvec bignums: ... with imaginary part exactly 0) { [[(0) -1][1 0]] mfromrows meigvec 0 get 1 get 0 get 1 get bniszero } (true) check
+(meigvec of a non-square matrix) { [[1 2 3][4 5 6]] mfromrows meigvec } (ERR:rangecheck) check
+
+(Matrix.ps 1.4: matrix exponential) bnt_section  30 setbnsize
+(mexp rotation) { [[0 -1][1 0]] mfromrows mexp } [0.540302306 -0.841470985 0.841470985 0.540302306] mapprox
+(mexp nilpotent) { [[0 1][0 0]] mfromrows mexp } [1 1 0 1] mapprox
+(mexp diagonal, large norm: e^5 relative) { [[5 0][0 -3]] mfromrows mexp 1 1 mget 148.4131591 div } 1 approx
+(mexp diagonal, large norm: e^-3) { [[5 0][0 -3]] mfromrows mexp 2 2 mget } 0.0497870684 approx
+(mexp of 0 is I) { [[0 0][0 0]] mfromrows mexp } [1 0 0 1] mapprox
+(mexp bignums: rotation cos 1) { [[(0) -1][1 0]] mfromrows mexp 1 1 mget } (+5.403023058681397174009366074429766037323e-1) 28 bnapprox
+(mexp bignums: rotation sin 1) { [[(0) -1][1 0]] mfromrows mexp 2 1 mget } (+8.414709848078965066525023216302989996226e-1) 28 bnapprox
+(mexp bignums: e^10) { [[(10) 0][0 1]] mfromrows mexp 1 1 mget } (+2.202646579480671651695790064528424436635e4) 27 bnapprox
+(mexp bignums: Jordan block, off-diagonal) { [[(0.5) (2.5)][0 (0.5)]] mfromrows mexp 1 2 mget } (+4.121803176750320367121626969535408929134e0) 28 bnapprox
+(mexp\(A\) mexp\(-A\) = I, bignums) { [[(0.3) 1 (-0.2)][(0.1) (-0.4) 2][1 (0.5) (0.25)]] mfromrows dup mexp exch -1 mscale mexp mmul 3 midentity tm_mdiff (1e-26) tm_le } (true) check
+(mexp of a non-square matrix) { [[1 2 3][4 5 6]] mfromrows mexp } (ERR:rangecheck) check
+
+(Special.ps 1.4 digamma, beta, binomial coefficients) bnt_section  20 setbnsize
+countdictstack /spt_ds exch def
+(digamma 0.5) { (0.5) digamma } (-1.963510026021423479440976332998755567193e0) 18 bnapprox
+(digamma 1) { (1) digamma } (-5.772156649015328606065120900824024310422e-1) 18 bnapprox
+(digamma 2) { (2) digamma } (+4.227843350984671393934879099175975689578e-1) 18 bnapprox
+(digamma 10.5) { (10.5) digamma } (+2.303001034297686375272593550849766052226e0) 18 bnapprox
+(digamma 1e-3) { (1e-3) digamma } (-1.000575571931810300471472614469649228500e3) 18 bnapprox
+(digamma -0.5) { (-0.5) digamma } (+3.648997397857652055902366700124443280684e-2) 18 bnapprox
+(digamma -2.3) { (-2.3) digamma } (+3.317323157561820123267000336263514186342e0) 18 bnapprox
+(digamma 100) { (100) digamma } (+4.600161852738087400198605585575850726867e0) 18 bnapprox
+(digamma 3.75) { (3.75) digamma } (+1.182537388611796228641511505581087705098e0) 18 bnapprox
+(digamma 1 \(real\)) { 1 digamma } -0.577215665 approx
+(digamma 0 is an error) { 0 digamma } (ERR:undefinedresult) check
+(digamma -2 is an error) { (-2) digamma } (ERR:undefinedresult) check
+(betafn 0.5 0.5) { (0.5) (0.5) betafn } (+3.141592653589793238462643383279502884197e0) 18 bnapprox
+(betafn 2 3) { (2) (3) betafn } (+8.333333333333333333333333333333333333333e-2) 18 bnapprox
+(betafn 1.5 2.5) { (1.5) (2.5) betafn } (+1.963495408493620774039152114549689302623e-1) 18 bnapprox
+(betafn 0.3 0.7) { (0.3) (0.7) betafn } (+3.883222077450933154693731259925391915269e0) 18 bnapprox
+(betafn 10 20) { (10) (20) betafn } (+4.992508740634677666161924032988500754618e-9) 18 bnapprox
+(betafn -0.5 2) { (-0.5) (2) betafn } (-4.000000000000000000000000000000000000000e0) 18 bnapprox
+(lnbeta 100 200) { (100) (200) lnbeta } (-1.921341922749789518930798544281427326162e2) 18 bnapprox
+(lnbeta 0.5 0.5 = ln pi) { (0.5) (0.5) lnbeta } (+1.144729885849400174143427351353058711647e0) 18 bnapprox
+(betafn 2 3 \(real\)) { 2 3 betafn } 0.0833333333 approx
+(betafn 0 1 is an error) { 0 1 betafn } (ERR:undefinedresult) check
+(betafn -1.5 1.5 is 0) { (-1.5) (1.5) betafn bnt_str } (+0.0000000000000000000e0) check
+(choose 100 50) { (100) (50) choose bnt_str } (+1.00891344545564193334812497256e29) check
+(choose 10 3) { (10) (3) choose bnt_str } (+1.2000000000000000000e2) check
+(choose 50 0) { (50) (0) choose bnt_str } (+1.0000000000000000000e0) check
+(choose 1000 3) { (1000) (3) choose bnt_str } (+1.6616700000000000000e8) check
+(choose 5 7) { (5) (7) choose bnt_str } (+0.0000000000000000000e0) check
+(choose 5 -1) { (5) (-1) choose bnt_str } (+0.0000000000000000000e0) check
+(choose -3 2) { (-3) (2) choose bnt_str } (+6.0000000000000000000e0) check
+(choose -4 3) { (-4) (3) choose bnt_str } (-2.0000000000000000000e1) check
+(choose 60 30) { (60) (30) choose bnt_str } (+1.1826458156486142400e17) check
+(choose of a 30-digit integer) { (123456789012345678901234567890) 2 choose bnt_str } (+7.620789376619418375247675781206370999244779760486892242105e57) check
+(choose 10 3 \(real\)) { 10 3 choose } (120.0) check
+(choose 2.5 2) { (2.5) 2 choose bnt_str } (+1.8750000000000000000e0) check
+(choose 5.5 2.5) { (5.5) (2.5) choose } (+1.443750000000000000000000000000000000000e1) 18 bnapprox
+(choose 0.5 3) { (0.5) 3 choose } (+6.250000000000000000000000000000000000000e-2) 18 bnapprox
+(choose -1 0.5 is an error) { (-1) (0.5) choose } (ERR:undefinedresult) check
+
+(Special.ps 1.4 incomplete gamma and beta) bnt_section  20 setbnsize
+(gammainc 2 1) { (2) (1) gammainc } (+2.642411176571153568089524596770782651084e-1) 18 bnapprox
+(gammaincc 2 1) { (2) (1) gammaincc } (+7.357588823428846431910475403229217348916e-1) 17 bnapprox
+(gammainc 0.5 0.3) { (0.5) (0.3) gammainc } (+5.614219739190001449497469037630042102066e-1) 18 bnapprox
+(gammaincc 0.5 0.3) { (0.5) (0.3) gammaincc } (+4.385780260809998550502530962369957897934e-1) 17 bnapprox
+(gammainc 5 10) { (5) (10) gammainc } (+9.707473119230389273272338668071518901367e-1) 18 bnapprox
+(gammaincc 5 10) { (5) (10) gammaincc } (+2.925268807696107267276613319284810986330e-2) 17 bnapprox
+(gammainc 10 5) { (10) (5) gammainc } (+3.182805730620481173718657418083710417702e-2) 18 bnapprox
+(gammaincc 10 5) { (10) (5) gammaincc } (+9.681719426937951882628134258191628958230e-1) 17 bnapprox
+(gammainc 3.5 4.5) { (3.5) (4.5) gammainc } (+7.473439535034362062427236784035850111296e-1) 18 bnapprox
+(gammaincc 3.5 4.5) { (3.5) (4.5) gammaincc } (+2.526560464965637937572763215964149888704e-1) 17 bnapprox
+(gammainc 1 50) { (1) (50) gammainc } (+9.999999999999999999998071250152036082217e-1) 18 bnapprox
+(gammaincc 1 50) { (1) (50) gammaincc } (+1.928749847963917783017342816527012574753e-22) 17 bnapprox
+(gammainc 100 90) { (100) (90) gammainc } (+1.582209891864301681049696996709105316998e-1) 18 bnapprox
+(gammaincc 100 90) { (100) (90) gammaincc } (+8.417790108135698318950303003290894683002e-1) 17 bnapprox
+(gammainc 2.7 0.01) { (2.7) (0.01) gammainc } (+9.476060057078839228473300274360366413969e-7) 18 bnapprox
+(gammaincc 2.7 0.01) { (2.7) (0.01) gammaincc } (+9.999990523939942921160771526699725639634e-1) 17 bnapprox
+(gammainc 3 5 \(real\)) { 3 5 gammainc } 0.875347981 approx
+(gammainc a = 0 is an error) { 0 1 gammainc } (ERR:rangecheck) check
+(gammaincc x < 0 is an error) { 1 -1 gammaincc } (ERR:rangecheck) check
+(gammainc x = 0) { (2) 0 gammainc bnt_str } (+0.0000000000000000000e0) check
+(betainc 0.3 2 3) { (0.3) (2) (3) betainc } (+3.483000000000000000000000000000000000000e-1) 18 bnapprox
+(betainc 0.9 2 3) { (0.9) (2) (3) betainc } (+9.963000000000000000000000000000000000000e-1) 18 bnapprox
+(betainc 0.5 0.5 0.5) { (0.5) (0.5) (0.5) betainc } (+5.000000000000000000000000000000000000000e-1) 18 bnapprox
+(betainc 0.1 10 1.5) { (0.1) (10) (1.5) betainc } (+3.527906745405452904847522016766601632332e-10) 18 bnapprox
+(betainc 0.99 5 5) { (0.99) (5) (5) betainc } (+9.999999878146314300000000000000000000000e-1) 18 bnapprox
+(betainc 0.45 50 60) { (0.45) (50) (60) betainc } (+4.642352914306035358503014106912766596236e-1) 18 bnapprox
+(betainc 1e-5 0.5 3) { (1e-5) (0.5) (3) betainc } (+5.929231084463544555012589634592000349659e-3) 18 bnapprox
+(betainc 0.4 2 2 \(real\)) { 0.4 2 2 betainc } 0.352 approx
+(betainc x > 1 is an error) { 1.5 2 2 betainc } (ERR:rangecheck) check
+(betainc b = 0 is an error) { 0.5 2 0 betainc } (ERR:rangecheck) check
+(betainc at 1) { (1) 2 3 betainc bnt_str } (+1.0000000000000000000e0) check
+
+(Special.ps 1.4 Bessel I K Y) bnt_section  20 setbnsize
+(besseli 0 1) { 0 (1) besseli } (+1.266065877752008335598244625214717537608e0) 18 bnapprox
+(besseli 1 1) { 1 (1) besseli } (+5.651591039924850272076960276098633073289e-1) 18 bnapprox
+(besseli 3 -2) { 3 (-2) besseli } (-2.127399592398526552723543934000000000000e-1) 18 bnapprox
+(besseli 2 10) { 2 (10) besseli } (+2.281518967726003540601604760072159583249e3) 18 bnapprox
+(besseli 0 0.001) { 0 (0.001) besseli } (+1.000000250000015625000434027784559461873e0) 18 bnapprox
+(besseli 5 30) { 5 (30) besseli } (+5.121514654769349699212448842095118559589e11) 18 bnapprox
+(besselk 0 1) { 0 (1) besselk } (+4.210244382407083333356273792126090361362e-1) 18 bnapprox
+(besselk 1 2) { 1 (2) besselk } (+1.398658818165224272845988070354110238872e-1) 18 bnapprox
+(besselk 2 0.5) { 2 (0.5) besselk } (+7.550183551240869436567705780226583035675e0) 18 bnapprox
+(besselk 0 50) { 0 (50) besselk } (+3.410167749789495513920675512352952231845e-23) 18 bnapprox
+(besselk 3 20) { 3 (20) besselk } (+7.148966692015483799746628227298261509452e-10) 18 bnapprox
+(besselk 5 1) { 5 (1) besselk } (+3.609605896012407006555237660611493674143e2) 18 bnapprox
+(besselk 1 40) { 1 (40) besselk } (+8.497131954861038650776823243166963652805e-19) 18 bnapprox
+(bessely 0 1) { 0 (1) bessely } (+8.825696421567695798292676602351516282782e-2) 17 bnapprox
+(bessely 1 1) { 1 (1) bessely } (-7.812128213002887165471500000479648205499e-1) 17 bnapprox
+(bessely 3 20) { 3 (20) bessely } (+1.496732627133941037143506999577506754803e-1) 17 bnapprox
+(bessely 0 50) { 0 (50) bessely } (-9.806499547007707902921145344037043200791e-2) 17 bnapprox
+(bessely 2 0.1) { 2 (0.1) bessely } (-1.276447832426901729099186608696129220871e2) 17 bnapprox
+(bessely 10 7.5) { 10 (7.5) bessely } (-1.276941928052437471839814168138023595272e0) 17 bnapprox
+(bessely 1 45) { 1 (45) bessely } (-1.155251796463994406895237363852774957900e-1) 17 bnapprox
+(bessely -3 2) { -3 (2) bessely } (+1.127783776840427786081583958000000000000e0) 18 bnapprox
+(besselk 1 2.5 \(real\)) { 1 2.5 besselk } 0.0738908163 approx
+(bessely 0 1 \(real\)) { 0 1 bessely } 0.0882569642 approx
+(besselk at 0 is an error) { 0 0 besselk } (ERR:undefinedresult) check
+(bessely of a negative x is an error) { 0 -1 bessely } (ERR:rangecheck) check
+(besseli with a real order is an error) { 0.5 1 besseli } (ERR:typecheck) check
+(besseli 2 0) { 2 (0) besseli bnt_str } (+0.0000000000000000000e0) check
+
+(Special.ps 1.4 t chi-squared F) bnt_section  20 setbnsize
+(tcdf 2 5) { (2) (5) tcdf } (+9.490302605850708218773194470788562846893e-1) 18 bnapprox
+(tcdf -3 3) { (-3) (3) tcdf } (+2.883444281121865428883504208842430631732e-2) 18 bnapprox
+(tcdf 0.5 1) { (0.5) (1) tcdf } (+6.475836176504332741754010762247405259511e-1) 18 bnapprox
+(tcdf 1 2) { (1) (2) tcdf } (+7.886751345948128822545743902509787278238e-1) 18 bnapprox
+(tcdf -1.5 2.5) { (-1.5) (2.5) tcdf } (+1.239182265431481305574669793104784575524e-1) 18 bnapprox
+(tcdf 10 4) { (10) (4) tcdf } (+9.997189981886420044221447444123658384743e-1) 18 bnapprox
+(tpdf 1 3) { (1) (3) tpdf } (+2.067483357831720185667474368673635405240e-1) 18 bnapprox
+(tpdf 0 1) { (0) (1) tpdf } (+3.183098861837906715377675267450287240689e-1) 18 bnapprox
+(tpdf 2.5 7) { (2.5) (7) tpdf } (+2.999022558989218865994852077756902649174e-2) 18 bnapprox
+(tinv 0.975 10) { (0.975) 10 tinv } (+2.228138851986274748395490663201806717856e0) 18 bnapprox
+(tinv 0.95 1 \(closed form\)) { (0.95) 1 tinv } (+6.313751514675043098979464244768186059447e0) 18 bnapprox
+(tinv 0.001 2 \(closed form\)) { (0.001) 2 tinv } (-2.232712477011987543527500362467222708402e1) 18 bnapprox
+(tinv 1e-6 4) { (1e-6) 4 tinv } (-4.157785415045097472633595064081096498441e1) 17 bnapprox
+(tinv 0.975 10 \(real\)) { 0.975 10 tinv } 2.22813885 1e-4 bnt_approx
+(tcdf 2 5 \(real\)) { 2 5 tcdf } 0.949030261 approx
+(tinv 0.5 is 0) { (0.5) 3 tinv bnt_str } (+0.0000000000000000000e0) check
+(tinv 1 is an error) { 1 3 tinv } (ERR:rangecheck) check
+(tcdf nu = 0 is an error) { 1 0 tcdf } (ERR:rangecheck) check
+(chi2cdf 3.84 1) { (3.84) (1) chi2cdf } (+9.499564787512949010523363358375855897308e-1) 18 bnapprox
+(chi2cdf 10 5) { (10) (5) chi2cdf } (+9.247647538534878212779231329945066977431e-1) 18 bnapprox
+(chi2cdf 0.5 3) { (0.5) (3) chi2cdf } (+8.110858834532414063588467647973557955519e-2) 18 bnapprox
+(chi2cdf 50 40) { (50) (40) chi2cdf } (+8.664251659143495943207479569430336182566e-1) 18 bnapprox
+(chi2pdf 0.5 4) { (0.5) (4) chi2pdf } (+9.735009788392560853064628337229008091210e-2) 18 bnapprox
+(chi2pdf 3 1) { (3) (1) chi2pdf } (+5.139344326792309227040685259379788210172e-2) 18 bnapprox
+(chi2pdf 7.5 5.5) { (7.5) (5.5) chi2pdf } (+7.388177285648365088040945321289929645446e-2) 18 bnapprox
+(chi2pdf 0 2) { (0) 2 chi2pdf bnt_str } (+5.0000000000000000000e-1) check
+(chi2pdf 0 1 is an error) { 0 1 chi2pdf } (ERR:undefinedresult) check
+(chi2inv 0.95 3) { (0.95) 3 chi2inv } (+7.814727903251179955268994873520450269166e0) 18 bnapprox
+(chi2inv 0.05 10) { (0.05) 10 chi2inv } (+3.940299136119060031321071526792296411783e0) 18 bnapprox
+(chi2inv 0.99 2 \(real\)) { 0.99 2 chi2inv } 9.21034037 1e-4 bnt_approx
+(fcdf 2 3 7) { (2) (3) (7) fcdf } (+7.973063575133490779283300059267147308096e-1) 18 bnapprox
+(fcdf 0.5 10 4) { (0.5) (10) (4) fcdf } (+1.705269258487771925764101753534258741798e-1) 18 bnapprox
+(fcdf 5 1 1) { (5) (1) (1) fcdf } (+7.322795271987699892547662040587681085056e-1) 18 bnapprox
+(fpdf 2 3 7) { (2) 3 7 fpdf } (+1.463569502018979200000305889337629767594e-1) 18 bnapprox
+(finv 0.95 3 7) { (0.95) 3 7 finv } (+4.346831399907818074806445239803700594807e0) 18 bnapprox
+(finv 0.5 2 2 \(real\)) { 0.5 2 2 finv } 1 1e-4 bnt_approx
+(finv 0.05 5 10 \(real\)) { 0.05 5 10 finv } 0.211190429 1e-5 bnt_approx
+(tinv 1e-6 4 \(real\)) { 1e-6 4 tinv } -41.5778542 1e-3 bnt_approx
+(tinv 0.3 3.5 \(real\)) { 0.3 3.5 tinv } -0.575338702 1e-5 bnt_approx
+(chi2inv 0.05 10 \(real\)) { 0.05 10 chi2inv } 3.94029914 1e-4 bnt_approx
+(chi2inv 1.5 3 \(real\) is an error) { 1.5 3 chi2inv } (ERR:rangecheck) check
+(finv d1 = 0 is an error) { 0.5 0 2 finv } (ERR:rangecheck) check
+(fcdf 2 3 7 \(real\)) { 2 3 7 fcdf } 0.797306358 approx
+(fpdf 2 3 7 \(real\)) { 2 3 7 fpdf } 0.14635695 approx
+(chi2cdf 10 5 \(real\)) { 10 5 chi2cdf } 0.924764754 approx
+(chi2pdf 3 1 \(real\)) { 3 1 chi2pdf } 0.0513934433 approx
+(tpdf 2.5 7 \(real\)) { 2.5 7 tpdf } 0.0299902256 approx
+(tcdf -1.5 2.5 \(real\)) { -1.5 2.5 tcdf } 0.123918227 approx
+(tcdf nu = 0 \(real\) is an error) { 1 0 tcdf } (ERR:rangecheck) check
+(fpdf 0 1 1 \(real\) is an error) { 0 1 1 fpdf } (ERR:undefinedresult) check
+
+(Special.ps 1.4 exponential binomial Poisson) bnt_section  20 setbnsize
+(exppdf 1 2) { (1) 2 exppdf } (+2.706705664732253837879989899449688068153e-1) 18 bnapprox
+(expcdf 1e-10 1 \(small\)) { (1e-10) 1 expcdf } (+9.999999999500000000016666666666250000000e-11) 18 bnapprox
+(expinv 0.5 2) { (0.5) 2 expinv } (+3.465735902799726547086160607290882840378e-1) 18 bnapprox
+(expinv 1e-30 1 \(small\)) { (1e-30) 1 expinv } (+1.000000000000000000000000000000500000000e-30) 18 bnapprox
+(exppdf x < 0) { (-1) 2 exppdf bnt_str } (+0.0000000000000000000e0) check
+(exppdf lambda = 0 is an error) { 1 0 exppdf } (ERR:rangecheck) check
+(expcdf 2 0.5 \(real\)) { 2 0.5 expcdf } 0.632120559 approx
+(exppdf 1 2 \(real\)) { 1 2 exppdf } 0.270670566 approx
+(expinv 0.5 2 \(real\)) { 0.5 2 expinv } 0.34657359 approx
+(expinv 1 2 \(real\) is an error) { 1 2 expinv } (ERR:rangecheck) check
+(binompdf 0 10 0.3) { 0 10 (0.3) binompdf } (+2.824752490000000000000000000000000000000e-2) 18 bnapprox
+(binompdf 3 10 0.3) { 3 10 (0.3) binompdf } (+2.668279320000000000000000000000000000000e-1) 18 bnapprox
+(binompdf 10 10 0.3) { 10 10 (0.3) binompdf } (+5.904900000000000000000000000000000000000e-6) 18 bnapprox
+(binomcdf 0 10 0.3) { 0 10 (0.3) binomcdf } (+2.824752490000000000000000000000000000000e-2) 18 bnapprox
+(binomcdf 3 10 0.3) { 3 10 (0.3) binomcdf } (+6.496107184000000000000000000000000000000e-1) 18 bnapprox
+(binomcdf 9 10 0.3) { 9 10 (0.3) binomcdf } (+9.999940951000000000000000000000000000000e-1) 18 bnapprox
+(binomcdf 40 100 0.5) { 40 100 (0.5) binomcdf } (+2.844396682049039583518215156363852311921e-2) 18 bnapprox
+(binomcdf k >= n) { (12) 10 (0.3) binomcdf bnt_str } (+1.0000000000000000000e0) check
+(binompdf of a non-integer k is an error) { 1.5 10 0.3 binompdf } (ERR:rangecheck) check
+(binominv 0.5 10 0.3) { (0.5) 10 (0.3) binominv } (3) check
+(binominv 0.05 10 0.3) { (0.05) 10 (0.3) binominv } (1) check
+(binominv 0.99 10 0.3) { (0.99) 10 (0.3) binominv } (7) check
+(binominv 0.5 20 0.5 \(real\)) { 0.5 20 0.5 binominv } (10) check
+(poissonpdf 2 3) { 2 (3) poissonpdf } (+2.240418076553877434070408704252779948426e-1) 18 bnapprox
+(poissonpdf 0 0.5) { 0 (0.5) poissonpdf } (+6.065306597126334236037995349911804534419e-1) 18 bnapprox
+(poissonpdf 10 2.5) { 10 (2.5) poissonpdf } (+2.157251844958516739073061293057658680685e-4) 18 bnapprox
+(poissonpdf 30 25) { 30 (25) poissonpdf } (+4.541278513011888514484533446720324611404e-2) 18 bnapprox
+(poissoncdf 2 3) { 2 (3) poissoncdf } (+4.231900811268435153244105330255251013694e-1) 18 bnapprox
+(poissoncdf 10 2.5) { 10 (2.5) poissoncdf } (+9.999383730898750156281321782093237855099e-1) 18 bnapprox
+(poissoncdf 30 25) { 30 (25) poissoncdf } (+8.633088691526637753424248989336574658498e-1) 18 bnapprox
+(poissoninv 0.9 3) { (0.9) (3) poissoninv } (5) check
+(poissoninv 0.5 10) { (0.5) (10) poissoninv } (10) check
+(poissoninv 0.001 2) { (0.001) (2) poissoninv } (0) check
+(poissoninv 0.5 10 \(real\)) { 0.5 10 poissoninv } (10) check
+(binominv 0.99 10 0.3 \(real\)) { 0.99 10 0.3 binominv } (7) check
+(poissonpdf lambda = 0 is an error) { 1 0 poissonpdf } (ERR:rangecheck) check
+(poissoncdf k < 0) { (-1) 2 poissoncdf bnt_str } (+0.0000000000000000000e0) check
+
+(Special.ps 1.4 precision 40) bnt_section  40 setbnsize
+(digamma 0.25) { (0.25) digamma } (-4.227453533376265408089530146096683577367e0) 38 bnapprox
+(gammaincc 3 7) { (3) (7) gammaincc } (+2.963616388052177676010192274330168536040e-2) 37 bnapprox
+(betainc 0.3 2.5 4) { (0.3) (2.5) (4) betainc } (+3.521975859067672364615634415549145396783e-1) 38 bnapprox
+(besselk 1 3) { 1 (3) besselk } (+4.015643112819418437670578015268481490724e-2) 38 bnapprox
+(bessely 2 5) { 2 (5) bessely } (+3.676628826055245179940692544072614935357e-1) 37 bnapprox
+(tcdf -2.5 6) { (-2.5) 6 tcdf } (+2.326411614208365561968227524245849943476e-2) 38 bnapprox
+
+(bignumlibrary.ps 1.4 powmodbn isprime factor) bnt_section  20 setbnsize
+(powmodbn 2 100 1000000007) { (2) (100) (1000000007) powmodbn bnt_str } (+9.7637128500000000000e8) check
+(powmodbn 3 200 1000000000000000003) { (3) (200) (1000000000000000003) powmodbn bnt_str } (+7.7563746401761905600e17) check
+(powmodbn -7 3 10) { (-7) (3) (10) powmodbn bnt_str } (+7.0000000000000000000e0) check
+(powmodbn 123456789 0 97) { (123456789) (0) (97) powmodbn bnt_str } (+1.0000000000000000000e0) check
+(powmodbn 5 117 19) { (5) (117) (19) powmodbn bnt_str } (+1.0000000000000000000e0) check
+(powmodbn 10 30 7) { (10) (30) (7) powmodbn bnt_str } (+1.0000000000000000000e0) check
+(powmodbn 98765432109876543210987654321 12345 1000000000000000000000000057) { (98765432109876543210987654321) (12345) (1000000000000000000000000057) powmodbn bnt_str } (+5.94299743210952717964214777e26) check
+(powmodbn m = 0 is an error) { 2 3 0 powmodbn } (ERR:rangecheck) check
+(powmodbn b < 0 is an error) { 2 -3 5 powmodbn } (ERR:rangecheck) check
+(isprime 0) { 0 isprime } (false) check
+(isprime 1) { 1 isprime } (false) check
+(isprime 2) { 2 isprime } (true) check
+(isprime 97) { 97 isprime } (true) check
+(isprime 91) { 91 isprime } (false) check
+(isprime 561) { 561 isprime } (false) check
+(isprime 7919) { 7919 isprime } (true) check
+(isprime 2147483647) { 2147483647 isprime } (true) check
+(isprime 1000036000099) { 1000036000099 isprime } (false) check
+(isprime 2305843009213693951) { (2305843009213693951) isprime } (true) check
+(isprime 618970019642690137449562111) { (618970019642690137449562111) isprime } (true) check
+(isprime 170141183460469231731687303715884105727) { (170141183460469231731687303715884105727) isprime } (true) check
+(isprime 147573952589676412927) { (147573952589676412927) isprime } (false) check
+(isprime 3215031751) { (3215031751) isprime } (false) check
+(isprime 3825123056546413051) { (3825123056546413051) isprime } (false) check
+(isprime 318665857834031151167461) { (318665857834031151167461) isprime } (false) check
+(isprime 3317044064679887385961981) { (3317044064679887385961981) isprime } (false) check
+(isprime 100000000000000000039) { (100000000000000000039) isprime } (true) check
+(isprime -7) { (-7) isprime } (false) check
+(isprime of a fraction is an error) { 2.5 isprime } (ERR:rangecheck) check
+(factor 360) { 360 factor bnt_list } (2 2 2 3 3 5) check
+(factor 1) { 1 factor bnt_list } () check
+(factor 97) { 97 factor bnt_list } (97) check
+(factor 2147483647) { 2147483647 factor bnt_list } (2147483647) check
+(factor 1024) { 1024 factor bnt_list } (2 2 2 2 2 2 2 2 2 2) check
+(factor 1999999874) { 1999999874 factor bnt_list } (2 999999937) check
+(factor 600851475143) { (600851475143) factor bnt_list } (+7.1000000000000000000e1 +8.3900000000000000000e2 +1.4710000000000000000e3 +6.8570000000000000000e3) check
+(factor 123456789012345678901234567890) { (123456789012345678901234567890) factor bnt_list } (+2.0000000000000000000e0 +3.0000000000000000000e0 +3.0000000000000000000e0 +3.0000000000000000000e0 +5.0000000000000000000e0 +7.0000000000000000000e0 +1.3000000000000000000e1 +3.1000000000000000000e1 +3.7000000000000000000e1 +2.1100000000000000000e2 +2.4100000000000000000e2 +2.1610000000000000000e3 +3.6070000000000000000e3 +3.8030000000000000000e3 +2.9061610000000000000e6) check
+(factor 100003300009) { (100003300009) factor bnt_list } (+1.0000300000000000000e5 +1.0000030000000000000e6) check
+(factor 2^64+1 \(Pollard rho\)) { (18446744073709551617) factor bnt_list } (+2.7417700000000000000e5 +6.7280421310721000000e13) check
+(factor 0 is an error) { 0 factor } (ERR:rangecheck) check
+(factor -6 is an error) { -6 factor } (ERR:rangecheck) check
+(setbn of a bad string closes its dictionary) { countdictstack mark (1x2) { setbn } stopped pop cleartomark countdictstack sub } (0) check
+(divbn by 0 closes its dictionary) { countdictstack mark 1 setbn 0 setbn { divbn } stopped pop cleartomark countdictstack sub } (0) check
+(choose of a bad string is a syntaxerror) { (1x2) 2 choose } (ERR:syntaxerror) check
+(no dictionaries left open by the error tests of 1.4) { countdictstack spt_ds sub } (0) check
+
+(tensor: building) bnt_section  20 setbnsize
+(tensor rank 1) { [1 2 3] tensor tcvs } ([1, 2, 3]) check
+(tensor rank 2) { [[1 2 3] [4 5 6]] tensor tcvs } ([1 2 3; 4 5 6]) check
+(tensor rank 3) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor tcvs } ([[8 -3; 5 -2; -4 2], [-4 8; 6 8; -2 2]]) check
+(tensor rank 4) { [[[[0 1] [2 3]] [[4 5] [6 7]]] [[[8 9] [10 11]] [[12 13] [14 15]]]] tensor tcvs } ([[[0 1; 2 3], [4 5; 6 7]], [[8 9; 10 11], [12 13; 14 15]]]) check
+(tshape) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor tshape length } (3) check
+(tshape values) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor tshape aload pop add add } (7) check
+(trank) { [[[[0 1] [2 3]] [[4 5] [6 7]]] [[[8 9] [10 11]] [[12 13] [14 15]]]] tensor trank } (4) check
+(tsize) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor tsize } (12) check
+(tolist round trip) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor tolist tensor tcvs } ([[8 -3; 5 -2; -4 2], [-4 8; 6 8; -2 2]]) check
+(tolist values) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor tolist } [8 -3 5 -2 -4 2 -4 8 6 8 -2 2] lapprox
+(tzeros) { [2 3] tzeros tcvs } ([0 0 0; 0 0 0]) check
+(tfill) { [3] 7 tfill tcvs } ([7, 7, 7]) check
+(tdelta) { 3 tdelta tcvs } ([1 0 0; 0 1 0; 0 0 1]) check
+(tlevi 3) { 3 tlevi tcvs } ([[0 0 0; 0 0 1; 0 -1 0], [0 0 -1; 0 0 0; 1 0 0], [0 1 0; -1 0 0; 0 0 0]]) check
+(tlevi 4 [2 1 3 4]) { 4 tlevi [2 1 3 4] tget } (-1) check
+(tlevi 4 contracted with itself is 4!) { 4 tlevi dup tinner } (24) check
+(tlevi 1) { 1 tlevi tcvs } ([1]) check
+(tfrommatrix) { [[1 2] [3 4]] mfromrows tfrommatrix tcvs } ([1 2; 3 4]) check
+(ttomatrix) { [[1 2] [3 4]] tensor ttomatrix 1 2 mget } (2) check
+(ragged list) { [[1 2] [3]] tensor } (ERR:rangecheck) check
+(ragged deeper) { [[[1 2] [3 4]] [[5 6] [7]]] tensor } (ERR:rangecheck) check
+(empty list) { [] tensor } (ERR:rangecheck) check
+(not a list) { 5 tensor } (ERR:typecheck) check
+(element of a wrong type) { [1 /a] tensor } (ERR:rangecheck) check
+(tzeros bad shape) { [2 0] tzeros } (ERR:rangecheck) check
+(tlevi 7) { 7 tlevi } (ERR:rangecheck) check
+(ttomatrix of rank 3) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor ttomatrix } (ERR:rangecheck) check
+(tolist of a list) { [1 2] tolist } (ERR:typecheck) check
+
+(tensor: access) bnt_section  20 setbnsize
+(tget [1, 1, 1]) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [1 1 1] tget } (8) check
+(tget [2, 3, 1]) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [2 3 1] tget } (-2) check
+(tget [1, 2, 2]) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [1 2 2] tget } (-2) check
+(tget out of range) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [3 1 1] tget } (ERR:rangecheck) check
+(tget wrong number of indices) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [1 1] tget } (ERR:rangecheck) check
+(tget of a list) { [1 2] [1] tget } (ERR:typecheck) check
+(tput) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [2 3 2] 99 tput tcvs } ([[8 -3; 5 -2; -4 2], [-4 8; 6 8; -2 99]]) check
+(tput leaves the original) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor dup [2 3 2] 99 tput pop tcvs } ([[8 -3; 5 -2; -4 2], [-4 8; 6 8; -2 2]]) check
+(tslice axis 1) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor 1 2 tslice tcvs } ([-4 8; 6 8; -2 2]) check
+(tslice axis 2) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor 2 2 tslice tcvs } ([5 -2; 6 8]) check
+(tslice axis 3) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor 3 2 tslice tcvs } ([-3 -2 2; 8 8 2]) check
+(tslice rank 1) { [4 5 6] tensor 1 3 tslice } (6) check
+(tslice bad axis) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor 4 1 tslice } (ERR:rangecheck) check
+(tslice bad index) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor 2 4 tslice } (ERR:rangecheck) check
+
+(tensor: algebra) bnt_section  20 setbnsize
+(tadd) { [[[7 8] [9 0] [0 2]] [[-4 6] [0 -5] [7 -4]]] tensor [[[5 3] [-1 -5] [-5 0]] [[4 8] [-1 7] [0 -1]]] tensor tadd tcvs } ([[12 11; 8 -5; -5 2], [0 14; -1 2; 7 -5]]) check
+(tsub) { [[[7 8] [9 0] [0 2]] [[-4 6] [0 -5] [7 -4]]] tensor [[[5 3] [-1 -5] [-5 0]] [[4 8] [-1 7] [0 -1]]] tensor tsub tcvs } ([[2 5; 10 5; 5 2], [-8 -2; 1 -12; 7 -3]]) check
+(thadamard) { [[[7 8] [9 0] [0 2]] [[-4 6] [0 -5] [7 -4]]] tensor [[[5 3] [-1 -5] [-5 0]] [[4 8] [-1 7] [0 -1]]] tensor thadamard tcvs } ([[35 24; -9 0; 0 0], [-16 48; 0 -35; 0 4]]) check
+(tscale) { [[[7 8] [9 0] [0 2]] [[-4 6] [0 -5] [7 -4]]] tensor -3 tscale tcvs } ([[-21 -24; -27 0; 0 -6], [12 -18; 0 15; -21 12]]) check
+(tadd shapes differ) { [[[7 8] [9 0] [0 2]] [[-4 6] [0 -5] [7 -4]]] tensor [[1 2] [3 4]] tensor tadd } (ERR:rangecheck) check
+(tadd of a list) { [[[7 8] [9 0] [0 2]] [[-4 6] [0 -5] [7 -4]]] tensor [1 2] tadd } (ERR:typecheck) check
+(tnorm) { [[[7 8] [9 0] [0 2]] [[-4 6] [0 -5] [7 -4]]] tensor tnorm } 18.4390889 approx
+(touter) { [[2 -5 2] [-2 5 -3]] tensor [4 1] tensor touter tcvs } ([[8 2; -20 -5; 8 2], [-8 -2; 20 5; -12 -3]]) check
+(tdot matrix product) { [[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [[6 7] [9 -5] [7 -5] [6 6]] tensor [2] [1] tdot tcvs } ([124 100; -58 44; 55 -10]) check
+(tdot over two axes) { [[[5 -2] [-3 0] [4 5] [-5 -4]] [[-4 8] [-3 -5] [-3 0] [7 -5]] [[9 -5] [5 -5] [-1 9] [1 9]]] tensor [[6 7] [9 -5] [7 -5] [6 6]] tensor [2 3] [1 2] tdot tcvs } ([-62, 21, 97]) check
+(tdot, B's axis 2) { [[[5 -2] [-3 0] [4 5] [-5 -4]] [[-4 8] [-3 -5] [-3 0] [7 -5]] [[9 -5] [5 -5] [-1 9] [1 9]]] tensor [[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [2] [2] tdot tcvs } ([[-25 -29 -32; -62 -28 2], [25 53 39; -1 -11 -59], [103 -31 -20; 3 21 100]]) check
+(tdot empty axes is touter) { [[2 -5 2] [-2 5 -3]] tensor [4 1] tensor [] [] tdot tcvs } ([[8 2; -20 -5; 8 2], [-8 -2; 20 5; -12 -3]]) check
+(tdot all axes gives a number) { [[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [1 2] [1 2] tdot } (272) check
+(tdot dimensions differ) { [[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [[6 7] [9 -5] [7 -5] [6 6]] tensor [1] [1] tdot } (ERR:rangecheck) check
+(tdot axis out of range) { [[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [[6 7] [9 -5] [7 -5] [6 6]] tensor [3] [1] tdot } (ERR:rangecheck) check
+(tdot axis repeated) { [[1 2] [3 4]] tensor [[1 2] [3 4]] tensor [1 1] [1 2] tdot } (ERR:rangecheck) check
+(tinner) { [[[7 8] [9 0] [0 2]] [[-4 6] [0 -5] [7 -4]]] tensor [[[5 3] [-1 -5] [-5 0]] [[4 8] [-1 7] [0 -1]]] tensor tinner } (51) check
+(tcontract 1 3) { [[[-2 -2 6] [-4 4 5]] [[-4 6 -4] [6 -2 8]] [[-1 -5 -4] [5 8 2]]] tensor 1 3 tcontract tcvs } ([0, -4]) check
+(tcontract 3 1) { [[[-2 -2 6] [-4 4 5]] [[-4 6 -4] [6 -2 8]] [[-1 -5 -4] [5 8 2]]] tensor 3 1 tcontract tcvs } ([0, -4]) check
+(tcontract 1 2) { [[[-5 2 -3] [-1 -1 6]] [[-1 8 0] [8 -1 3]]] tensor 1 2 tcontract tcvs } ([3, 1, 0]) check
+(tcontract of rank 2 gives a number) { [[8 -3 5] [-2 -4 2] [-4 8 6]] tensor 1 2 tcontract } (10) check
+(tcontract dimensions differ) { [[[-2 -2 6] [-4 4 5]] [[-4 6 -4] [6 -2 8]] [[-1 -5 -4] [5 8 2]]] tensor 1 2 tcontract } (ERR:rangecheck) check
+(tcontract i = j) { [[[-2 -2 6] [-4 4 5]] [[-4 6 -4] [6 -2 8]] [[-1 -5 -4] [5 8 2]]] tensor 2 2 tcontract } (ERR:rangecheck) check
+(ttrace rank 2) { [[8 -3 5] [-2 -4 2] [-4 8 6]] tensor ttrace } (10) check
+(ttrace rank 4) { [[[[-3 -5 -5] [8 2 1] [-2 4 7]] [[-5 2 -2] [-1 4 -3] [-1 4 -2]]] [[[9 9 -4] [-3 4 4] [-1 0 2]] [[-2 4 9] [6 2 1] [2 -4 0]]]] tensor ttrace } (6) check
+(ttrace odd rank) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor ttrace } (ERR:rangecheck) check
+(ttrace not square) { [[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor ttrace } (ERR:rangecheck) check
+(tpermute [1, 2, 3]) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [1 2 3] tpermute tcvs } ([[8 -3; 5 -2; -4 2], [-4 8; 6 8; -2 2]]) check
+(tpermute [1, 3, 2]) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [1 3 2] tpermute tcvs } ([[8 5 -4; -3 -2 2], [-4 6 -2; 8 8 2]]) check
+(tpermute [2, 1, 3]) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [2 1 3] tpermute tcvs } ([[8 -3; -4 8], [5 -2; 6 8], [-4 2; -2 2]]) check
+(tpermute [2, 3, 1]) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [2 3 1] tpermute tcvs } ([[8 -4; -3 8], [5 6; -2 8], [-4 -2; 2 2]]) check
+(tpermute [3, 1, 2]) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [3 1 2] tpermute tcvs } ([[8 5 -4; -4 6 -2], [-3 -2 2; 8 8 2]]) check
+(tpermute [3, 2, 1]) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [3 2 1] tpermute tcvs } ([[8 -4; 5 6; -4 -2], [-3 8; -2 8; 2 2]]) check
+(tpermute not a permutation) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [1 1 2] tpermute } (ERR:rangecheck) check
+(tpermute wrong length) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor [1 2] tpermute } (ERR:rangecheck) check
+(ttranspose rank 3) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor ttranspose tcvs } ([[8 -4; 5 6; -4 -2], [-3 8; -2 8; 2 2]]) check
+(ttranspose rank 2) { [[1 2 3] [4 5 6]] tensor ttranspose tcvs } ([1 4; 2 5; 3 6]) check
+(tsym rank 3) { [[[-4 -3 5] [4 8 -1] [-3 0 3]] [[2 2 8] [7 6 6] [1 7 6]] [[4 3 8] [2 7 -4] [-2 -1 1]]] tensor tsym tolist } [-4 1 2 1 5.66666667 2.16666667 2 2.16666667 3 1 5.66666667 2.16666667 5.66666667 6 6.66666667 2.16666667 6.66666667 0.333333333 2 2.16666667 3 2.16666667 6.66666667 0.333333333 3 0.333333333 1] lapprox
+(tantisym rank 3) { [[[-4 -3 5] [4 8 -1] [-3 0 3]] [[2 2 8] [7 6 6] [1 7 6]] [[4 3 8] [2 7 -4] [-2 -1 1]]] tensor tantisym tolist } [0 0 0 0 0 -1.16666667 0 1.16666667 0 0 0 1.16666667 0 0 0 -1.16666667 0 0 0 -1.16666667 0 1.16666667 0 0 0 0 0] lapprox
+(tantisym is a multiple of tlevi) { [[[-4 -3 5] [4 8 -1] [-3 0 3]] [[2 2 8] [7 6 6] [1 7 6]] [[4 3 8] [2 7 -4] [-2 -1 1]]] tensor tantisym 3 tlevi tinner } -7 approx
+(tsym dimensions differ) { [[[8 -3] [5 -2] [-4 2]] [[-4 8] [6 8] [-2 2]]] tensor tsym } (ERR:rangecheck) check
+
+(tensor: teinsum) bnt_section  20 setbnsize
+(teinsum \(ij,jk->ik\)) { (ij,jk->ik) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [[6 7] [9 -5] [7 -5] [6 6]] tensor] teinsum tcvs } ([124 100; -58 44; 55 -10]) check
+(teinsum implicit \(ij,jk\)) { (ij,jk) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [[6 7] [9 -5] [7 -5] [6 6]] tensor] teinsum tcvs } ([124 100; -58 44; 55 -10]) check
+(teinsum \(ii\)) { (ii) [[[8 -3 5] [-2 -4 2] [-4 8 6]] tensor] teinsum } (10) check
+(teinsum \(ii->i\) diagonal) { (ii->i) [[[8 -3 5] [-2 -4 2] [-4 8 6]] tensor] teinsum tcvs } ([8, -4, 6]) check
+(teinsum \(ij->ji\)) { (ij->ji) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor] teinsum tcvs } ([8 -2 -3; 4 -4 1; -2 -4 4; 9 3 6]) check
+(teinsum \(i,i\)) { (i,i) [[1 2 3] tensor [4 5 6] tensor] teinsum } (32) check
+(teinsum \(ij,j->i\)) { (ij,j->i) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [8 4 -2 9] tensor] teinsum tcvs } ([165, 3, 26]) check
+(teinsum \(i,j->ij\)) { (i,j->ij) [[4 1] tensor [8 -3 5] tensor] teinsum tcvs } ([32 -12 20; 8 -3 5]) check
+(teinsum \(ijk,jl->ikl\)) { (ijk,jl->ikl) [[[[5 -2] [-3 0] [4 5] [-5 -4]] [[-4 8] [-3 -5] [-3 0] [7 -5]] [[9 -5] [5 -5] [-1 9] [1 9]]] tensor [[8 4 -2] [9 -2 -4] [-4 3 -3] [1 4 6]] tensor] teinsum tcvs } ([[-8 18 -40; -40 -9 -35], [-40 9 71; 14 22 -26], [122 27 -29; -112 53 57]]) check
+(teinsum three operands) { (ij,jk,kl->il) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [[6 7] [9 -5] [7 -5] [6 6]] tensor [[2 -5 2] [-2 5 -3]] tensor] teinsum tcvs } ([48 -120 -52; -204 510 -248; 130 -325 140]) check
+(teinsum implicit \(ij,ji\) gives a number) { (ij,ji) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [[8 4 -2] [9 -2 -4] [-4 3 -3] [1 4 6]] tensor] teinsum } (143) check
+(teinsum spaces) { ( i j , j k -> i k ) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [[6 7] [9 -5] [7 -5] [6 6]] tensor] teinsum tcvs } ([124 100; -58 44; 55 -10]) check
+(teinsum wrong operand count) { (ij,jk) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor] teinsum } (ERR:rangecheck) check
+(teinsum rank mismatch) { (ijk) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor] teinsum } (ERR:rangecheck) check
+(teinsum dimensions differ) { (ij,jk) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor [[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor] teinsum } (ERR:rangecheck) check
+(teinsum bad character) { (i1) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor] teinsum } (ERR:rangecheck) check
+(teinsum output repeated) { (ij->ii) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor] teinsum } (ERR:rangecheck) check
+(teinsum output not in inputs) { (ij->k) [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor] teinsum } (ERR:rangecheck) check
+(teinsum not a string) { 5 [[[8 4 -2 9] [-2 -4 -4 3] [-3 1 4 6]] tensor] teinsum } (ERR:typecheck) check
+
+(tensor: vectors and metrics) bnt_section  20 setbnsize
+(tcross lists) { [1 2 3] [4 -5 6] tcross } [27 6 -13] lapprox
+(tcross tensors) { [1 2 3] tensor [4 -5 6] tensor tcross tcvs } ([27, 6, -13]) check
+(tcross mixed) { [1 2 3] [4 -5 6] tensor tcross tcvs } ([27, 6, -13]) check
+(tcross equals tlevi contraction) { (ijk,j,k->i) [3 tlevi [1 2 3] tensor [4 -5 6] tensor] teinsum tcvs } ([27, 6, -13]) check
+(ttriple) { [1 2 3] [4 -5 6] [2 0 7] ttriple } (-37) check
+(tcross length 2) { [1 2] [3 4] tcross } (ERR:rangecheck) check
+(tlower vector) { [3 5] tensor [[2 1] [1 3]] mfromrows 1 tlower tolist } [11 18] lapprox
+(traise vector) { [3 5] tensor [[2 1] [1 3]] mfromrows 1 traise tolist } [0.8 1.4] lapprox
+(traise undoes tlower) { [3 5] tensor [[2 1] [1 3]] tensor 1 tlower [[2 1] [1 3]] tensor 1 traise tolist } [3 5] lapprox
+(tlower index 2 of a matrix) { [[1 2] [3 4]] tensor [[2 1] [1 3]] mfromrows 2 tlower tolist } [4 7 10 15] lapprox
+(tlower bad index) { [3 5] tensor [[2 1] [1 3]] mfromrows 2 tlower } (ERR:rangecheck) check
+(tlower metric of wrong size) { [3 5] tensor 3 tdelta 1 tlower } (ERR:rangecheck) check
+(traise singular metric) { [3 5] tensor [[1 2] [2 4]] mfromrows 1 traise } (ERR:undefinedresult) check
+
+(tensor: bignums) bnt_section  20 setbnsize
+(tcvs of strings) { [[(0.1) (0.2)] [(0.3) (0.4)]] tensor tcvs } ([+1.0000000000000000000e-1 +2.0000000000000000000e-1; +3.0000000000000000000e-1 +4.0000000000000000000e-1]) check
+(tadd bignums) { [[(0.1) (0.2)] [(0.3) (0.4)]] tensor [[(1.5) (-2)] [(0.25) (3)]] tensor tadd tcvs } ([+1.6000000000000000000e0 -1.8000000000000000000e0; +5.5000000000000000000e-1 +3.4000000000000000000e0]) check
+(tadd mixed) { [[(0.1) (0.2)] [(0.3) (0.4)]] tensor [[1 2] [3 4]] tensor tadd tcvs } ([+1.1000000000000000000e0 +2.2000000000000000000e0; +3.3000000000000000000e0 +4.4000000000000000000e0]) check
+(tscale by a string) { [[1 2] [3 4]] tensor (0.5) tscale tcvs } ([+5.0000000000000000000e-1 +1.0000000000000000000e0; +1.5000000000000000000e0 +2.0000000000000000000e0]) check
+(teinsum bignums) { (ij,jk->ik) [[[(0.1) (0.2)] [(0.3) (0.4)]] tensor [[(1.5) (-2)] [(0.25) (3)]] tensor] teinsum tcvs } ([+2.0000000000000000000e-1 +4.0000000000000000000e-1; +5.5000000000000000000e-1 +6.0000000000000000000e-1]) check
+(tinner bignums) { [[(0.1) (0.2)] [(0.3) (0.4)]] tensor [[(1.5) (-2)] [(0.25) (3)]] tensor tinner bncvs } (+1.0250000000000000000e0) check
+(tnorm bignums) { [[(0.1) (0.2)] [(0.3) (0.4)]] tensor tnorm } (+5.477225575051661134569697828008021339527e-1) 18 bnapprox
+(tcross bignums) { [(0.1) (0.2) (0.3)] tensor [1 (-0.5) 2] tcross tcvs } ([+5.5000000000000000000e-1, +1.0000000000000000000e-1, -2.5000000000000000000e-1]) check
+(tsym bignums) { [[(0.1) (0.2)] [(0.3) (0.4)]] tensor tsym tcvs } ([+1.0000000000000000000e-1 +2.5000000000000000000e-1; +2.5000000000000000000e-1 +4.0000000000000000000e-1]) check
+(tcontract bignums) { [[(0.1) (0.2)] [(0.3) (0.4)]] tensor 1 2 tcontract bncvs } (+5.0000000000000000000e-1) check
+(tget keeps a string) { [[(0.1) (0.2)] [(0.3) (0.4)]] tensor [2 1] tget } (0.3) check
+
 () =
 bnt_pass =only ( passed, ) print bnt_fail =only ( failed) =
 bnt_fail 0 gt { (TESTS FAILED) = } { (ALL TESTS PASSED) = } ifelse

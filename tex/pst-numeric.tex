@@ -20,11 +20,12 @@
 \csname PSTnumericLoaded\endcsname
 \let\PSTnumericLoaded\endinput
 \ifx\PSTricksLoaded\endinput\else\input pstricks.tex\fi
+\ifx\PSTplotLoaded\endinput\else\input pst-plot.tex\fi
 %
 \edef\PstAtCode{\the\catcode`\@}\catcode`\@=11\relax
 %
-\def\fileversion{1.3}
-\def\filedate{2026/11/21}
+\def\fileversion{1.4}
+\def\filedate{2026/11/22}
 \message{`PST-numeric' v\fileversion, \filedate\space (BL)}
 %
 % The parts to load, a comma-separated list without spaces. Define
@@ -88,21 +89,123 @@
 % PostScript argument of PSTricks:  \psplot{0}{1}{\pstNumeric{x 2 mul}}
 \def\pstNumeric#1{ tx@NumericDict begin #1 end }
 %
-% \psNumericShow[pstricks options]{code} prints the result that the code
-% leaves on the stack, at the current point, as a zero-width object: put it
-% in a pspicture that leaves room for the text. A bignum is printed with all
-% its digits, a complex number as a + bi, a matrix as [a b; c d]. Font and
-% size are set by \psNumericFont and \psNumericFontSize (in pt).
+% ---------------------------------------------------------------- presentation
+% Keys of the family pst-numeric, for \psset and the optional arguments:
+%   numFormat   raw (as computed: all digits of a bignum), auto (like %g),
+%               fixed (numDigits decimals), sci (numDigits significant digits)
+%   numDigits   significant digits (auto, sci) or decimals (fixed)
+%   numTrim     drop trailing zeros
+%   numDecimal  the decimal separator, a single character
+%   sciStyle    e (1.5e-3) or times (1.5 x 10 with a raised -3)
+%   numFont, numFontSize   PostScript font name and size in pt
+%   matrixFont  the font of \psNumericMatrix and \psNumericRegression
+%   matrixDelim bracket, paren, bar, dbar or none
+%   matrixAlign decimal, right, center or left
+%   colSep, rowSep   column gap and row pitch, in units of the font size
+%   vector      column or row (how a list of numbers is drawn)
+%   label       drawn before the result followed by " = " (^{} and _{} work)
+%   tensorLabels  slice labels such as (1,:,:) above a tensor's slices
+%   regShow     the lines of \psNumericRegression, from eq params coef r2
+%               adjr2 s n dof tval sse
+%   regPlot     what \psNumericRegPlot draws: fit, ci, pi, data, residuals
+%               or stdresiduals
+\pst@addfams{pst-numeric}
+\define@key[psset]{pst-numeric}{numFormat}{\def\psk@numFormat{#1}}
+\define@key[psset]{pst-numeric}{numDigits}{\pst@getint{#1}\psk@numDigits}
+\define@boolkey[psset]{pst-numeric}[Pst@]{numTrim}[true]{}
+\define@key[psset]{pst-numeric}{numDecimal}{\def\psk@numDecimal{#1}}
+\define@key[psset]{pst-numeric}{sciStyle}{\def\psk@sciStyle{#1}}
+\define@key[psset]{pst-numeric}{numFont}{\def\psNumericFont{#1}}
+\define@key[psset]{pst-numeric}{numFontSize}{\def\psNumericFontSize{#1}}
+\define@key[psset]{pst-numeric}{matrixFont}{\def\psNumericMatrixFont{#1}}
+\define@key[psset]{pst-numeric}{matrixDelim}{\def\psk@matrixDelim{#1}}
+\define@key[psset]{pst-numeric}{matrixAlign}{\def\psk@matrixAlign{#1}}
+\define@key[psset]{pst-numeric}{colSep}{\def\psk@colSep{#1}}
+\define@key[psset]{pst-numeric}{rowSep}{\def\psk@rowSep{#1}}
+\define@key[psset]{pst-numeric}{vector}{\def\psk@vector{#1}}
+\define@key[psset]{pst-numeric}{label}{\def\psk@numLabel{#1}}
+\define@boolkey[psset]{pst-numeric}[Pst@]{tensorLabels}[true]{}
+\define@key[psset]{pst-numeric}{regShow}{\def\psk@regShow{#1}}
+\define@key[psset]{pst-numeric}{regPlot}{\def\psk@regPlot{#1}}
+\psset[pst-numeric]{numFormat=raw,numDigits=6,numTrim=false,numDecimal=.,
+  sciStyle=times,matrixDelim=bracket,matrixAlign=decimal,colSep=1,rowSep=1.4,
+  vector=column,label={},tensorLabels=true,regShow={eq r2 s},regPlot=fit}
+% the settings as PostScript, for a dictionary on top of tx@NumericDict
+\def\pstnum@setup{%
+  /pstnum_format /\psk@numFormat\space def
+  /pstnum_digits \psk@numDigits\space def
+  /pstnum_trim \ifPst@numTrim true\else false\fi\space def
+  /pstnum_dsep (\psk@numDecimal) def
+  /pstnum_sci /\psk@sciStyle\space def
+  /pstnum_font /\psNumericFont\space def
+  /pstnum_fsize \psNumericFontSize\space def
+  /pstnum_delim /\psk@matrixDelim\space def
+  /pstnum_align /\psk@matrixAlign\space def
+  /pstnum_colsep \psk@colSep\space def
+  /pstnum_rowsep \psk@rowSep\space def
+  /pstnum_vector /\psk@vector\space def
+  /pstnum_label (\psk@numLabel) def
+  /pstnum_tlabels \ifPst@tensorLabels true\else false\fi\space def
+  /pstnum_regshow (\psk@regShow) def }
+% #1 options, #2 PostScript drawing code run with the settings
+\def\pstnum@draw#1#2{%
+  \pscustom[#1]{\moveto(0,0)%
+    \code{tx@NumericDict begin 40 dict begin \pstnum@setup #2 end end}}}
+%
+% \psNumericShow[options]{code} prints the result that the code leaves on
+% the stack, at the current point, as a zero-width object: put it in a
+% pspicture that leaves room for the text. With numFormat=raw (the default)
+% a bignum is printed with all its digits, a complex number as a + bi, a
+% matrix as [a b; c d]; the other formats round as asked.
 \def\psNumericFont{Courier}
 \def\psNumericFontSize{10}
-\def\psNumericShow{\futurelet\pstnum@next\pstnum@showi}
-\def\pstnum@showi{%
-  \ifx\pstnum@next[\expandafter\pstnum@show
-  \else\expandafter\pstnum@show\expandafter[\expandafter]\fi}
-\def\pstnum@show[#1]#2{%
-  \pscustom[#1]{\moveto(0,0)%
-    \code{/\psNumericFont\space findfont \psNumericFontSize\space scalefont setfont
-      \pstNumeric{#2 pstnum_cvs} show}}}
+\def\psNumericShow{\pst@object{psNumericShow}}
+\def\psNumericShow@i#1{%
+  \begingroup\use@par\pstnum@draw{}{#1 pstnum_textdraw}\endgroup\ignorespaces}
+%
+% \psNumericMatrix[options]{code} draws the result laid out: a matrix with
+% delimiters and aligned columns, a list of numbers as a vector, a tensor of
+% rank 3 or 4 as its slices; the left end of the math axis is at (0,0).
+% The default format is auto.
+\def\psNumericMatrix{\pst@object{psNumericMatrix}}
+\def\psNumericMatrix@i#1{%
+  \begingroup\use@par\pstnum@draw{}{/pstnum_font /\psNumericMatrixFont\space def #1 pstnum_mdraw}\endgroup\ignorespaces}
+\def\psNumericMatrixFont{Times-Roman}
+%
+% \psNumericRegression[options]{code}: a regression result (from regress)
+% as lines of text, the first baseline at (0,0); regShow picks the lines.
+\def\psNumericRegression{\pst@object{psNumericRegression}}
+\def\psNumericRegression@i#1{%
+  \begingroup\use@par\pstnum@draw{}{/pstnum_font /\psNumericMatrixFont\space def #1 pstnum_regdraw}\endgroup\ignorespaces}
+%
+% \psNumericDef{name}{code}: runs the code once, in the dvips header, and
+% stores its result as /name in tx@NumericDict, for every page. Use it for
+% a result needed many times, such as a regression for \psNumericRegPlot or
+% \psplot. Needs the latex + dvips route.
+\def\psNumericDef#1#2{\special{! tx@NumericDict begin /#1 #2 def end}}
+%
+% \psNumericRegPlot[options]{name}{x0}{x1}: plots the regression stored as
+% name (\psNumericDef) from x0 to x1: regPlot=fit (the curve), ci or pi
+% (both limits of the confidence or prediction band), data, residuals or
+% stdresiduals (as dots, at the data's x values).
+\def\psNumericRegPlot{\pst@object{psNumericRegPlot}}
+\def\psNumericRegPlot@i#1#2#3{%
+  \begingroup\use@par
+  \def\pstnum@tmp{fit}\ifx\psk@regPlot\pstnum@tmp
+    \psplot{#2}{#3}{x tx@NumericDict begin #1 exch regeval pstnum_real end}\fi
+  \def\pstnum@tmp{ci}\ifx\psk@regPlot\pstnum@tmp
+    \psplot{#2}{#3}{x tx@NumericDict begin #1 exch regci 0 get pstnum_real end}%
+    \psplot{#2}{#3}{x tx@NumericDict begin #1 exch regci 1 get pstnum_real end}\fi
+  \def\pstnum@tmp{pi}\ifx\psk@regPlot\pstnum@tmp
+    \psplot{#2}{#3}{x tx@NumericDict begin #1 exch regpi 0 get pstnum_real end}%
+    \psplot{#2}{#3}{x tx@NumericDict begin #1 exch regpi 1 get pstnum_real end}\fi
+  \def\pstnum@tmp{data}\ifx\psk@regPlot\pstnum@tmp
+    \listplot[plotstyle=dots]{\pstNumeric{#1 /y get #1 pstnum_xy}}\fi
+  \def\pstnum@tmp{residuals}\ifx\psk@regPlot\pstnum@tmp
+    \listplot[plotstyle=dots]{\pstNumeric{#1 /resid get #1 pstnum_xy}}\fi
+  \def\pstnum@tmp{stdresiduals}\ifx\psk@regPlot\pstnum@tmp
+    \listplot[plotstyle=dots]{\pstNumeric{#1 /stdresid get #1 pstnum_xy}}\fi
+  \endgroup\ignorespaces}
 %
 \catcode`\@=\PstAtCode\relax
 \endinput
