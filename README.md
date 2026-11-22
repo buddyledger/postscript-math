@@ -22,18 +22,19 @@ calculator.
 ```
 
 The [manual](doc/pst-numeric-doc.pdf) describes the package, with examples
-and a reference of every procedure. The library has five parts, chosen by
+and a reference of every procedure. The library has six parts, chosen by
 the package options:
 
 | Option | Source | What it does |
 |---|---|---|
-| `bignum` | `bignumlibrary.ps` | Decimal floating-point numbers with as many significant digits as you ask for: arithmetic, comparisons, sqrt, exp, powers, logarithms, trigonometric and hyperbolic functions and their inverses, pi, factorials |
+| `bignum` | `bignumlibrary.ps` | Decimal floating-point numbers with as many significant digits as you ask for: arithmetic, comparisons, sqrt and n-th roots, exp, powers, logarithms, trigonometric and hyperbolic functions and their inverses, pi, e, factorials, integer division and remainder |
 | `trig` | `Trig.ps` | sin/cos/tan/atan for ordinary PostScript reals using the CORDIC algorithm |
-| `matrix` | `Matrix.ps` | Matrices of reals or bignums: build, add, multiply, transpose, determinant, inverse, linear systems, least squares, symmetric eigenvalues |
-| `complex` | `Complex.ps` | Complex numbers of reals or bignums: arithmetic, modulus and argument, sqrt, exp, ln, powers (loads `matrix`) |
-| `calc` | `Numeric.ps` | Roots of functions, integrals, polynomials (values, roots, fitting), gcd and lcm (loads `matrix` and `complex`) |
+| `matrix` | `Matrix.ps` | Matrices of reals or bignums: build, add, multiply, transpose, determinant, inverse, linear systems, least squares, LU decomposition, rank, norms, condition number, eigenvalues of symmetric and general matrices |
+| `complex` | `Complex.ps` | Complex numbers of reals or bignums: arithmetic, modulus and argument, sqrt, exp, ln, powers, trigonometric and hyperbolic functions and their inverses (loads `matrix`) |
+| `calc` | `Numeric.ps` | Roots of functions, integrals, polynomials (values, roots, fitting, interpolation), cubic splines, minima, derivatives, systems of equations, statistics, differential equations, Fourier transform, gcd and lcm (loads `matrix` and `complex`) |
+| `special` | `Special.ps` | Gamma, error and Bessel functions, the normal distribution (loads `bignum`) |
 
-With no option, all five are loaded. Matrices, complex numbers and `calc`
+With no option, all six are loaded. Matrices, complex numbers and `calc`
 work on reals without `bignum`; load it too to use them with bignums.
 Like every PSTricks package it needs the `latex`–`dvips` route (or `xelatex`).
 
@@ -45,7 +46,7 @@ Like every PSTricks package it needs the `latex`–`dvips` route (or `xelatex`).
 | `dvips/` | `pst-numeric-<part>.pro`, each part as a dvips header (generated), and `pst-numeric.pro`, the package's own helpers | yes |
 | `doc/` | The manual: [`pst-numeric-doc.pdf`](doc/pst-numeric-doc.pdf), its source and bibliography | yes |
 | `source/` | The library's PostScript files, `Load.ps` to load them all, `make_headers.py` to generate the headers, and `gs.bat` to run Ghostscript on Windows | yes, without `gs.bat` |
-| `test/` | `test_bignum.ps` (581 tests of the library), `make_tests.py` that generates it, and `tex-test.sh` with `tex-test.tex` (tests of the package with latex and dvips) | no |
+| `test/` | `test_bignum.ps` (889 tests of the library), `make_tests.py` that generates it, and `tex-test.sh` with `tex-test.tex` (tests of the package with latex and dvips) | no |
 | `examples/` | [`showcase.pdf`](examples/showcase.pdf), every public procedure with a live result, with its source `showcase.ps` and `make_showcase.bat`; and `bignumfactorial.ps` | no |
 | `tools/` | `make-doc.sh` builds the manual, `make-ctan.py` builds the CTAN archive | no |
 
@@ -110,7 +111,7 @@ the CTAN archive.
 
 ## Using the library with Ghostscript
 
-`source/Load.ps` loads all five parts from the current folder and opens the
+`source/Load.ps` loads all six parts from the current folder and opens the
 library's dictionary, so after `(Load.ps) run` everything can be called
 directly. In `source/`:
 
@@ -244,7 +245,11 @@ Stack effects are shown as `inputs → outputs`. `bn` is a bignum.
 | `sinhbn` `coshbn` `tanhbn` | `x → bn` | \|x\| ≥ 10⁹ gives `rangecheck` |
 | `factbn` | `n → n!` | n an integer ≥ 0 |
 | `binombn` | `n k → C(n, k)` | 0 when k < 0 or k > n |
-| `pibn` | `– → bn` | |
+| `pibn` `ebn` | `– → bn` | π and e |
+| `rootbn` | `x n → ⁿ√x` | n an integer ≥ 1; a negative x needs an odd n, else `rangecheck`. A last Newton step makes exact roots exact |
+| `minbn` `maxbn` | `a b → bn` | the smaller, the larger |
+| `idivbn` | `a b → ⌊a/b⌋` | exact while the quotient has at most `bnn` digits; b = 0 gives `undefinedresult` |
+| `modbn` | `a b → a − b⌊a/b⌋` | the remainder, with the sign of b, exact for numbers of any size |
 
 pi, ln 2 and ln 10 are computed once per precision and cached.
 
@@ -264,9 +269,10 @@ them, so `stopped` catches them and Ghostscript reports them as, for example,
 #### Speed
 
 Arithmetic works one decimal digit at a time. At 20 digits each operation is
-instant. At 100 digits, `pibn` takes about 5 s the first time (it's cached
-after that) and `sinbn` about 2 s. The full test suite (581 tests) takes
-about 30 seconds, mostly for bignum integrals and polynomial roots.
+instant and a function takes a few hundredths of a second. At 100 digits,
+`pibn` takes about 1.5 s the first time (it's cached after that) and `sinbn`
+about 0.3 s. The full test suite (889 tests) takes about a minute, mostly for
+bignum integrals, polynomial roots and the special functions.
 
 ### Trig.ps
 
@@ -324,6 +330,12 @@ only, Matrix.ps works on its own.
 | `msolve` | `A B → X` | solves A X = B for an n × n A and n × k B; singular A gives `undefinedresult` |
 | `mlstsq` | `A B → X` | least squares: the X that minimises the size of A X − B, for an m × n A with m ≥ n (Householder QR). Linearly dependent columns give `undefinedresult` |
 | `meigsym` | `A → [values] V` | A symmetric. Eigenvalues in ascending order, and V with the matching unit eigenvectors as columns (cyclic Jacobi). Not symmetric gives `rangecheck` |
+| `mtrace` | `A → trace` | sum of the diagonal; A square |
+| `mnorm` `mnorm1` `mnorminf` | `A → norm` | Frobenius norm; largest column sum of \|aᵢⱼ\|; largest row sum |
+| `mcond` | `A → κ` | condition number ‖A‖₁ ‖A⁻¹‖₁; singular A gives `undefinedresult` |
+| `mrank` | `A → r` | Gaussian elimination with partial pivoting; a pivot below the zero tolerance (as for `mdet`) counts as 0 |
+| `mlu` | `A → L U P` | P A = L U, L lower triangular with ones on the diagonal, U upper triangular, P a permutation matrix (partial pivoting) |
+| `meig` | `A → [z …]` | every eigenvalue of a square matrix, as complex numbers sorted by real part: Hessenberg reduction, then QR steps in complex arithmetic with Wilkinson shifts |
 | `mPrint` | `M → –` | prints one row per line |
 
 `mdet`, `minv` and `msolve` use Gauss-Jordan elimination with partial
@@ -359,6 +371,13 @@ string part switches the calculation to bignums. Needs Matrix.ps.
 | `cln` | `z → ln z` | principal value; 0 gives `rangecheck` |
 | `cpow` | `z w → zʷ` | whole-number w by repeated multiplication, otherwise e^(w ln z) |
 | `ccvs` `cPrint` | `z → string`, `z → –` | `re + im i` |
+| `csin` `ccos` `ctan` | `z → z` | `ctan` at a pole gives `undefinedresult` |
+| `csinh` `ccosh` `ctanh` | `z → z` | |
+| `casin` `cacos` `catan` | `z → z` | principal values with the branch cuts of C99 and Python (asin 2 = π/2 + 1.317i); `catan` of ±i gives `rangecheck` |
+| `casinh` `cacosh` `catanh` | `z → z` | `catanh` of ±1 gives `rangecheck` |
+
+A real argument whose result is real (asin 0.5, atanh 0.5, acosh 2) gives a
+real result with an exact zero imaginary part, computed with real functions.
 
 Parts much smaller than the modulus can show rounding noise instead of 0, for
 example `[0 pibn] cexp` gives −1 − 3.7e−20i because pibn is pi rounded to
@@ -390,6 +409,18 @@ return a bignum. It runs at 6 digits above `bnn`, so it shouldn't change
 | `polyadd` `polymul` | `p q → p+q, p×q` | |
 | `polyroots` | `p → [z …]` | all roots as complex numbers, sorted by real part (Durand-Kerner). All-zero p gives `rangecheck` |
 | `polyfit` | `[x …] [y …] d → p` | least-squares polynomial of degree d, using `mlstsq` |
+| `polyinterp` | `[x …] [y …] → p` | the polynomial of lowest degree through the points (Newton's divided differences); equal x give `rangecheck` |
+| `spline` | `[x …] [y …] → S` | natural cubic spline, x increasing; S is `[[x …] [y …] [y″ …]]` |
+| `splineval` | `S x → y` | the spline at x; beyond the ends the end pieces continue |
+| `fmin` | `{f} a b → x` | where f is smallest in [a, b] (Brent's method). x to about half the digits, f(x) to all of them |
+| `fderiv` | `{f} x → f′(x)` | central differences extrapolated to step 0 (Ridders' method) |
+| `fsolve` | `{F} [x0 …] → [x …]` | F(x) = 0 for a list of n unknowns, F mapping a list of n numbers to a list of n. Newton's method with a central-difference Jacobian and step halving; a singular Jacobian gives `undefinedresult` |
+| `mean` `median` | `[x …] → number` | |
+| `variance` `stddev` | `[x …] → number` | sample variance and standard deviation (n − 1); fewer than 2 values give `rangecheck` |
+| `covariance` `correlation` | `[x …] [y …] → number` | sample covariance; Pearson's r (`undefinedresult` for a constant list) |
+| `oderk4` | `{f} t0 y0 t1 n → [[t y] …]` | y′ = f(t, y) by n steps of the classical Runge-Kutta method, n + 1 points. y is a number or a list (a system); f takes `t y` and returns y′ of the same shape |
+| `odesolve` | `{f} t0 y0 t1 n → [[t y] …]` | the same, each of the n steps solved to the working precision by Gragg-Bulirsch-Stoer extrapolation (a step that does not converge is halved) |
+| `fft` `ifft` | `[z …] → [Z …]` | discrete Fourier transform Z(k) = Σ z(j) e^(−2πijk/n) and its inverse (with 1/n); radix 2 for a power of 2, otherwise the direct sum |
 
 A polynomial is an array of coefficients, highest power first: `[1 0 -2]` is
 x² − 2.
@@ -406,6 +437,34 @@ Limits:
   so a double root keeps about half of them.
 - `froot` and `polyroots` stop after 500 iterations even if they haven't
   converged.
+- With reals, `odesolve` and `fsolve` reach about 5 or 6 digits, the limit
+  of single-precision reals; with bignums they reach the working precision.
+  `oderk4` has an error that falls with the fourth power of the step.
+
+### Special.ps
+
+Special functions of a number, a bignum or a string. A number gives a real,
+computed with bignums at 12 digits; a bignum or a string gives a bignum at
+the current precision. Needs bignumlibrary.ps.
+
+```postscript
+(0.5) gamma bnPrint                  % +1.7724538509055160273e0   (sqrt pi)
+(5) erfc bnPrint                     % +1.5374597944280348502e-12
+0.975 norminv =                      % 1.95996
+0 (1) besselj bnPrint                % +7.6519768655796655145e-1
+```
+
+| Procedure | Stack | Notes |
+|---|---|---|
+| `gamma` | `x → Γ(x)` | Stirling's series after shifting x up to the precision, reflection for x < 0; exact factorials for whole numbers. 0, −1, −2, … give `undefinedresult` |
+| `lngamma` | `x → ln\|Γ(x)\|` | for arguments where Γ itself would be huge |
+| `erf` `erfc` | `x → number` | a series of positive terms for small x, a continued fraction for large x; `erfc` keeps all its digits in the tail |
+| `normpdf` `normcdf` | `x → number` | density and distribution function of the standard normal distribution |
+| `norminv` | `p → x` | the quantile, 0 < p < 1 (else `rangecheck`): Newton's method on ln Φ from Acklam's approximation |
+| `besselj` | `n x → Jₙ(x)` | Bessel function of the first kind, integer n (else `typecheck`), \|x\| < 10⁶; the power series with extra digits for the cancellation |
+
+A real argument costs about as much as a 20-digit bignum, so a plot of a
+special function takes a few seconds rather than a fraction of one.
 
 ## License
 
@@ -423,10 +482,10 @@ This work consists of the files `README`, `README.md`, `Changes`,
 `RELEASING.md`, `tex/pst-numeric.tex`, `latex/pst-numeric.sty`,
 `dvips/pst-numeric.pro`, `dvips/pst-numeric-bignum.pro`,
 `dvips/pst-numeric-trig.pro`, `dvips/pst-numeric-matrix.pro`,
-`dvips/pst-numeric-complex.pro`, `dvips/pst-numeric-calc.pro`,
+`dvips/pst-numeric-complex.pro`, `dvips/pst-numeric-calc.pro`, `dvips/pst-numeric-special.pro`,
 `doc/pst-numeric-doc.tex`, `doc/pst-numeric-doc.bib`,
 `doc/pst-numeric-doc.pdf`, `source/bignumlibrary.ps`, `source/Trig.ps`,
-`source/Matrix.ps`, `source/Complex.ps`, `source/Numeric.ps`,
+`source/Matrix.ps`, `source/Complex.ps`, `source/Numeric.ps`, `source/Special.ps`,
 `source/Load.ps`, `source/make_headers.py`, `source/gs.bat`,
 `test/test_bignum.ps`, `test/make_tests.py`, `test/tex-test.sh`,
 `test/tex-test.tex`, `examples/showcase.ps`, `examples/showcase.pdf`,

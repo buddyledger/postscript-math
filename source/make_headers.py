@@ -36,6 +36,7 @@ PARTS = [
     ("matrix", "Matrix.ps", ["bignum (only for bignum matrices)"]),
     ("complex", "Complex.ps", ["matrix", "bignum (only for bignums)"]),
     ("calc", "Numeric.ps", ["matrix", "complex", "bignum (only for bignums)"]),
+    ("special", "Special.ps", ["bignum"]),
 ]
 
 here = Path(__file__).resolve().parent      # source/

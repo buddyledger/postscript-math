@@ -639,6 +639,442 @@ out(f"(meigsym 3x3: A v = lambda v, reals) {{ {mlit(E3)} mfromrows dup meigsym /
 t("meigsym non-symmetric", "[[1 2][3 4]] mfromrows meigsym", "ERR:rangecheck")
 t("meigsym non-square", "[[1 2 3][4 5 6]] mfromrows meigsym", "ERR:rangecheck")
 
+
+# ================================================================ version 1.3
+import cmath
+n = 20
+
+def ra(label, proc, val, tol=None):  # a real within 1e-5 (or a coarser tolerance)
+    esc = label.replace("(", "\\(").replace(")", "\\)")
+    if tol is None:
+        out(f"({esc}) {{ {proc} }} {val:.9g} approx")
+    else:
+        out(f"({esc}) {{ {proc} }} {val:.9g} {tol} bnt_approx")
+
+def la(label, proc, vals):  # nested list of reals, each within 1e-4
+    esc = label.replace("(", "\\(").replace(")", "\\)")
+    out(f"({esc}) {{ {proc} }} [{' '.join(f'{float(v):.9g}' for v in vals)}] lapprox")
+
+def bna(label, proc, val, digits):  # a bignum within a relative 10^-digits
+    esc = label.replace("(", "\\(").replace(")", "\\)")
+    out(f"({esc}) {{ {proc} }} ({fmt(val, 40)}) {digits} bnapprox")
+
+def HP_CTX(): return Context(prec=HP)
+
+# ---------------------------------------------------------------- bignum additions
+section("ebn rootbn minbn maxbn idivbn modbn", n)
+t("ebn", "ebn", fmt(d_exp(1), n))
+with localcontext() as c:
+    c.prec = HP
+    for x, k in [("27", 3), ("2", 2), ("2", 3), ("1e100", 7), ("0.001", 3), ("123.456", 5), ("5", 1), ("0", 4)]:
+        X = D(x)
+        ref = D(0) if X == 0 else (X.ln() / k).exp()
+        t(f"rootbn {x} {k}", f"{ps(x)} {k} rootbn", fmt(ref, n))
+    t("rootbn -32 5", "(-32) 5 rootbn", fmt(D(-2), n))
+    t("rootbn -2 3", "(-2) 3 rootbn", fmt(-(D(2).ln() / 3).exp(), n))
+t("rootbn -4 2 is an error", "(-4) 2 rootbn", "ERR:rangecheck")
+t("rootbn 0th root is an error", "2 0 rootbn", "ERR:rangecheck")
+t("rootbn real exponent is an error", "2 2.0 rootbn", "ERR:rangecheck")
+t("minbn", "(3.5) 2 minbn", fmt(2, n))
+t("maxbn", "(3.5) 2 maxbn", fmt(D("3.5"), n))
+t("minbn negative", "(-1e-30) 0 minbn", fmt(D("-1e-30"), n))
+def floordiv(a, b):
+    A, B = F(D(a)), F(D(b)); q = (A / B).__floor__(); return q, A - B * q
+for a, b in [("17", "5"), ("-17", "5"), ("17", "-5"), ("-17", "-5"), ("7.5", "2"), ("1e30", "7"),
+             ("-0.3", "0.1"), ("0", "3"), ("123456789012", "1000"), ("1", "3")]:
+    q, r = floordiv(a, b)
+    t(f"idivbn {a} {b}", f"{ps(a)} {ps(b)} idivbn", fmt(D(q), n))
+    t(f"modbn {a} {b}", f"{ps(a)} {ps(b)} modbn", fmt(D(r.numerator) / D(r.denominator), n))
+t("modbn by 0 is an error", "1 0 modbn", "ERR:undefinedresult")
+t("idivbn by 0 is an error", "1 0 idivbn", "ERR:undefinedresult")
+
+# ---------------------------------------------------------------- complex functions
+section("Complex.ps trigonometric and hyperbolic", n)
+for f, fn in [("csin", cmath.sin), ("ccos", cmath.cos), ("ctan", cmath.tan), ("csinh", cmath.sinh),
+              ("ccosh", cmath.cosh), ("ctanh", cmath.tanh), ("casin", cmath.asin), ("cacos", cmath.acos),
+              ("catan", cmath.atan), ("casinh", cmath.asinh), ("cacosh", cmath.acosh), ("catanh", cmath.atanh)]:
+    for z in [complex(1, 2), complex(-0.5, 0.3), complex(0, -1.5)]:
+        if f == "catan" and z == complex(0, -1.5):
+            continue   # on the branch cut
+        w = fn(z)
+        la(f"{f} {z.real:g}{z.imag:+g}i", f"[{z.real:g} {z.imag:g}] {f}", [w.real, w.imag])
+for f, fn, xs in [("casin", cmath.asin, [0.5, -1, 2, -2]), ("cacos", cmath.acos, [0.5, -0.5, 2]),
+                  ("catan", cmath.atan, [0.3, -4]), ("casinh", cmath.asinh, [0.001, -2, 1e-6]),
+                  ("cacosh", cmath.acosh, [2, 0.5, -2]), ("catanh", cmath.atanh, [0.5, -0.9, 2, -3])]:
+    for x in xs:
+        w = fn(complex(x, 0))
+        la(f"{f} {x:g}", f"{x:g} {f}", [w.real, w.imag])
+la("ctan with a large imaginary part", "[1 50] ctan", [0, 1])
+t("ctan 0", "0 ctan ccvs", "0.0 + 0.0i")
+t("catan i is an error", "[0 1] catan", "ERR:rangecheck")
+t("catanh 1 is an error", "1 catanh", "ERR:rangecheck")
+t("casin 0.5 is real", "0.5 casin cim", "0")
+
+def dc_ln(z):
+    re, im = z
+    with localcontext() as c:
+        c.prec = HP + 20
+        return ((re * re + im * im).ln() / 2, d_atan2(im, re))
+def dc_sqrt(z):
+    re, im = z
+    with localcontext() as c:
+        c.prec = HP + 20
+        r = (re * re + im * im).sqrt()
+        if re >= 0:
+            t_ = ((r + re) / 2).sqrt(); return (t_, im / (2 * t_) if t_ != 0 else D(0))
+        t_ = ((r - re) / 2).sqrt(); return (abs(im) / (2 * t_), t_ if im >= 0 else -t_)
+def dc_mul(a, b): return (a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0])
+with localcontext() as c:
+    c.prec = HP + 20
+    a_, b_ = D(1), D(2)
+    ch, sh = d_hyp(b_, 'cosh'), d_hyp(b_, 'sinh')
+    t("csin 1+2i, bignums", "[(1) 2] csin ccvs", cfmt(d_sin(a_) * ch, d_cos(a_) * sh, n))
+    t("ccos 1+2i, bignums", "[(1) 2] ccos ccvs", cfmt(d_cos(a_) * ch, -d_sin(a_) * sh, n))
+    t("csinh 1+2i, bignums", "[(1) 2] csinh ccvs", cfmt(d_hyp(a_, 'sinh') * d_cos(b_), d_hyp(a_, 'cosh') * d_sin(b_), n))
+    den = d_cos(2 * a_) + d_hyp(2 * b_, 'cosh')
+    t("ctan 1+2i, bignums", "[(1) 2] ctan ccvs", cfmt(d_sin(2 * a_) / den, d_hyp(2 * b_, 'sinh') / den, n))
+    z = (D(1), D(2))
+    s1 = dc_sqrt((1 - (z[0] * z[0] - z[1] * z[1]), -2 * z[0] * z[1]))
+    w = dc_ln((-z[1] + s1[0], z[0] + s1[1]))
+    t("casin 1+2i, bignums", "[(1) 2] casin ccvs", cfmt(w[1], -w[0], n))
+    t("casin 0.5 is pi/6, bignums", "(0.5) casin ccvs", cfmt(PI / 6, D(0), n))
+    t("catan 1 is pi/4, bignums", "(1) catan ccvs", cfmt(PI / 4, D(0), n))
+    t("casinh 1, bignums", "(1) casinh ccvs", cfmt((1 + D(2).sqrt()).ln(), D(0), n))
+    t("casinh 1e-15, bignums", "(1e-15) casinh cre bnt_str", fmt(D("1e-15") - D("1e-45") / 6, n))
+    t("catanh 1e-12, bignums", "(1e-12) catanh cre bnt_str", fmt(D("1e-12") + D("1e-36") / 3, n))
+    t("cacosh 2, bignums", "(2) cacosh ccvs", cfmt((2 + D(3).sqrt()).ln(), D(0), n))
+    t("catanh 0.5, bignums", "(0.5) catanh ccvs", cfmt(D(3).ln() / 2, D(0), n))
+    t("catanh 2 is on the branch cut, bignums", "(2) catanh ccvs", cfmt(D(3).ln() / 2, PI / 2, n))
+
+# ---------------------------------------------------------------- matrices
+section("Matrix.ps version 1.3", n)
+t("mtrace", "[[1 2][3 4]] mfromrows mtrace", "5")
+t("mtrace bignums", "[[(1.5) 2][3 (0.25)]] mfromrows mtrace bnt_str", fmt(D("1.75"), n))
+t("mtrace non-square", "[[1 2 3]] mfromrows mtrace", "ERR:rangecheck")
+ra("mnorm", "[[1 2][3 4]] mfromrows mnorm", 30 ** 0.5)
+with localcontext() as c:
+    c.prec = HP
+    t("mnorm bignums", "[[(1) 2][3 4]] mfromrows mnorm bnt_str", fmt(D(30).sqrt(), n))
+t("mnorm1", "[[1 -2][3 4]] mfromrows mnorm1", "6")
+t("mnorminf", "[[1 -2][3 4]] mfromrows mnorminf", "7")
+ra("mcond", "[[1 2][3 4]] mfromrows mcond", 21)
+t("mcond bignums", "[[(1) 2][3 4]] mfromrows mcond bnt_str", fmt(21, n))
+t("mcond singular", "[[1 2][2 4]] mfromrows mcond", "ERR:undefinedresult")
+for rows, r in [([[1, 2], [2, 4]], 1), ([[1, 2, 3], [4, 5, 6], [7, 8, 9]], 2), ([[1, 2, 3], [4, 5, 6], [7, 8, 10]], 3),
+                ([[0, 0], [0, 0]], 0), ([[1, 2, 3], [2, 4, 6]], 1), ([[1, 0], [0, 1], [1, 1]], 2)]:
+    t(f"mrank {mlit(rows)}", f"{mlit(rows)} mfromrows mrank", str(r))
+t("mrank bignums", "[[(1) 2 3][4 5 6][7 8 9]] mfromrows mrank", "2")
+t("mrank nearly singular, bignums", "[[(1) 1][1 (1.000000000000001)]] mfromrows mrank", "2")
+t("mlu P", "[[1 2][3 4]] mfromrows mlu bnt_mstr 3 1 roll pop pop", "0 1; 1 0")
+t("mlu U", "[[1 2][3 4]] mfromrows mlu pop bnt_mstr exch pop", "3 4; 0 " + "0.666667")
+A3 = [[2, 1, 1], [4, 3, 3], [8, 7, 9]]
+la("mlu: L U equals P A", f"{mlit(A3)} mfromrows dup mlu /bnt_P exch def /bnt_U exch def /bnt_L exch def bnt_P exch mmul bnt_L bnt_U mmul msub mtorows",
+   [0] * 9)
+t("mlu bignums, U", f"{bnl(A3)} 1 setbn mscale mlu pop exch pop mtorows 2 get 2 get bnt_str", fdec(F(-2, 3), n))
+t("mlu non-square", "[[1 2 3]] mfromrows mlu", "ERR:rangecheck")
+la("meig 2x2", "[[1 2][3 4]] mfromrows meig", [(5 - 33 ** 0.5) / 2, 0, (5 + 33 ** 0.5) / 2, 0])
+la("meig rotation", "[[0 -1][1 0]] mfromrows meig", [0, -1, 0, 1])
+la("meig 3x3 complex pair", "[[1 1 0][0 1 1][1 0 1]] mfromrows meig", [0.5, -0.75 ** 0.5, 0.5, 0.75 ** 0.5, 2, 0])
+la("meig companion of (x-1)(x-2)(x-3)", "[[0 0 6][1 0 -11][0 1 6]] mfromrows meig", [1, 0, 2, 0, 3, 0])
+la("meig symmetric", f"{mlit(E3)} mfromrows meig", sum(([float(v), 0] for v in sym_eigs(E3)), []))
+la("meig triangular", "[[1 5 7][0 2 9][0 0 -3]] mfromrows meig", [-3, 0, 1, 0, 2, 0])
+la("meig 1x1", "[[4]] mfromrows meig", [4, 0])
+with localcontext() as c:
+    c.prec = HP
+    s33 = D(33).sqrt()
+    bna("meig 2x2 bignums, first", "[[(1) 2][3 4]] mfromrows meig 0 get 0 get", (5 - s33) / 2, 19)
+    bna("meig 2x2 bignums, second", "[[(1) 2][3 4]] mfromrows meig 1 get 0 get", (5 + s33) / 2, 19)
+t("meig 2x2 bignums, imaginary parts", "[[(1) 2][3 4]] mfromrows meig { 1 get bniszero } forall and", "true")
+bna("meig rotation bignums", "[[(0) -1][1 0]] mfromrows meig 1 get 1 get", D(1), 19)
+for k_, v_ in enumerate([2, 3, 4]):
+    bna(f"meig companion bignums, root {v_}", f"[[(0) 0 24][1 0 -26][0 1 9]] mfromrows meig {k_} get 0 get", D(v_), 19)
+t("meig non-square", "[[1 2 3]] mfromrows meig", "ERR:rangecheck")
+
+# ---------------------------------------------------------------- interpolation
+section("Numeric.ps interpolation", n)
+def lagrange(xs, ys):
+    m = len(xs); coef = [F(0)] * m
+    for i in range(m):
+        num = [F(1)]; den = F(1)
+        for j in range(m):
+            if j != i:
+                num = [a - F(xs[j]) * b for a, b in zip(num + [F(0)], [F(0)] + num)]
+                den *= F(xs[i]) - F(xs[j])
+        for k in range(m): coef[k] += F(ys[i]) * num[k] / den
+    return coef
+for xs, ys in [([0, 1, 2, 3], [1, 2, 5, 10]), ([-1, 0, 2], [3, 1, 7]), ([1, 2, 4, 5, 7], [2, -1, 3, 0, 5])]:
+    cf = lagrange(xs, ys)
+    la(f"polyinterp {xs}", f"[{' '.join(map(str, xs))}] [{' '.join(map(str, ys))}] polyinterp", [float(v) for v in cf])
+cf = lagrange([1, 2, 4, 5, 7], [2, -1, 3, 0, 5])
+t("polyinterp bignums", "[(1) 2 4 5 7] [2 -1 3 0 5] polyinterp bnt_list", " ".join(fdec(v, n) for v in cf))
+t("polyinterp repeated x", "[1 1] [2 3] polyinterp", "ERR:rangecheck")
+t("polyinterp lengths differ", "[1 2] [2] polyinterp", "ERR:rangecheck")
+def spline_exact(xs, ys):
+    m = len(xs); xs = [F(x) for x in xs]; ys = [F(y) for y in ys]
+    M = [F(0)] * m
+    if m > 2:
+        k = m - 2
+        A = [[F(0)] * k for _ in range(k)]; r = [F(0)] * k
+        for i in range(1, m - 1):
+            h0, h1 = xs[i] - xs[i - 1], xs[i + 1] - xs[i]
+            if i - 1 > 0: A[i - 1][i - 2] = h0
+            A[i - 1][i - 1] = 2 * (h0 + h1)
+            if i < m - 2: A[i - 1][i] = h1
+            r[i - 1] = 6 * ((ys[i + 1] - ys[i]) / h1 - (ys[i] - ys[i - 1]) / h0)
+        for c_ in range(k):
+            for rr in range(c_ + 1, k):
+                f = A[rr][c_] / A[c_][c_]
+                A[rr] = [a - f * b for a, b in zip(A[rr], A[c_])]; r[rr] -= f * r[c_]
+        sol = [F(0)] * k
+        for i in range(k - 1, -1, -1):
+            sol[i] = (r[i] - sum(A[i][j] * sol[j] for j in range(i + 1, k))) / A[i][i]
+        M[1:m - 1] = sol
+    def ev(x):
+        x = F(x); lo = 0
+        for i in range(m - 1):
+            if xs[i] <= x: lo = i
+        lo = min(lo, m - 2); hi = lo + 1; h = xs[hi] - xs[lo]
+        A_ = (xs[hi] - x) / h; B_ = (x - xs[lo]) / h
+        return A_ * ys[lo] + B_ * ys[hi] + ((A_ ** 3 - A_) * M[lo] + (B_ ** 3 - B_) * M[hi]) * h * h / 6
+    return M, ev
+SX, SY = [0, 1, 2.5, 4, 6], [0, 2, 1, 3, -1]
+M_, ev = spline_exact([F(D(str(x))) for x in SX], SY)
+la("spline second derivatives", f"[{' '.join(map(str, SX))}] [{' '.join(map(str, SY))}] spline 2 get", [float(v) for v in M_])
+for x in [0, 0.5, 1, 2, 3.3, 5.9, 6, -1, 7]:
+    la(f"splineval {x}", f"[{' '.join(map(str, SX))}] [{' '.join(map(str, SY))}] spline {x} splineval", [float(ev(F(D(str(x)))))])
+_sv = ev(F(D("3.3")))
+bna("splineval bignums", f"[(0) 1 2.5 4 6] [{' '.join(map(str, SY))}] spline (3.3) splineval", D(_sv.numerator) / D(_sv.denominator), 19)
+t("spline of two points is a line", "[0 2] [1 5] spline 0.5 splineval", "2.0")
+t("spline x not increasing", "[0 2 1] [1 2 3] spline", "ERR:rangecheck")
+
+# ---------------------------------------------------------------- minimum, derivative, systems
+section("Numeric.ps minimum, derivative, systems", n)
+ra("fmin (2x^2-3)^2", "{ dup mul 2 mul 3 sub dup mul } 0 3 fmin", 1.5 ** 0.5, "1e-3")
+ra("fmin cos on [2, 5]", "{ 57.29577951 mul cos } 2 5 fmin", math.pi, "1e-3")
+ra("fmin at an end", "{ } 1 4 fmin", 1, "1e-3")
+with localcontext() as c:
+    c.prec = HP
+    bna("fmin bignums, 10 digits", "{ dup mulbn 2 setbn mulbn 3 setbn subbn dup mulbn } (0) (3) fmin", D("1.5").sqrt(), 9)
+    bna("fmin bignums, cos", "{ cosbn } (2) (5) fmin", PI, 9)
+ra("fderiv x^4 at 2", "{ dup mul dup mul } 2 fderiv", 32, "1e-3")
+ra("fderiv sin at 1", "{ 57.29577951 mul sin } 1 fderiv", math.cos(1))
+ra("fderiv exp at 0", "{ 2.718281828 exch exp } 0 fderiv", 1)
+bna("fderiv exp at 1, bignums", "{ expbn } (1) fderiv", d_exp(1), 17)
+bna("fderiv x^3 at 2, bignums", "{ dup dup mulbn mulbn } (2) fderiv", D(12), 18)
+bna("fderiv sin at 0.5, bignums", "{ sinbn } (0.5) fderiv", d_cos("0.5"), 17)
+FS = "{ aload pop 2 copy dup mul exch dup mul add 4 sub 3 1 roll sub 2 array astore }"
+la("fsolve circle and line", f"{FS} [1 0.5] fsolve", [2 ** 0.5, 2 ** 0.5])
+la("fsolve 3 equations", "{ aload pop /bnt_z exch def /bnt_y exch def /bnt_x exch def"
+   " [ bnt_x bnt_y add bnt_z add 6 sub  bnt_x bnt_y mul bnt_z mul 6 sub  bnt_x dup mul bnt_y dup mul add bnt_z dup mul add 14 sub ] }"
+   " [0.8 2.2 2.9] fsolve", [1, 2, 3])
+with localcontext() as c:
+    c.prec = HP
+    t("fsolve bignums", "{ aload pop 2 copy dup mulbn exch dup mulbn addbn 4 setbn subbn 3 1 roll subbn 2 array astore }"
+      " [(1) (0.5)] fsolve bnt_list", " ".join([fmt(D(2).sqrt(), n)] * 2))
+t("fsolve singular Jacobian", "{ aload pop pop 0 2 array astore } [1 1] fsolve", "ERR:undefinedresult")
+
+# ---------------------------------------------------------------- statistics
+section("Numeric.ps statistics", n)
+DATA = [2, 4, 4, 4, 5, 5, 7, 9]
+def fstats(xs):
+    xs = [F(D(str(x))) for x in xs]; m = sum(xs) / len(xs)
+    v = sum((x - m) ** 2 for x in xs) / (len(xs) - 1); return m, v
+mu, var = fstats(DATA)
+la("mean", f"[{' '.join(map(str, DATA))}] mean", [float(mu)])
+la("variance", f"[{' '.join(map(str, DATA))}] variance", [float(var)])
+la("stddev", f"[{' '.join(map(str, DATA))}] stddev", [float(var) ** 0.5])
+t("median even", f"[{' '.join(map(str, DATA))}] median", "4.5")
+t("median odd", "[3 1 2] median", "2")
+B5 = ["0.1", "0.2", "0.3", "0.4", "0.6"]
+mu, var = fstats(B5)
+t("mean bignums", "[(0.1) (0.2) (0.3) (0.4) (0.6)] mean bnt_str", fdec(mu, n))
+t("variance bignums", "[(0.1) (0.2) (0.3) (0.4) (0.6)] variance bnt_str", fdec(var, n))
+with localcontext() as c:
+    c.prec = HP
+    t("stddev bignums", "[(0.1) (0.2) (0.3) (0.4) (0.6)] stddev bnt_str", fmt((D(var.numerator) / D(var.denominator)).sqrt(), n))
+t("median bignums", "[(0.6) (0.1) (0.3)] median bnt_str", fmt(D("0.3"), n))
+X5, Y5 = [1, 2, 3, 4, 5], [2, 4, 5, 4, 5]
+mx, my = F(sum(X5), 5), F(sum(Y5), 5)
+sxy = sum((F(x) - mx) * (F(y) - my) for x, y in zip(X5, Y5)); sxx = sum((F(x) - mx) ** 2 for x in X5); syy = sum((F(y) - my) ** 2 for y in Y5)
+la("covariance", "[1 2 3 4 5] [2 4 5 4 5] covariance", [float(sxy / 4)])
+la("correlation", "[1 2 3 4 5] [2 4 5 4 5] correlation", [float(sxy) / float(sxx * syy) ** 0.5])
+with localcontext() as c:
+    c.prec = HP
+    t("correlation bignums", "[(1) 2 3 4 5] [2 4 5 4 5] correlation bnt_str",
+      fmt(D(sxy.numerator) / D(sxy.denominator) / (D((sxx * syy).numerator) / D((sxx * syy).denominator)).sqrt(), n))
+t("mean of nothing", "[] mean", "ERR:rangecheck")
+t("variance of one value", "[1] variance", "ERR:rangecheck")
+t("correlation of a constant", "[1 2 3] [5 5 5] correlation", "ERR:undefinedresult")
+
+# ---------------------------------------------------------------- differential equations
+section("Numeric.ps differential equations", n)
+ra("oderk4 y' = y, 10 steps", "{ exch pop } 0 1 1 10 oderk4 10 get 1 get", math.e, "1e-4")
+t("oderk4 gives n+1 points", "{ exch pop } 0 1 1 10 oderk4 length", "11")
+t("oderk4 last t is t1", "{ exch pop } 0 1 0.3 7 oderk4 7 get 0 get", "0.3")
+ra("odesolve y' = y", "{ exch pop } 0 1 1 2 odesolve 2 get 1 get", math.e)
+ra("odesolve y' = t y, y(2)", "{ mul } 0 1 2 1 odesolve 1 get 1 get", math.exp(2), "5e-4")
+la("odesolve harmonic oscillator at pi", "{ exch pop aload pop neg exch 2 array astore } 0 [0 1] 3.14159265 3 odesolve 3 get 1 get", [0, -1])
+la("oderk4 harmonic oscillator at pi/2", "{ exch pop aload pop neg exch 2 array astore } 0 [0 1] 1.5707963 20 oderk4 20 get 1 get", [-1, 0])
+with localcontext() as c:
+    c.prec = HP
+    t("odesolve y' = y, bignums", "{ exch pop } (0) (1) 1 2 odesolve 2 get 1 get bnt_str", fmt(d_exp(1), n))
+    t("odesolve harmonic oscillator, bignums", "{ exch pop aload pop negbn exch 2 array astore } (0) [0 1] (1) 1 odesolve 1 get 1 get bnt_list",
+      fmt(-d_sin(1), n) + " " + fmt(d_cos(1), n))
+    bna("odesolve y' = -2 t y^2, bignums", "{ dup mulbn mulbn -2 setbn mulbn } (0) (1) (3) 1 odesolve 1 get 1 get", D(1) / 10, 18)
+t("oderk4 0 steps is an error", "{ } 0 1 1 0 oderk4", "ERR:rangecheck")
+
+# ---------------------------------------------------------------- Fourier transform
+section("Numeric.ps Fourier transform", n)
+def dft(zs, inv=False):
+    m = len(zs); sg = 1 if inv else -1
+    r = [sum(z * cmath.exp(sg * 2j * math.pi * j * k / m) for j, z in enumerate(zs)) for k in range(m)]
+    return [v / m for v in r] if inv else r
+for zs in [[1, 2, 3, 4], [1, 2, 3], [1, 0, 0, 0, 0, 0, 0, 0], [1j, 2, -1, 3 - 1j, 0.5, 0, 2, 1], [5]]:
+    lit = " ".join(f"[{z.real:g} {z.imag:g}]" if isinstance(z, complex) else str(z) for z in zs)
+    w = dft([complex(z) for z in zs])
+    la(f"fft [{lit}]", f"[{lit}] fft", sum(([v.real, v.imag] for v in w), []))
+    la(f"ifft fft [{lit}]", f"[{lit}] fft ifft", sum(([complex(v).real, complex(v).imag] for v in zs), []))
+la("ifft", "[[10 0] [-2 2] [-2 0] [-2 -2]] ifft", [1, 0, 2, 0, 3, 0, 4, 0])
+t("fft bignums", "[(1) 2 3 4] fft bnt_clist", "; ".join(cfmt(a, b, n) for a, b in [(10, 0), (-2, 2), (-2, 0), (-2, -2)]))
+with localcontext() as c:
+    c.prec = HP
+    s3 = D(3).sqrt() / 2
+    t("fft 3 points, bignums", "[(1) 2 3] fft bnt_clist", "; ".join(cfmt(a, b, n) for a, b in [(6, 0), (D("-1.5"), s3), (D("-1.5"), -s3)]))
+t("fft of nothing", "[] fft length", "0")
+
+# ---------------------------------------------------------------- special functions
+section("Special.ps", n)
+def spouge_lgamma(x):  # ln Gamma(x) for x > 0, by Spouge's formula (independent of Stirling)
+    with localcontext() as c:
+        c.prec = 260
+        x = D(x); a = 140
+        shift = 0
+        while x < 10: x += 1; shift += 1   # Gamma(x) = Gamma(x + s) / (x (x+1) ...)
+        z = x - 1
+        s = (2 * PI_HP()).sqrt()
+        fact = D(1)
+        for k in range(1, a):
+            if k > 1: fact *= k - 1
+            ck = ((-1) ** (k - 1)) / fact * (D(a - k) ** (D(k) - D("0.5"))) * (D(a - k)).exp()
+            s += ck / (z + k)
+        lg = (z + D("0.5")) * (z + a).ln() - (z + a) + s.ln()
+        xx = D(x) - shift
+        for i in range(shift): lg -= (xx + i).ln()
+        return lg
+_pi_cache = []
+def PI_HP():
+    if not _pi_cache:
+        with localcontext() as c:
+            c.prec = 280
+            def atan_inv(k):
+                x = D(1) / k; x2 = x * x; s = x; t_ = x; m = 1; sg = -1
+                while True:
+                    t_ *= x2; term = t_ / (2 * m + 1)
+                    if abs(term) < D(10) ** -278: break
+                    s += sg * term; sg = -sg; m += 1
+                return s
+            _pi_cache.append(16 * atan_inv(5) - 4 * atan_inv(239))
+    return _pi_cache[0]
+def d_gamma(x):
+    with localcontext() as c:
+        c.prec = 260
+        X = D(x)
+        if X > 0: return spouge_lgamma(X).exp()
+        # reflection
+        s = d_sin_hp(PI_HP() * X)
+        return PI_HP() / (s * spouge_lgamma(1 - X).exp())
+def d_sin_hp(x):
+    with localcontext() as c:
+        c.prec = 260
+        tp = 2 * PI_HP(); r = x - tp * (x / tp).to_integral_value(rounding=ROUND_HALF_UP)
+        t_ = r; s = r; i = 1
+        while True:
+            t_ = -t_ * r * r / ((2 * i) * (2 * i + 1))
+            if abs(t_) < D(10) ** -255: break
+            s += t_; i += 1
+        return s
+def d_erf(x):  # alternating Taylor series at high precision
+    with localcontext() as c:
+        c.prec = 300
+        x = D(x); s = D(0); term = x; k = 0
+        while True:
+            add = term / (2 * k + 1)
+            s += add
+            if abs(add) < D(10) ** -290: break
+            k += 1; term = -term * x * x / k
+        return 2 / PI_HP().sqrt() * s
+def d_erfc(x):
+    with localcontext() as c:
+        c.prec = 300
+        return 1 - d_erf(x)
+def d_besselj(nn, x):
+    with localcontext() as c:
+        c.prec = 300
+        x = D(x); sg = 1
+        if nn < 0: nn = -nn; sg = (-1) ** nn
+        if x == 0: return D(1 if nn == 0 else 0)
+        h = x / 2; t_ = h ** nn / math.factorial(nn); s = t_; k = 0
+        while True:
+            k += 1; t_ = -t_ * h * h / (k * (k + nn)); s += t_
+            if abs(t_) < D(10) ** -280 and k > x: break
+        return sg * s
+def d_ncdf(x):
+    with localcontext() as c:
+        c.prec = 300
+        return d_erfc(-D(x) / D(2).sqrt()) / 2
+def d_npdf(x):
+    with localcontext() as c:
+        c.prec = 300
+        return (-D(x) ** 2 / 2).exp() / (2 * PI_HP()).sqrt()
+def d_ninv(p):
+    with localcontext() as c:
+        c.prec = 300
+        p = D(p); x = D(str(__import__("statistics").NormalDist().inv_cdf(float(p))))
+        for _ in range(8): x = x - (d_ncdf(x) - p) / d_npdf(x)
+        return x
+
+for x in ["5", "0.5", "4.5", "1.5", "0.1", "10.3", "-0.5", "-2.5", "-1.3", "30.25", "171.7"]:
+    t(f"gamma {x}, bignums", f"({x}) gamma bnt_str", fmt(d_gamma(x), n))
+for x in [5, 0.5, -1.5, 3.7]:
+    ra(f"gamma {x}", f"{x} gamma", math.gamma(x))
+t("gamma 0 is an error", "0 gamma", "ERR:undefinedresult")
+t("gamma -3 is an error", "-3 gamma", "ERR:undefinedresult")
+t("gamma 1", "1 gamma", "1.0")
+for x in ["0.5", "1", "2", "10.5", "100", "1000.5", "-0.5", "0.001"]:
+    ref = (D(math.factorial(int(x) - 1)).ln(HP_CTX()) if D(x) == D(x).to_integral_value() else spouge_lgamma(x)) if D(x) > 0 else (PI_HP().ln() - abs(d_sin_hp(PI_HP() * D(x))).ln() - spouge_lgamma(1 - D(x)))
+    t(f"lngamma {x}, bignums", f"({x}) lngamma bnt_str", fmt(ref, n))
+ra("lngamma 100", "100 lngamma", math.lgamma(100), "1e-3")
+for x in ["0.5", "-1", "2", "3", "1e-5", "0.1", "5.5"]:
+    t(f"erf {x}, bignums", f"({x}) erf bnt_str", fmt(d_erf(x), n))
+for x in ["0.5", "-1", "2", "3", "5", "10", "1e-5"]:
+    t(f"erfc {x}, bignums", f"({x}) erfc bnt_str", fmt(d_erfc(x), n))
+for x in [0.5, -1, 2.5, 4]:
+    ra(f"erf {x}", f"{x} erf", math.erf(x))
+    ra(f"erfc {x}", f"{x} erfc", math.erfc(x))
+for x in ["0", "1", "-2", "1.5"]:
+    t(f"normpdf {x}, bignums", f"({x}) normpdf bnt_str", fmt(d_npdf(x), n))
+    t(f"normcdf {x}, bignums", f"({x}) normcdf bnt_str", fmt(d_ncdf(x), n))
+for p_ in ["0.975", "0.5", "0.025", "0.001", "0.9999", "1e-20"]:
+    t(f"norminv {p_}, bignums", f"({p_}) norminv bnt_str", fmt(d_ninv(p_) if p_ != "0.5" else 0, n))
+ra("normcdf 1.96", "1.96 normcdf", 0.9750021048517795)
+ra("norminv 0.975", "0.975 norminv", 1.959963984540054)
+t("norminv 0 is an error", "0 norminv", "ERR:rangecheck")
+t("norminv 1 is an error", "1 norminv", "ERR:rangecheck")
+for nn, x in [(0, "1"), (1, "1"), (0, "10"), (3, "-2"), (-1, "2"), (5, "30"), (2, "0.001"), (0, "0"), (1, "0"), (10, "7.5")]:
+    t(f"besselj {nn} {x}, bignums", f"{nn} ({x}) besselj bnt_str", fmt(d_besselj(nn, x), n))
+ra("besselj 0 2.404825558 (a zero)", "0 2.404825558 besselj", 0)
+ra("besselj 1 3", "1 3 besselj", float(d_besselj(1, "3")))
+t("besselj with a real order is an error", "0.5 1 besselj", "ERR:typecheck")
+
+n = 40
+section("Special.ps precision 40", n)
+t("gamma 1/3", f"({'0.' + '3' * 40}) gamma bnt_str", fmt(d_gamma('0.' + '3' * 40), n))
+t("erf 0.7", "(0.7) erf bnt_str", fmt(d_erf("0.7"), n))
+t("erfc 4", "(4) erfc bnt_str", fmt(d_erfc("4"), n))
+t("besselj 2 15", "2 (15) besselj bnt_str", fmt(d_besselj(2, "15"), n))
+t("norminv 0.01", "(0.01) norminv bnt_str", fmt(d_ninv("0.01"), n))
+n = 20
+
 header = r"""%!PS
 % test_bignum.ps - regression tests for the pst-numeric library
 % Generated by make_tests.py - edit that file, not this one.
@@ -675,10 +1111,11 @@ userdict length countdictstack
 	(dvips/pst-numeric-matrix.pro) run
 	(dvips/pst-numeric-complex.pro) run
 	(dvips/pst-numeric-calc.pro) run
+	(dvips/pst-numeric-special.pro) run
 	(the dvips headers)
 }{
 	(source/bignumlibrary.ps) run (source/Trig.ps) run (source/Matrix.ps) run
-	(source/Complex.ps) run (source/Numeric.ps) run
+	(source/Complex.ps) run (source/Numeric.ps) run (source/Special.ps) run
 	(the .ps files)
 } ifelse
 countdictstack userdict length
@@ -744,6 +1181,29 @@ count /bnt_junk exch def clear
 	bnt_lab 3 1 roll
 	bnt_result
 } def
+/bnt_flat1 { dup type /arraytype eq { { bnt_flat1 } forall } if } def   % nested arrays -> their numbers
+/lapprox { % (label) {proc} [expected numbers]   nested lists of reals, each within 1e-4
+	/bnt_exp exch def /bnt_proc exch def /bnt_lab exch def
+	/bnt_proc load stopped { clear (ERR:) $error /errorname get 40 string cvs mergestr false }{
+		count 1 ne { count { pop } repeat (EXTRA ITEMS LEFT ON STACK) false }{
+		[ exch bnt_flat1 ] dup bnt_mok exch bnt_list exch } ifelse
+	} ifelse
+	bnt_lab 3 1 roll
+	bnt_result
+} def
+/bnapprox { % (label) {proc} (expected) digits   a bignum within a relative 10^-digits
+	/bnt_k exch def /bnt_exp exch def /bnt_proc exch def /bnt_lab exch def
+	/bnt_proc load stopped { clear (ERR:) $error /errorname get 40 string cvs mergestr false }{
+		dup typchk (bignumtype) eq {
+			dup bnt_exp setbn subbn absbn
+			bnt_exp setbn absbn dup bniszero { pop 1 setbn } if
+			(1e-) bnt_k 10 string cvs mergestr setbn mulbn lebn
+			exch bncvs exch
+		}{ bnt_str false } ifelse
+	} ifelse
+	bnt_lab 3 1 roll
+	bnt_result
+} def
 """
 footer = r"""
 () =
@@ -755,4 +1215,4 @@ bnt_fail 0 gt { (TESTS FAILED) = } { (ALL TESTS PASSED) = } ifelse
 target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).with_name("test_bignum.ps")
 with open(target, "w", encoding="ascii", newline="\n") as f:
     f.write(header + "\n".join(lines) + "\n" + footer + "\n")
-print(f"wrote {target} ({sum(l.endswith((' check', ' approx', ' approx_coarse', ' mapprox')) for l in lines)} tests)")
+print(f"wrote {target} ({sum(l.endswith((' check', ' approx', ' approx_coarse', ' mapprox', ' lapprox', ' bnapprox', ' bnt_approx')) for l in lines)} tests)")

@@ -23,7 +23,7 @@
 %
 \edef\PstAtCode{\the\catcode`\@}\catcode`\@=11\relax
 %
-\def\fileversion{1.2}
+\def\fileversion{1.3}
 \def\filedate{2026/11/21}
 \message{`PST-numeric' v\fileversion, \filedate\space (BL)}
 %
@@ -34,19 +34,23 @@
 %   trig     CORDIC trigonometry on reals (Trig.ps)
 %   matrix   matrices of reals or bignums (Matrix.ps)
 %   complex  complex numbers (Complex.ps), needs matrix
-%   calc     roots, integrals, polynomials (Numeric.ps), needs matrix and complex
+%   calc     roots, integrals, polynomials, interpolation, statistics,
+%            differential equations, Fourier transform (Numeric.ps), needs
+%            matrix and complex
+%   special  gamma, error and Bessel functions, normal distribution
+%            (Special.ps), needs bignum
 \ifx\pstNumericParts\pstnum@undefined
-  \def\pstNumericParts{bignum,trig,matrix,complex,calc}\fi
+  \def\pstNumericParts{bignum,trig,matrix,complex,calc,special}\fi
 %
 \def\pstnum@empty{}
 \def\pstnum@relax{\relax}
 \def\pstnum@gobble#1{}
-\def\pstnum@known{,bignum,trig,matrix,complex,calc,}
+\def\pstnum@known{,bignum,trig,matrix,complex,calc,special,}
 \def\pstnum@want#1{\expandafter\let\csname pstnum@want@#1\endcsname\pstnum@empty}
 \def\pstnum@check#1#2{% #1: what follows #2 in the known list, empty if #2 is unknown
   \def\pstnum@tmp{#1}%
   \ifx\pstnum@tmp\pstnum@empty
-    \errmessage{pst-numeric: unknown part `#2' (use bignum, trig, matrix, complex or calc)}%
+    \errmessage{pst-numeric: unknown part `#2' (use bignum, trig, matrix, complex, calc or special)}%
   \else\pstnum@want{#2}\fi}
 \def\pstnum@mark#1,{%
   \def\pstnum@tmp{#1}%
@@ -61,6 +65,7 @@
 % parts that other parts need
 \ifcsname pstnum@want@calc\endcsname\pstnum@want{complex}\pstnum@want{matrix}\fi
 \ifcsname pstnum@want@complex\endcsname\pstnum@want{matrix}\fi
+\ifcsname pstnum@want@special\endcsname\pstnum@want{bignum}\fi
 %
 \pstheader{pst-numeric.pro}% the helpers of this interface
 \def\pstnum@load#1{%
@@ -72,6 +77,7 @@
 \pstnum@load{matrix}
 \pstnum@load{complex}
 \pstnum@load{calc}
+\pstnum@load{special}
 %
 % The dictionary that holds every procedure of the library.
 \def\pstNumericDict{tx@NumericDict}

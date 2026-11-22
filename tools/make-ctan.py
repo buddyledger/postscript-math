@@ -35,6 +35,7 @@ FILES = [
     "dvips/pst-numeric-matrix.pro",
     "dvips/pst-numeric-complex.pro",
     "dvips/pst-numeric-calc.pro",
+    "dvips/pst-numeric-special.pro",
     "latex/pst-numeric.sty",
     "tex/pst-numeric.tex",
     "source/bignumlibrary.ps",
@@ -42,6 +43,7 @@ FILES = [
     "source/Matrix.ps",
     "source/Complex.ps",
     "source/Numeric.ps",
+    "source/Special.ps",
     "source/Load.ps",
     "source/make_headers.py",
 ]

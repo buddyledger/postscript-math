@@ -4,7 +4,7 @@
 % Copyright 2012, 2026 Buddy Ledger
 % LaTeX Project Public License 1.3c or later, see LICENSE
 % https://github.com/buddyledger/pst-numeric
-/tx@NumericDict where { pop }{ /tx@NumericDict 600 dict def } ifelse
+/tx@NumericDict where { pop }{ /tx@NumericDict 1000 dict def } ifelse
 tx@NumericDict begin
 /bnDebug false def
 /bnn 20 def
@@ -134,6 +134,19 @@ end
 } bind def
 /bn_parts { aload pop exch bn_s2a exch } bind def        % bn -> sign array exp
 /bn_renorm { bn_parts bn_norm } bind def                  % round to current bnn
+/bn_divint {             % bn k -> bn / k for an integer 1 <= k < 2e8 (long division)
+	dup 200000000 ge { setbn divbn }{
+	8 dict begin
+		/k exch def bn_parts /e exch def /d exch def /s exch def
+		/z bnn 2 add def
+		/q d length z add array def /r 0 def
+		0 1 q length 1 sub { /i exch def
+			/cur r 10 mul i d length lt { d i get }{ 0 } ifelse add def
+			q i cur k idiv put /r cur k mod def
+		} for
+		s q e z sub bn_norm
+	end } ifelse
+} bind def
 /bniszero { 1 get bn_s2a bn_iszeroA } bind def
 /bn_lead {               % bn -> exponent of leading digit (zero -> -1000000000)
 	bn_parts 3 -1 roll pop exch bn_strip
@@ -299,11 +312,11 @@ end
 8 dict begin
 	/k exch def
 	/k2 k k mul setbn def
-	/p 1 setbn k setbn divbn def
+	/p 1 setbn k bn_divint def
 	/sum p def /i 0 def /sg true def
 	{ /i i 1 add def /sg sg not def
 	  /p p k2 divbn def
-	  /t p 2 i mul 1 add setbn divbn def
+	  /t p 2 i mul 1 add bn_divint def
 	  t sum bn_tiny { exit } if
 	  /sum sum sg { t }{ t negbn } ifelse addbn def
 	} loop
@@ -317,16 +330,16 @@ end
 8 dict begin
 	/z exch def /z2 z z mulbn def /p z def /sum z def /i 0 def
 	{ /i i 1 add def /p p z2 mulbn def
-	  /t p 2 i mul 1 add setbn divbn def
+	  /t p 2 i mul 1 add bn_divint def
 	  t sum bn_tiny { exit } if
 	  /sum sum t addbn def
 	} loop
 	sum 2 setbn mulbn
 end
 } bind def
-/bn_ln2 { /LN2 { 1 setbn 3 setbn divbn bn_atanh2 } bn_cachedget } bind def
+/bn_ln2 { /LN2 { 1 setbn 3 bn_divint bn_atanh2 } bn_cachedget } bind def
 /bn_ln10 {               % ln 10 = 3 ln 2 + ln 1.25
-	/LN10 { bn_ln2 3 setbn mulbn 1 setbn 9 setbn divbn bn_atanh2 addbn } bn_cachedget
+	/LN10 { bn_ln2 3 setbn mulbn 1 setbn 9 bn_divint bn_atanh2 addbn } bn_cachedget
 } bind def
 /bn_reduce {             % x -> x - 2pi*round(x/2pi), in [-pi, pi]
 8 dict begin
@@ -338,7 +351,7 @@ end
 8 dict begin
 	bn_reduce /r exch def /r2 r r mulbn def
 	/t r def /sum r def /i 1 def
-	{ /t t r2 mulbn i 2 mul dup 1 add mul setbn divbn negbn def
+	{ /t t r2 mulbn i 2 mul dup 1 add mul bn_divint negbn def
 	  t sum bn_tiny { exit } if
 	  /sum sum t addbn def /i i 1 add def
 	} loop
@@ -349,7 +362,7 @@ end
 8 dict begin
 	bn_reduce /r exch def /r2 r r mulbn def
 	/t 1 setbn def /sum t def /i 1 def
-	{ /t t r2 mulbn i 2 mul dup 1 sub mul setbn divbn negbn def
+	{ /t t r2 mulbn i 2 mul dup 1 sub mul bn_divint negbn def
 	  t sum bn_tiny { exit } if
 	  /sum sum t addbn def /i i 1 add def
 	} loop
@@ -422,7 +435,7 @@ end
 	/k x bn_ln10 divbn roundbn bn_toint def
 	/r x k setbn bn_ln10 mulbn subbn def                % |r| <= 1.16
 	/t 1 setbn def /sum t def /i 1 def
-	{ /t t r mulbn i setbn divbn def
+	{ /t t r mulbn i bn_divint def
 	  t sum bn_tiny { exit } if
 	  /sum sum t addbn def /i i 1 add def
 	} loop
@@ -438,12 +451,12 @@ end
 	2 { /x x one x x mulbn addbn bn_sqrt_wp one addbn divbn def } repeat
 	/x2 x x mulbn def /p x def /sum x def /i 0 def /sg true def
 	{ /i i 1 add def /sg sg not def /p p x2 mulbn def
-	  /t p 2 i mul 1 add setbn divbn def
+	  /t p 2 i mul 1 add bn_divint def
 	  t sum bn_tiny { exit } if
 	  /sum sum sg { t }{ t negbn } ifelse addbn def
 	} loop
 	/sum sum 4 setbn mulbn def
-	inv { /sum bn_pi 2 setbn divbn sum subbn def } if
+	inv { /sum bn_pi 2 bn_divint sum subbn def } if
 	isneg { sum negbn }{ sum } ifelse
 end
 } bind def
@@ -466,7 +479,7 @@ end
 6 dict begin
 	/x exch def /y exch def
 	x bniszero {
-		y bniszero { 0 setbn }{ bn_pi 2 setbn divbn y bn_isneg { negbn } if } ifelse
+		y bniszero { 0 setbn }{ bn_pi 2 bn_divint y bn_isneg { negbn } if } ifelse
 	}{
 		y x divbn bn_atan_wp
 		x bn_isneg { y bn_isneg { bn_pi subbn }{ bn_pi addbn } ifelse } if
@@ -478,7 +491,7 @@ end
 	/x exch def
 	x absbn 1 setbn ltbn {                              % Taylor series, no cancellation
 		/x2 x x mulbn def /t x def /sum x def /i 1 def
-		{ /t t x2 mulbn i 2 mul dup 1 add mul setbn divbn def
+		{ /t t x2 mulbn i 2 mul dup 1 add mul bn_divint def
 		  t sum bn_tiny { exit } if
 		  /sum sum t addbn def /i i 1 add def
 		} loop
@@ -574,6 +587,48 @@ end
 	/bnn outn def bn_renorm
 end
 } bind def
+/ebn { 1 setbn 0 { bn_exp_wp } bn_prec } bind def       % -> e
+/rootbn {                % x n (integer >= 1) -> the real n-th root of x
+	dup type /integertype ne 1 index 1 lt or { /rootbn errordict /rangecheck get exec } if
+10 dict begin
+	/n exch def setbn /x exch def
+	x bn_isneg n 2 mod 0 eq and { x n end /rootbn errordict /rangecheck get exec } if
+	x bniszero n 1 eq or { x }{
+		/xneg x bn_isneg def /a x absbn def
+		/outn bnn def /bnn bnn bn_guard add 2 add def
+		/y a lnbn n bn_divint expbn def
+		/p y n 1 sub setbn powbn def
+		/y y  p y mulbn a subbn  n setbn p mulbn  divbn subbn def
+		/bnn outn def
+		y bn_renorm xneg { negbn } if
+	} ifelse
+end
+} bind def
+/minbn { setbn exch setbn 2 copy gtbn { exch } if pop } bind def   % a b -> smaller
+/maxbn { setbn exch setbn 2 copy ltbn { exch } if pop } bind def   % a b -> larger
+/bn_divmod {             % a b /opname -> floor(a/b) and a - b floor(a/b)
+12 dict begin
+	/op exch def setbn /B exch def setbn /A exch def
+	B bniszero { A B op end errordict /undefinedresult get exec } if
+	A bniszero { 0 setbn 0 setbn }{
+		A bn_parts /ae exch def bn_strip /ad exch def /as exch def
+		B bn_parts /be exch def bn_strip /bd exch def /bs exch def
+		/e ae be bn_min def                              % |A| = ai 10^e, |B| = bi 10^e
+		/ai ad ae e sub bn_zeros bn_cat def
+		/bi bd be e sub bn_zeros bn_cat def
+		/q ai bi bn_natdiv bn_strip def
+		/r ai q bi bn_natmul bn_natsub bn_strip def
+		as bs ne r bn_iszeroA not and {                  % signs differ: round down further
+			/q q [ 1 ] bn_natadd bn_strip def
+			/r bi r bn_natsub bn_strip def
+		} if
+		as bs eq q 0 bn_norm
+		bs r e bn_norm
+	} ifelse
+end
+} bind def
+/idivbn { /idivbn bn_divmod pop } bind def   % a b -> floor(a/b), exact if it has at most bnn digits
+/modbn { /modbn bn_divmod exch pop } bind def % a b -> a - b floor(a/b), with the sign of b
 /bn_isbnshape {          % any -> bool
 	dup type /arraytype eq {
 		dup length 3 eq {

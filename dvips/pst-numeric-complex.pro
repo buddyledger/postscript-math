@@ -5,7 +5,7 @@
 % LaTeX Project Public License 1.3c or later, see LICENSE
 % https://github.com/buddyledger/pst-numeric
 % Needs: matrix, bignum (only for bignums)
-/tx@NumericDict where { pop }{ /tx@NumericDict 600 dict def } ifelse
+/tx@NumericDict where { pop }{ /tx@NumericDict 1000 dict def } ifelse
 tx@NumericDict begin
 /c_z { % any -> [re im]
 	dup type /arraytype eq { dup length 2 eq { }{ 0 2 array astore } ifelse }{ 0 2 array astore } ifelse
@@ -105,6 +105,108 @@ tx@NumericDict begin
 		}{ z cln w cmul cexp } ifelse
 	} ifelse
 	aload pop c_end
+} bind def
+/csin  { c_1 ar m_sin ai m_cosh m_mul  ar m_cos ai m_sinh m_mul  c_end } bind def
+/ccos  { c_1 ar m_cos ai m_cosh m_mul  ar m_sin ai m_sinh m_mul m_neg  c_end } bind def
+/csinh { c_1 ar m_sinh ai m_cos m_mul  ar m_cosh ai m_sin m_mul  c_end } bind def
+/ccosh { c_1 ar m_cosh ai m_cos m_mul  ar m_sinh ai m_sin m_mul  c_end } bind def
+/c_isreal { m_one type /integertype eq } bind def   % -> true for real arithmetic
+/ctan { % (sin 2a + i sinh 2b) / (cos 2a + cosh 2b)
+	c_1
+	c_isreal { ai abs 20 gt }{ false } ifelse { m_zero ai 0 lt { -1 }{ 1 } ifelse }{
+		/d ar m_two m_mul m_cos ai m_two m_mul m_cosh m_add def
+		d m_isz { Z end m_unguard end /ctan errordict /undefinedresult get exec } if
+		ar m_two m_mul m_sin d m_div  ai m_two m_mul m_sinh d m_div
+	} ifelse
+	c_end
+} bind def
+/ctanh { % (sinh 2a + i sin 2b) / (cosh 2a + cos 2b)
+	c_1
+	c_isreal { ar abs 20 gt }{ false } ifelse { ar 0 lt { -1 }{ 1 } ifelse m_zero }{
+		/d ar m_two m_mul m_cosh ai m_two m_mul m_cos m_add def
+		d m_isz { Z end m_unguard end /ctanh errordict /undefinedresult get exec } if
+		ar m_two m_mul m_sinh d m_div  ai m_two m_mul m_sin d m_div
+	} ifelse
+	c_end
+} bind def
+/c_rasinh { % x -> asinh x for a real x (ops dict current)
+	4 dict begin /x exch def
+	x m_isneg { x m_neg c_rasinh m_neg }{ x m_isz { m_zero }{
+	c_isreal {
+		x 0.1 lt { x dup dup mul dup dup -5 112 div mul 3 40 div add mul -1 6 div add mul 1 add mul }
+		{ x dup dup mul 1 add sqrt add ln } ifelse
+	}{
+		/bnn bnn x bn_lead neg 0 bn_max add def          % digits lost near 0
+		x x x m_mul m_one m_add m_sqrt m_add m_ln
+	} ifelse } ifelse } ifelse
+	end
+} bind def
+/c_ratanh { % x -> atanh x for a real x, |x| < 1 (ops dict current)
+	4 dict begin /x exch def
+	x m_isneg { x m_neg c_ratanh m_neg }{ x m_isz { m_zero }{
+	c_isreal {
+		x 0.1 lt { x dup dup mul dup dup 1 7 div mul 1 5 div add mul 1 3 div add mul 1 add mul }
+		{ 1 x add 1 x sub div ln 2 div } ifelse
+	}{
+		/bnn bnn x bn_lead neg 0 bn_max add def
+		m_one x m_add m_one x m_sub m_div m_ln m_two m_div
+	} ifelse } ifelse } ifelse
+	end
+} bind def
+/c_unit { ai m_isz ar m_abs m_one m_gt not and } bind def   % z real, |z| <= 1
+/casin { % -i ln(iz + sqrt(1 - z^2))
+	c_1
+	c_unit { ar m_one ar ar m_mul m_sub m_sqrt m_atan2 m_zero }{
+	ai m_isz { % real |x| > 1: +-pi/2 + i acosh|x|, as C99 and Python
+		m_pi m_two m_div ar m_isneg { m_neg } if
+		ar m_abs dup dup m_mul m_one m_sub m_sqrt m_add m_ln
+	}{
+		[ ai m_neg ar ]  [ m_one m_zero ] Z Z cmul csub csqrt  cadd cln
+		aload pop exch m_neg
+	} ifelse } ifelse
+	c_end
+} bind def
+/cacos { % pi/2 - asin z
+	c_1
+	c_unit { m_one ar ar m_mul m_sub m_sqrt ar m_atan2 m_zero }{
+		Z casin aload pop m_neg exch m_pi m_two m_div exch m_sub exch
+	} ifelse
+	c_end
+} bind def
+/catan { % (i/2) (ln(1 - iz) - ln(1 + iz))
+	c_1
+	ar m_isz ai m_abs m_one m_sub m_isz and { Z end m_unguard end /catan errordict /rangecheck get exec } if
+	ai m_isz { ar m_one m_atan2 m_zero }{
+		[ m_one ai m_add ar m_neg ] cln  [ m_one ai m_sub ar ] cln  csub
+		aload pop m_two m_div exch m_two m_div exch m_neg exch
+	} ifelse
+	c_end
+} bind def
+/casinh { % -i asin(iz), as C99 defines it
+	c_1
+	ai m_isz { ar c_rasinh m_zero }{ [ ai m_neg ar ] casin aload pop exch m_neg } ifelse
+	c_end
+} bind def
+/cacosh { % ln(z + sqrt(z + 1) sqrt(z - 1))
+	c_1
+	ai m_isz ar m_one m_lt not and {
+		ar ar ar m_mul m_one m_sub m_sqrt m_add m_ln m_zero
+	}{
+		Z  Z m_one cadd csqrt Z m_one csub csqrt cmul  cadd cln aload pop
+	} ifelse
+	c_end
+} bind def
+/catanh { % (ln(1 + z) - ln(1 - z)) / 2
+	c_1
+	ai m_isz ar m_abs m_one m_sub m_isz and { Z end m_unguard end /catanh errordict /rangecheck get exec } if
+	c_unit { ar c_ratanh m_zero }{
+	ai m_isz { % real |x| > 1: atanh(1/x) + i pi/2, as C99 and Python
+		m_one ar m_div c_ratanh m_pi m_two m_div
+	}{
+		m_one Z cadd cln  m_one Z csub cln  csub
+		aload pop m_two m_div exch m_two m_div exch
+	} ifelse } ifelse
+	c_end
 } bind def
 /c_cat { % (a) (b) -> (ab)
 	1 index length 1 index length add string

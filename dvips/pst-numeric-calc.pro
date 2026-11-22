@@ -5,7 +5,7 @@
 % LaTeX Project Public License 1.3c or later, see LICENSE
 % https://github.com/buddyledger/pst-numeric
 % Needs: matrix, complex, bignum (only for bignums)
-/tx@NumericDict where { pop }{ /tx@NumericDict 600 dict def } ifelse
+/tx@NumericDict where { pop }{ /tx@NumericDict 1000 dict def } ifelse
 tx@NumericDict begin
 /gcd { % a b (integers) -> greatest common divisor, >= 0
 	abs exch abs { dup 0 eq { pop exit } if dup 3 1 roll mod } loop
@@ -278,6 +278,430 @@ end
 	n_A n_B mlstsq 0 get
 	end m_unguard
 	[ exch { m_fin } forall ]
+	end
+} bind def
+/polyinterp {
+	2 copy n_hasbn exch n_hasbn or m_ops begin m_guard
+	14 dict begin
+	/n_Y exch def /n_X exch def
+	n_X length n_Y length ne n_X length 0 eq or {
+		n_X n_Y end m_unguard end /polyinterp errordict /rangecheck get exec } if
+	/n_m n_X length def
+	/n_xs [ n_X { m_cv } forall ] def
+	/n_c [ n_Y { m_cv } forall ] def
+	1 1 n_m 1 sub { /n_j exch def
+		n_m 1 sub -1 n_j { /n_i exch def
+			/n_dx n_xs n_i get n_xs n_i n_j sub get m_sub def
+			n_dx m_isz { n_X n_Y end m_unguard end /polyinterp errordict /rangecheck get exec } if
+			n_c n_i  n_c n_i get n_c n_i 1 sub get m_sub n_dx m_div  put
+		} for
+	} for
+	/n_p [ n_c n_m 1 sub get ] def
+	n_m 2 sub -1 0 { /n_i exch def
+		/n_a n_xs n_i get def /n_L n_p length def
+		/n_q [ n_p 0 get
+			1 1 n_L 1 sub { /n_k exch def n_p n_k get n_a n_p n_k 1 sub get m_mul m_sub } for
+			n_a n_p n_L 1 sub get m_mul m_neg n_c n_i get m_add ] def
+		/n_p n_q def
+	} for
+	n_p
+	end m_unguard
+	[ exch { m_fin } forall ]
+	end
+} bind def
+/spline {
+	2 copy n_hasbn exch n_hasbn or m_ops begin m_guard
+	24 dict begin
+	/n_Y exch def /n_X exch def
+	/n_m n_X length def
+	n_m n_Y length ne n_m 2 lt or { n_X n_Y end m_unguard end /spline errordict /rangecheck get exec } if
+	/n_xs [ n_X { m_cv } forall ] def /n_ys [ n_Y { m_cv } forall ] def
+	0 1 n_m 2 sub { /n_i exch def
+		n_xs n_i 1 add get n_xs n_i get m_gt not { n_X n_Y end m_unguard end /spline errordict /rangecheck get exec } if
+	} for
+	/n_M [ n_m { m_zero } repeat ] def
+	n_m 2 gt {
+		/n_cp n_m array def /n_dp n_m array def
+		1 1 n_m 2 sub { /n_i exch def
+			/n_h0 n_xs n_i get n_xs n_i 1 sub get m_sub def
+			/n_h1 n_xs n_i 1 add get n_xs n_i get m_sub def
+			/n_b n_h0 n_h1 m_add m_two m_mul def
+			/n_r n_ys n_i 1 add get n_ys n_i get m_sub n_h1 m_div
+			     n_ys n_i get n_ys n_i 1 sub get m_sub n_h0 m_div m_sub 6 m_cv m_mul def
+			n_i 1 gt {
+				/n_b n_b n_h0 n_cp n_i 1 sub get m_mul m_sub def
+				/n_r n_r n_h0 n_dp n_i 1 sub get m_mul m_sub def
+			} if
+			n_cp n_i n_h1 n_b m_div put
+			n_dp n_i n_r n_b m_div put
+		} for
+		n_M n_m 2 sub n_dp n_m 2 sub get put
+		n_m 3 sub -1 1 { /n_i exch def
+			n_M n_i  n_dp n_i get n_cp n_i get n_M n_i 1 add get m_mul m_sub  put
+		} for
+	} if
+	[ n_xs n_ys n_M ]
+	end m_unguard
+	[ exch { [ exch { m_fin } forall ] } forall ]
+	end
+} bind def
+/splineval {
+	2 copy m_isstrbn exch 0 get n_hasbn or m_ops begin m_guard
+	16 dict begin
+	/n_x exch m_cv def aload pop /n_M exch def /n_ys exch def /n_xs exch def
+	/n_lo 0 def /n_hi n_xs length 1 sub def
+	{ n_hi n_lo sub 1 le { exit } if
+	  /n_mid n_lo n_hi add 2 idiv def
+	  n_xs n_mid get m_cv n_x m_gt { /n_hi n_mid def }{ /n_lo n_mid def } ifelse
+	} loop
+	/n_xl n_xs n_lo get m_cv def /n_xh n_xs n_hi get m_cv def
+	/n_h n_xh n_xl m_sub def
+	/n_A n_xh n_x m_sub n_h m_div def /n_B n_x n_xl m_sub n_h m_div def
+	n_A n_ys n_lo get m_cv m_mul  n_B n_ys n_hi get m_cv m_mul  m_add
+	n_A n_A n_A m_mul m_mul n_A m_sub n_M n_lo get m_cv m_mul
+	n_B n_B n_B m_mul m_mul n_B m_sub n_M n_hi get m_cv m_mul  m_add
+	n_h n_h m_mul m_mul 6 m_cv m_div  m_add
+	end m_unguard m_fin end
+} bind def
+/fmin {
+	2 copy m_isstrbn exch m_isstrbn or m_ops begin m_guard
+	40 dict begin
+	/n_b exch m_cv def /n_a exch m_cv def /n_f exch def
+	n_a n_b m_gt { /n_t n_a def /n_a n_b def /n_b n_t def } if
+	/n_cg 3 m_cv 5 m_cv m_sqrt m_sub m_two m_div def        % 0.381966...
+	m_one type /integertype eq { /n_tol 3e-4 def /n_zeps 1e-10 def }{
+		/n_tol (1e-) bnn 2 idiv 10 string cvs mergestr setbn def
+		/n_zeps n_tol n_tol m_mul def
+	} ifelse
+	/n_sign { exch m_abs exch m_isneg { m_neg } if } def   % a b -> |a| with the sign of b
+	/n_x n_a n_cg n_b n_a m_sub m_mul m_add def
+	/n_w n_x def /n_v n_x def
+	/n_fx n_x n_f m_cv def /n_fw n_fx def /n_fv n_fx def
+	/n_d m_zero def /n_e m_zero def
+	0 1 500 { pop
+		/n_xm n_a n_b m_add m_two m_div def
+		/n_tol1 n_tol n_x m_abs m_mul n_zeps m_add def /n_tol2 n_tol1 m_two m_mul def
+		n_x n_xm m_sub m_abs  n_tol2 n_b n_a m_sub m_two m_div m_sub  m_gt not { exit } if
+		/n_gold true def
+		n_e m_abs n_tol1 m_gt {
+			/n_r n_x n_w m_sub n_fx n_fv m_sub m_mul def
+			/n_q n_x n_v m_sub n_fx n_fw m_sub m_mul def
+			/n_p n_x n_v m_sub n_q m_mul n_x n_w m_sub n_r m_mul m_sub def
+			/n_q n_q n_r m_sub m_two m_mul def
+			n_q m_isneg not n_q m_isz not and { /n_p n_p m_neg def } if
+			/n_q n_q m_abs def
+			/n_et n_e def /n_e n_d def
+			n_p m_abs n_q n_et m_mul m_two m_div m_abs m_lt
+			n_p n_q n_a n_x m_sub m_mul m_gt and
+			n_p n_q n_b n_x m_sub m_mul m_lt and {
+				/n_d n_p n_q m_div def
+				/n_u n_x n_d m_add def
+				n_u n_a m_sub n_tol2 m_lt n_b n_u m_sub n_tol2 m_lt or {
+					/n_d n_tol1 n_xm n_x m_sub n_sign def } if
+				/n_gold false def
+			} if
+		} if
+		n_gold {
+			/n_e n_x n_xm m_lt not { n_a n_x m_sub }{ n_b n_x m_sub } ifelse def
+			/n_d n_cg n_e m_mul def
+		} if
+		/n_u n_d m_abs n_tol1 m_lt not { n_x n_d m_add }{ n_x n_tol1 n_d n_sign m_add } ifelse def
+		/n_fu n_u n_f m_cv def
+		n_fu n_fx m_gt not {
+			n_u n_x m_lt not { /n_a n_x def }{ /n_b n_x def } ifelse
+			/n_v n_w def /n_fv n_fw def /n_w n_x def /n_fw n_fx def /n_x n_u def /n_fx n_fu def
+		}{
+			n_u n_x m_lt { /n_a n_u def }{ /n_b n_u def } ifelse
+			n_fu n_fw m_gt not n_w n_x m_sub m_isz or {
+				/n_v n_w def /n_fv n_fw def /n_w n_u def /n_fw n_fu def
+			}{
+				n_fu n_fv m_gt not n_v n_x m_sub m_isz or n_v n_w m_sub m_isz or {
+					/n_v n_u def /n_fv n_fu def } if
+			} ifelse
+		} ifelse
+	} for
+	n_x
+	end m_unguard m_fin end
+} bind def
+/fderiv {
+	dup m_isstrbn m_ops begin m_guard
+	30 dict begin
+	/n_x exch m_cv def /n_f exch def
+	/n_ntab m_one type /integertype eq { 10 }{ bnn 3 idiv 10 add } ifelse def
+	/n_con 14 m_cv 10 m_cv m_div def /n_con2 n_con n_con m_mul def
+	/n_cd { /n_hc exch def
+		n_x n_hc m_add n_f m_cv  n_x n_hc m_sub n_f m_cv  m_sub  n_hc m_two m_mul m_div } def
+	/n_hh n_x m_abs m_one n_max 10 m_cv m_div def
+	/n_tab n_ntab array def
+	n_tab 0 [ n_hh n_cd ] put
+	/n_ans n_tab 0 get 0 get def /n_have false def /n_err m_zero def
+	1 1 n_ntab 1 sub { /n_i exch def
+		/n_hh n_hh n_con m_div def
+		/n_col n_i 1 add array def
+		n_col 0 n_hh n_cd put
+		/n_fac n_con2 def
+		/n_prev n_tab n_i 1 sub get def
+		1 1 n_i { /n_j exch def
+			n_col n_j  n_col n_j 1 sub get n_fac m_mul n_prev n_j 1 sub get m_sub  n_fac m_one m_sub m_div  put
+			/n_fac n_fac n_con2 m_mul def
+			/n_errt n_col n_j get n_col n_j 1 sub get m_sub m_abs
+			        n_col n_j get n_prev n_j 1 sub get m_sub m_abs n_max def
+			n_have { n_errt n_err m_gt not }{ true } ifelse {
+				/n_err n_errt def /n_ans n_col n_j get def /n_have true def } if
+		} for
+		n_tab n_i n_col put
+		n_col n_i get n_prev n_i 1 sub get m_sub m_abs  n_err m_two m_mul  m_lt not { exit } if
+	} for
+	n_ans
+	end m_unguard m_fin end
+} bind def
+/fsolve {
+	dup n_hasbn m_ops begin m_guard
+	40 dict begin
+	/n_x0 exch def /n_F exch def
+	/n_n n_x0 length def
+	/n_x [ n_x0 { m_cv } forall ] def
+	/n_eval { [ exch aload pop ] n_F
+		dup length n_n ne { pop /n_F load n_x0 end m_unguard end /fsolve errordict /rangecheck get exec } if
+		[ exch { m_cv } forall ] } def
+	/n_nrm2 { m_zero exch { dup m_mul m_add } forall } def
+	/n_h0 m_one type /integertype eq { 4e-3 }{ (1e-) bnn 3 idiv 10 string cvs mergestr setbn } ifelse def
+	/n_tol2 m_tol dup m_mul def
+	/n_fx n_x n_eval def /n_f2 n_fx n_nrm2 def
+	0 1 100 { pop
+		n_f2 m_isz { exit } if
+		/n_J n_n n_n marray def
+		1 1 n_n { /n_j exch def
+			/n_hj n_x n_j 1 sub get m_abs m_one n_max n_h0 m_mul def
+			/n_xp [ n_x aload pop ] def n_xp n_j 1 sub n_xp n_j 1 sub get n_hj m_add put
+			/n_xm [ n_x aload pop ] def n_xm n_j 1 sub n_xm n_j 1 sub get n_hj m_sub put
+			/n_fp n_xp n_eval def /n_fm n_xm n_eval def
+			1 1 n_n { /n_i exch def
+				n_J n_i n_j  n_fp n_i 1 sub get n_fm n_i 1 sub get m_sub  n_hj m_two m_mul m_div  mput
+			} for
+		} for
+		/n_B n_n 1 marray def
+		1 1 n_n { /n_i exch def n_B n_i 1 n_fx n_i 1 sub get m_neg mput } for
+		n_J n_B m_gj not { pop /n_F load n_x0 end m_unguard end /fsolve errordict /undefinedresult get exec } if
+		pop /n_X exch def
+		/n_dx [ 1 1 n_n { n_X exch 1 mget } for ] def
+		/n_lam m_one def
+		0 1 10 { /n_k exch def
+			/n_xt [ 0 1 n_n 1 sub { /n_i exch def n_x n_i get n_dx n_i get n_lam m_mul m_add } for ] def
+			/n_ft n_xt n_eval def /n_ft2 n_ft n_nrm2 def
+			n_ft2 n_f2 m_gt not n_k 10 ge or { exit } if
+			/n_lam n_lam m_two m_div def
+		} for
+		/n_s2 n_dx n_nrm2 n_lam n_lam m_mul m_mul def
+		/n_x n_xt def /n_fx n_ft def /n_f2 n_ft2 def
+		n_s2  n_x n_nrm2 m_one n_max n_tol2 m_mul  m_gt not { exit } if
+	} for
+	n_x
+	end m_unguard
+	[ exch { m_fin } forall ]
+	end
+} bind def
+/n_stat { % list /opname min -> (ops dict, guard and a local dict begun; n_D, n_m defined)
+	3 -1 roll dup n_hasbn m_ops begin m_guard
+	12 dict begin
+	/n_D exch def
+	n_D length gt { n_D end m_unguard end exch errordict /rangecheck get exec } if pop
+	/n_m n_D length def
+	/n_D [ n_D { m_cv } forall ] def
+} bind def
+/n_avg { m_zero exch { m_add } forall n_m m_cv m_div } bind def   % [converted] -> mean
+/n_ss { % [converted] mean -> sum of squared deviations
+	/n_mu exch def m_zero exch { n_mu m_sub dup m_mul m_add } forall
+} bind def
+/mean { /mean 1 n_stat n_D n_avg end m_unguard m_fin end } bind def               % [x...] -> mean
+/variance { /variance 2 n_stat n_D dup n_avg n_ss n_m 1 sub m_cv m_div end m_unguard m_fin end } bind def
+/stddev { /stddev 2 n_stat n_D dup n_avg n_ss n_m 1 sub m_cv m_div m_sqrt end m_unguard m_fin end } bind def
+/median { % [x...] -> the middle value, or the mean of the two middle ones
+	/median 1 n_stat
+	1 1 n_m 1 sub { /n_k exch def                                   % insertion sort
+		/n_cur n_D n_k get def /n_j n_k 1 sub def
+		{ n_j 0 lt { exit } if n_D n_j get n_cur m_gt not { exit } if
+		  n_D n_j 1 add n_D n_j get put /n_j n_j 1 sub def } loop
+		n_D n_j 1 add n_cur put
+	} for
+	n_m 2 mod 1 eq { n_D n_m 2 idiv get }{
+		n_D n_m 2 idiv 1 sub get n_D n_m 2 idiv get m_add m_two m_div } ifelse
+	end m_unguard m_fin end
+} bind def
+/n_stat2 { % [x...] [y...] /opname -> (as n_stat, with n_X, n_Y, n_mx, n_my)
+	3 1 roll 2 copy n_hasbn exch n_hasbn or m_ops begin m_guard
+	14 dict begin
+	/n_Y exch def /n_X exch def
+	n_X length n_Y length ne n_X length 2 lt or { n_X n_Y end m_unguard end 3 -1 roll errordict /rangecheck get exec } if
+	pop
+	/n_m n_X length def
+	/n_X [ n_X { m_cv } forall ] def /n_Y [ n_Y { m_cv } forall ] def
+	/n_mx n_X n_avg def /n_my n_Y n_avg def
+} bind def
+/n_sxy { % -> sum of (x - mean x)(y - mean y)
+	m_zero 0 1 n_m 1 sub { /n_i exch def
+		n_X n_i get n_mx m_sub n_Y n_i get n_my m_sub m_mul m_add } for
+} bind def
+/covariance { /covariance n_stat2 n_sxy n_m 1 sub m_cv m_div end m_unguard m_fin end } bind def
+/correlation { % [x...] [y...] -> Pearson's r (undefinedresult if a list is constant)
+	/correlation n_stat2
+	/n_d n_X n_mx n_ss n_Y n_my n_ss m_mul def
+	n_d m_isz { n_X n_Y end m_unguard end /correlation errordict /undefinedresult get exec } if
+	n_sxy n_d m_sqrt m_div
+	end m_unguard m_fin end
+} bind def
+/n_isvec { dup type /arraytype eq { m_isbn not }{ pop false } ifelse } bind def
+/n_vcv { dup n_isvec { [ exch { m_cv } forall ] }{ m_cv } ifelse } bind def
+/n_vfin { dup n_isvec { [ exch { m_fin } forall ] }{ m_fin } ifelse } bind def
+/n_vaxpy { % y k a -> y + a k   (y, k of the same shape, a a number)
+	2 index n_isvec {
+		3 dict begin /n_va exch def /n_vk exch def /n_vy exch def
+		[ 0 1 n_vy length 1 sub { dup n_vy exch get exch n_vk exch get n_va m_mul m_add } for ]
+		end
+	}{ m_mul m_add } ifelse
+} bind def
+/n_vnorm { dup n_isvec { m_zero exch { m_abs n_max } forall }{ m_abs } ifelse } bind def
+/n_ode0 { % {f} t0 y0 t1 n /opname -> (ops dict, guard and local dict begun)
+	6 1 roll
+	4 copy pop m_isstrbn exch dup n_isvec { n_hasbn }{ m_isstrbn } ifelse or exch m_isstrbn or
+	m_ops begin m_guard
+	40 dict begin
+	/n_n exch def /n_t1 exch m_cv def /n_y exch n_vcv def /n_t0 exch m_cv def /n_f exch def
+	n_n type /integertype ne n_n 1 lt or { /n_f load n_t0 n_y n_t1 n_n end m_unguard end 6 -1 roll errordict /rangecheck get exec } if
+	pop
+	/n_h n_t1 n_t0 m_sub n_n m_cv m_div def
+	/n_feval { n_f n_vcv } def
+} bind def
+/n_odeend { % [ points ] -> rounded points, closing what n_ode0 opened
+	end m_unguard
+	[ exch { aload pop n_vfin exch m_fin exch 2 array astore } forall ]
+	end
+} bind def
+/oderk4 {
+	/oderk4 n_ode0
+	/n_hh n_h m_two m_div def /n_h6 n_h 6 m_cv m_div def /n_h3 n_h 3 m_cv m_div def
+	/n_t n_t0 def
+	[ [ n_t n_y ]
+	1 1 n_n { /n_i exch def
+		/n_k1 n_t n_y n_feval def
+		/n_k2 n_t n_hh m_add n_y n_k1 n_hh n_vaxpy n_feval def
+		/n_k3 n_t n_hh m_add n_y n_k2 n_hh n_vaxpy n_feval def
+		/n_k4 n_t n_h m_add n_y n_k3 n_h n_vaxpy n_feval def
+		/n_y n_y n_k1 n_h6 n_vaxpy n_k2 n_h3 n_vaxpy n_k3 n_h3 n_vaxpy n_k4 n_h6 n_vaxpy def
+		/n_t n_i n_n eq { n_t1 }{ n_t0 n_h n_i m_cv m_mul m_add } ifelse def
+		[ n_t n_y ]
+	} for ]
+	n_odeend
+} bind def
+/n_vscale { % v a -> a v
+	1 index n_isvec { 1 dict begin /n_va exch def [ exch { n_va m_mul } forall ] end }{ m_mul } ifelse
+} bind def
+/n_gbs { % t y H depth -> y(t + H), by Gragg-Bulirsch-Stoer extrapolation
+	24 dict begin
+	/n_dep exch def /n_H exch def /n_gy exch def /n_gt exch def
+	/n_prev [ ] def /n_conv false def
+	1 1 n_kmax { /n_j exch def
+		/n_ns n_j 2 mul def
+		/n_hs n_H n_ns m_cv m_div def
+		/n_z0 n_gy def
+		/n_z1 n_gy  n_gt n_gy n_feval  n_hs n_vaxpy def
+		1 1 n_ns 1 sub { /n_mm exch def
+			/n_z2 n_z0  n_gt n_hs n_mm m_cv m_mul m_add n_z1 n_feval  n_hs m_two m_mul  n_vaxpy def
+			/n_z0 n_z1 def /n_z1 n_z2 def
+		} for
+		/n_row [ n_z0 n_z1 m_one n_vaxpy  n_gt n_H m_add n_z1 n_feval  n_hs n_vaxpy  m_one m_two m_div n_vscale ] def
+		1 1 n_j 1 sub { /n_k exch def
+			/n_jk n_j n_k sub def
+			/n_c n_jk n_jk mul m_cv  n_j n_j mul n_jk n_jk mul sub m_cv  m_div def
+			/n_r1 n_row n_k 1 sub get def
+			/n_row [ n_row aload pop  n_r1  n_r1 n_prev n_k 1 sub get m_one m_neg n_vaxpy  n_c n_vaxpy ] def
+		} for
+		n_j 3 ge {
+			n_row n_j 1 sub get n_row n_j 2 sub get m_one m_neg n_vaxpy n_vnorm
+			n_row n_j 1 sub get n_vnorm m_one n_max n_otol m_mul  m_gt not { /n_conv true def exit } if
+		} if
+		/n_prev n_row def
+	} for
+	n_conv n_dep 30 ge or { n_row n_row length 1 sub get }{
+		/n_H2 n_H m_two m_div def
+		n_gt n_gy n_H2 n_dep 1 add n_gbs
+		n_gt n_H2 m_add exch n_H2 n_dep 1 add n_gbs
+	} ifelse
+	end
+} bind def
+/odesolve {
+	/odesolve n_ode0
+	/n_kmax m_one type /integertype eq { 8 }{ bnn 4 idiv 6 add } ifelse def
+	/n_otol m_one type /integertype eq { 1e-5 }{ m_tol } ifelse def
+	/n_t n_t0 def
+	[ [ n_t n_y ]
+	1 1 n_n { /n_i exch def
+		/n_tn n_i n_n eq { n_t1 }{ n_t0 n_h n_i m_cv m_mul m_add } ifelse def
+		/n_y n_t n_y n_tn n_t m_sub 0 n_gbs def
+		/n_t n_tn def
+		[ n_t n_y ]
+	} for ]
+	n_odeend
+} bind def
+/fft { false n_fft } bind def
+/ifft { true n_fft } bind def
+/n_cxhasbn { false exch { c_z aload pop m_isstrbn exch m_isstrbn or or } forall } bind def
+/n_fft { % list inverse -> list
+	exch dup n_cxhasbn m_ops begin m_guard
+	30 dict begin
+	/n_in exch def /n_inv exch def
+	/n_n n_in length def
+	/n_re [ n_in { c_z 0 get m_cv } forall ] def
+	/n_im [ n_in { c_z 1 get m_cv } forall ] def
+	/n_tw { % m N -> cos and sin of -+2 pi m/N
+		m_cv exch m_cv exch m_div m_pi m_two m_mul m_mul n_inv not { m_neg } if
+		dup m_cos exch m_sin } def
+	n_n 0 gt n_n n_n 1 sub and 0 eq and {
+		/n_j 0 def                                       % bit-reversed order
+		1 1 n_n 1 sub { /n_i exch def
+			/n_bit n_n -1 bitshift def
+			{ n_j n_bit and 0 eq { exit } if /n_j n_j n_bit xor def /n_bit n_bit -1 bitshift def } loop
+			/n_j n_j n_bit xor def
+			n_i n_j lt { [ n_re n_im ] { /n_arr exch def
+				n_arr n_i get n_arr n_j get n_arr exch n_i exch put n_arr exch n_j exch put } forall } if
+		} for
+		/n_len 2 def
+		{ n_len n_n gt { exit } if
+			/n_half n_len 2 idiv def
+			1 n_len n_tw /n_wsi exch def /n_wsr exch def
+			0 n_len n_n 1 sub { /n_s exch def
+				/n_wr m_one def /n_wi m_zero def
+				0 1 n_half 1 sub { /n_k exch def
+					m_one type /integertype eq n_k 0 gt and { n_k n_len n_tw /n_wi exch def /n_wr exch def } if
+					/n_p n_s n_k add def /n_q n_p n_half add def
+					n_re n_q get n_im n_q get n_wr n_wi n_cmul /n_vi exch def /n_vr exch def
+					/n_ur n_re n_p get def /n_ui n_im n_p get def
+					n_re n_p n_ur n_vr m_add put n_im n_p n_ui n_vi m_add put
+					n_re n_q n_ur n_vr m_sub put n_im n_q n_ui n_vi m_sub put
+					m_one type /integertype ne { n_wr n_wi n_wsr n_wsi n_cmul /n_wi exch def /n_wr exch def } if
+				} for
+			} for
+			/n_len n_len 2 mul def
+		} loop
+		/n_or n_re def /n_oi n_im def
+	}{
+		/n_cr n_n array def /n_ci n_n array def          % the n-th roots of unity
+		0 1 n_n 1 sub { /n_m exch def n_m n_n n_tw n_ci n_m 3 -1 roll put n_cr n_m 3 -1 roll put } for
+		/n_or n_n array def /n_oi n_n array def
+		0 1 n_n 1 sub { /n_k exch def
+			m_zero m_zero
+			0 1 n_n 1 sub { /n_j exch def
+				/n_m n_j n_k mul n_n mod def
+				n_re n_j get n_im n_j get n_cr n_m get n_ci n_m get n_cmul m_cadd
+			} for
+			n_oi n_k 3 -1 roll put n_or n_k 3 -1 roll put
+		} for
+	} ifelse
+	n_inv { /n_nn n_n m_cv def
+		/n_or [ n_or { n_nn m_div } forall ] def /n_oi [ n_oi { n_nn m_div } forall ] def } if
+	[ 0 1 n_n 1 sub { /n_k exch def [ n_or n_k get n_oi n_k get ] } for ]
+	end m_unguard
+	[ exch { aload pop m_fin exch m_fin exch 2 array astore } forall ]
 	end
 } bind def
 end % tx@NumericDict

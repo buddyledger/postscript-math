@@ -5,7 +5,7 @@
 % https://github.com/buddyledger/pst-numeric
 % The library itself is in pst-numeric-bignum.pro, -trig.pro, -matrix.pro,
 % -complex.pro and -calc.pro, which pst-numeric.tex loads as needed.
-/tx@NumericDict where { pop }{ /tx@NumericDict 600 dict def } ifelse
+/tx@NumericDict where { pop }{ /tx@NumericDict 1000 dict def } ifelse
 tx@NumericDict begin
 % s1 s2 -> s1s2
 /pstnum_cat {

@@ -47,13 +47,33 @@ for want in \
   "7" \
   "[-1.0 - 2.0i, -1.0 + 2.0i]" \
   "-0.98803" \
-  "text is kept"; do
+  "text is kept" \
+  "+1.7724538509055160273e0" \
+  "+1.1490348493190048047e-1" \
+  "3.16578 + 1.9596i" \
+  "[0 - 1.0i, 0 + 1.0i]" \
+  "[0.0, 1.0, 0.0, 1.0]" \
+  "+9.7500210485177956586e-1"; do
   expect tex-test.txt "$want"
 done
 got="$(headers tex-test.ps)"
 echo "headers: $got"
-[ "$got" = "pst-numeric.pro pst-numeric-bignum.pro pst-numeric-trig.pro pst-numeric-matrix.pro pst-numeric-complex.pro pst-numeric-calc.pro " ] \
+[ "$got" = "pst-numeric.pro pst-numeric-bignum.pro pst-numeric-trig.pro pst-numeric-matrix.pro pst-numeric-complex.pro pst-numeric-calc.pro pst-numeric-special.pro " ] \
   || { echo "FAIL wrong headers"; fail=1; }
+
+echo "== option special loads bignum too"
+cat > special.tex <<'EOF'
+\documentclass{article}
+\usepackage[special]{pst-numeric}
+\begin{document}
+\begin{pspicture}(0,0)(8,0.4)\psNumericShow{0.5 erf}\end{pspicture}
+\end{document}
+EOF
+build special || exit 1
+expect special.txt "0.5205"
+got="$(headers special.ps)"
+echo "headers: $got"
+[ "$got" = "pst-numeric.pro pst-numeric-bignum.pro pst-numeric-special.pro " ] || { echo "FAIL wrong headers"; fail=1; }
 
 echo "== option calc loads matrix and complex too, but not bignum or trig"
 cat > parts.tex <<'EOF'

@@ -34,10 +34,11 @@ userdict length countdictstack
 	(dvips/pst-numeric-matrix.pro) run
 	(dvips/pst-numeric-complex.pro) run
 	(dvips/pst-numeric-calc.pro) run
+	(dvips/pst-numeric-special.pro) run
 	(the dvips headers)
 }{
 	(source/bignumlibrary.ps) run (source/Trig.ps) run (source/Matrix.ps) run
-	(source/Complex.ps) run (source/Numeric.ps) run
+	(source/Complex.ps) run (source/Numeric.ps) run (source/Special.ps) run
 	(the .ps files)
 } ifelse
 countdictstack userdict length
@@ -100,6 +101,29 @@ count /bnt_junk exch def clear
 		}{ bnt_str false } ifelse
 	} ifelse
 	count 2 ne { pop count 1 sub { exch pop } repeat (EXTRA ITEMS LEFT ON STACK) mergestr false } if
+	bnt_lab 3 1 roll
+	bnt_result
+} def
+/bnt_flat1 { dup type /arraytype eq { { bnt_flat1 } forall } if } def   % nested arrays -> their numbers
+/lapprox { % (label) {proc} [expected numbers]   nested lists of reals, each within 1e-4
+	/bnt_exp exch def /bnt_proc exch def /bnt_lab exch def
+	/bnt_proc load stopped { clear (ERR:) $error /errorname get 40 string cvs mergestr false }{
+		count 1 ne { count { pop } repeat (EXTRA ITEMS LEFT ON STACK) false }{
+		[ exch bnt_flat1 ] dup bnt_mok exch bnt_list exch } ifelse
+	} ifelse
+	bnt_lab 3 1 roll
+	bnt_result
+} def
+/bnapprox { % (label) {proc} (expected) digits   a bignum within a relative 10^-digits
+	/bnt_k exch def /bnt_exp exch def /bnt_proc exch def /bnt_lab exch def
+	/bnt_proc load stopped { clear (ERR:) $error /errorname get 40 string cvs mergestr false }{
+		dup typchk (bignumtype) eq {
+			dup bnt_exp setbn subbn absbn
+			bnt_exp setbn absbn dup bniszero { pop 1 setbn } if
+			(1e-) bnt_k 10 string cvs mergestr setbn mulbn lebn
+			exch bncvs exch
+		}{ bnt_str false } ifelse
+	} ifelse
 	bnt_lab 3 1 roll
 	bnt_result
 } def
@@ -730,6 +754,334 @@ count /bnt_junk exch def clear
 (meigsym 3x3: A v = lambda v, reals) { [[4 1 2][1 3 0][2 0 5]] mfromrows dup meigsym /bnt_V exch def 2 get /bnt_l exch def bnt_V mmul 2 get /bnt_c exch def 0 0 1 2 { /bnt_i exch def bnt_c bnt_i get bnt_V 2 get bnt_i get bnt_l mul sub abs 2 copy lt { exch } if pop } for } 0 approx
 (meigsym non-symmetric) { [[1 2][3 4]] mfromrows meigsym } (ERR:rangecheck) check
 (meigsym non-square) { [[1 2 3][4 5 6]] mfromrows meigsym } (ERR:rangecheck) check
+
+(ebn rootbn minbn maxbn idivbn modbn) bnt_section  20 setbnsize
+(ebn) { ebn } (+2.7182818284590452354e0) check
+(rootbn 27 3) { (27) 3 rootbn } (+3.0000000000000000000e0) check
+(rootbn 2 2) { (2) 2 rootbn } (+1.4142135623730950488e0) check
+(rootbn 2 3) { (2) 3 rootbn } (+1.2599210498948731648e0) check
+(rootbn 1e100 7) { (1e100) 7 rootbn } (+1.9306977288832501670e14) check
+(rootbn 0.001 3) { (0.001) 3 rootbn } (+1.0000000000000000000e-1) check
+(rootbn 123.456 5) { (123.456) 5 rootbn } (+2.6200069317003254417e0) check
+(rootbn 5 1) { (5) 1 rootbn } (+5.0000000000000000000e0) check
+(rootbn 0 4) { (0) 4 rootbn } (+0.0000000000000000000e0) check
+(rootbn -32 5) { (-32) 5 rootbn } (-2.0000000000000000000e0) check
+(rootbn -2 3) { (-2) 3 rootbn } (-1.2599210498948731648e0) check
+(rootbn -4 2 is an error) { (-4) 2 rootbn } (ERR:rangecheck) check
+(rootbn 0th root is an error) { 2 0 rootbn } (ERR:rangecheck) check
+(rootbn real exponent is an error) { 2 2.0 rootbn } (ERR:rangecheck) check
+(minbn) { (3.5) 2 minbn } (+2.0000000000000000000e0) check
+(maxbn) { (3.5) 2 maxbn } (+3.5000000000000000000e0) check
+(minbn negative) { (-1e-30) 0 minbn } (-1.0000000000000000000e-30) check
+(idivbn 17 5) { (17) (5) idivbn } (+3.0000000000000000000e0) check
+(modbn 17 5) { (17) (5) modbn } (+2.0000000000000000000e0) check
+(idivbn -17 5) { (-17) (5) idivbn } (-4.0000000000000000000e0) check
+(modbn -17 5) { (-17) (5) modbn } (+3.0000000000000000000e0) check
+(idivbn 17 -5) { (17) (-5) idivbn } (-4.0000000000000000000e0) check
+(modbn 17 -5) { (17) (-5) modbn } (-3.0000000000000000000e0) check
+(idivbn -17 -5) { (-17) (-5) idivbn } (+3.0000000000000000000e0) check
+(modbn -17 -5) { (-17) (-5) modbn } (-2.0000000000000000000e0) check
+(idivbn 7.5 2) { (7.5) (2) idivbn } (+3.0000000000000000000e0) check
+(modbn 7.5 2) { (7.5) (2) modbn } (+1.5000000000000000000e0) check
+(idivbn 1e30 7) { (1e30) (7) idivbn } (+1.4285714285714285714e29) check
+(modbn 1e30 7) { (1e30) (7) modbn } (+1.0000000000000000000e0) check
+(idivbn -0.3 0.1) { (-0.3) (0.1) idivbn } (-3.0000000000000000000e0) check
+(modbn -0.3 0.1) { (-0.3) (0.1) modbn } (+0.0000000000000000000e0) check
+(idivbn 0 3) { (0) (3) idivbn } (+0.0000000000000000000e0) check
+(modbn 0 3) { (0) (3) modbn } (+0.0000000000000000000e0) check
+(idivbn 123456789012 1000) { (123456789012) (1000) idivbn } (+1.2345678900000000000e8) check
+(modbn 123456789012 1000) { (123456789012) (1000) modbn } (+1.2000000000000000000e1) check
+(idivbn 1 3) { (1) (3) idivbn } (+0.0000000000000000000e0) check
+(modbn 1 3) { (1) (3) modbn } (+1.0000000000000000000e0) check
+(modbn by 0 is an error) { 1 0 modbn } (ERR:undefinedresult) check
+(idivbn by 0 is an error) { 1 0 idivbn } (ERR:undefinedresult) check
+
+(Complex.ps trigonometric and hyperbolic) bnt_section  20 setbnsize
+(csin 1+2i) { [1 2] csin } [3.16577851 1.95960104] lapprox
+(csin -0.5+0.3i) { [-0.5 0.3] csin } [-0.50116198 0.267241699] lapprox
+(csin 0-1.5i) { [0 -1.5] csin } [0 -2.12927946] lapprox
+(ccos 1+2i) { [1 2] ccos } [2.03272301 -3.0518978] lapprox
+(ccos -0.5+0.3i) { [-0.5 0.3] ccos } [0.917370851 0.145994806] lapprox
+(ccos 0-1.5i) { [0 -1.5] ccos } [2.35240962 0] lapprox
+(ctan 1+2i) { [1 2] ctan } [0.0338128261 1.01479362] lapprox
+(ctan -0.5+0.3i) { [-0.5 0.3] ctan } [-0.487592316 0.368910397] lapprox
+(ctan 0-1.5i) { [0 -1.5] ctan } [0 -0.905148254] lapprox
+(csinh 1+2i) { [1 2] csinh } [-0.489056259 1.40311925] lapprox
+(csinh -0.5+0.3i) { [-0.5 0.3] csinh } [-0.49782136 0.333236258] lapprox
+(csinh 0-1.5i) { [0 -1.5] csinh } [0 -0.997494987] lapprox
+(ccosh 1+2i) { [1 2] ccosh } [-0.642148125 1.06860742] lapprox
+(ccosh -0.5+0.3i) { [-0.5 0.3] ccosh } [1.07726223 -0.153994192] lapprox
+(ccosh 0-1.5i) { [0 -1.5] ccosh } [0.0707372017 -0] lapprox
+(ctanh 1+2i) { [1 2] ctanh } [1.16673626 -0.243458201] lapprox
+(ctanh -0.5+0.3i) { [-0.5 0.3] ctanh } [-0.496197066 0.238405083] lapprox
+(ctanh 0-1.5i) { [0 -1.5] ctanh } [0 -14.1014199] lapprox
+(casin 1+2i) { [1 2] casin } [0.427078586 1.52857092] lapprox
+(casin -0.5+0.3i) { [-0.5 0.3] casin } [-0.493039241 0.334299818] lapprox
+(casin 0-1.5i) { [0 -1.5] casin } [0 -1.19476322] lapprox
+(cacos 1+2i) { [1 2] cacos } [1.14371774 -1.52857092] lapprox
+(cacos -0.5+0.3i) { [-0.5 0.3] cacos } [2.06383557 -0.334299818] lapprox
+(cacos 0-1.5i) { [0 -1.5] cacos } [1.57079633 1.19476322] lapprox
+(catan 1+2i) { [1 2] catan } [1.33897252 0.402359478] lapprox
+(catan -0.5+0.3i) { [-0.5 0.3] catan } [-0.49371166 0.240948266] lapprox
+(casinh 1+2i) { [1 2] casinh } [1.46935174 1.06344002] lapprox
+(casinh -0.5+0.3i) { [-0.5 0.3] casinh } [-0.497902943 0.269555641] lapprox
+(casinh 0-1.5i) { [0 -1.5] casinh } [0.96242365 -1.57079633] lapprox
+(cacosh 1+2i) { [1 2] cacosh } [1.52857092 1.14371774] lapprox
+(cacosh -0.5+0.3i) { [-0.5 0.3] cacosh } [0.334299818 2.06383557] lapprox
+(cacosh 0-1.5i) { [0 -1.5] cacosh } [1.19476322 -1.57079633] lapprox
+(catanh 1+2i) { [1 2] catanh } [0.173286795 1.17809725] lapprox
+(catanh -0.5+0.3i) { [-0.5 0.3] catanh } [-0.482240148 0.36890753] lapprox
+(catanh 0-1.5i) { [0 -1.5] catanh } [0 -0.982793723] lapprox
+(casin 0.5) { 0.5 casin } [0.523598776 0] lapprox
+(casin -1) { -1 casin } [-1.57079633 0] lapprox
+(casin 2) { 2 casin } [1.57079633 1.3169579] lapprox
+(casin -2) { -2 casin } [-1.57079633 1.3169579] lapprox
+(cacos 0.5) { 0.5 cacos } [1.04719755 -0] lapprox
+(cacos -0.5) { -0.5 cacos } [2.0943951 -0] lapprox
+(cacos 2) { 2 cacos } [0 -1.3169579] lapprox
+(catan 0.3) { 0.3 catan } [0.291456794 0] lapprox
+(catan -4) { -4 catan } [-1.32581766 0] lapprox
+(casinh 0.001) { 0.001 casinh } [0.000999999833 0] lapprox
+(casinh -2) { -2 casinh } [-1.44363548 0] lapprox
+(casinh 1e-06) { 1e-06 casinh } [1e-06 0] lapprox
+(cacosh 2) { 2 cacosh } [1.3169579 0] lapprox
+(cacosh 0.5) { 0.5 cacosh } [0 1.04719755] lapprox
+(cacosh -2) { -2 cacosh } [1.3169579 3.14159265] lapprox
+(catanh 0.5) { 0.5 catanh } [0.549306144 0] lapprox
+(catanh -0.9) { -0.9 catanh } [-1.47221949 0] lapprox
+(catanh 2) { 2 catanh } [0.549306144 1.57079633] lapprox
+(catanh -3) { -3 catanh } [-0.34657359 1.57079633] lapprox
+(ctan with a large imaginary part) { [1 50] ctan } [0 1] lapprox
+(ctan 0) { 0 ctan ccvs } (0.0 + 0.0i) check
+(catan i is an error) { [0 1] catan } (ERR:rangecheck) check
+(catanh 1 is an error) { 1 catanh } (ERR:rangecheck) check
+(casin 0.5 is real) { 0.5 casin cim } (0) check
+(csin 1+2i, bignums) { [(1) 2] csin ccvs } (+3.1657785132161681467e0 + 1.9596010414216058971e0i) check
+(ccos 1+2i, bignums) { [(1) 2] ccos ccvs } (+2.0327230070196655294e0 - 3.0518977991518000575e0i) check
+(csinh 1+2i, bignums) { [(1) 2] csinh ccvs } (-4.8905625904129367359e-1 + 1.4031192506220405880e0i) check
+(ctan 1+2i, bignums) { [(1) 2] ctan ccvs } (+3.3812826079896690284e-2 + 1.0147936161466335681e0i) check
+(casin 1+2i, bignums) { [(1) 2] casin ccvs } (+4.2707858639247612548e-1 + 1.5285709194809981613e0i) check
+(casin 0.5 is pi/6, bignums) { (0.5) casin ccvs } (+5.2359877559829887308e-1 + 0.0000000000000000000e0i) check
+(catan 1 is pi/4, bignums) { (1) catan ccvs } (+7.8539816339744830962e-1 + 0.0000000000000000000e0i) check
+(casinh 1, bignums) { (1) casinh ccvs } (+8.8137358701954302523e-1 + 0.0000000000000000000e0i) check
+(casinh 1e-15, bignums) { (1e-15) casinh cre bnt_str } (+1.0000000000000000000e-15) check
+(catanh 1e-12, bignums) { (1e-12) catanh cre bnt_str } (+1.0000000000000000000e-12) check
+(cacosh 2, bignums) { (2) cacosh ccvs } (+1.3169578969248167086e0 + 0.0000000000000000000e0i) check
+(catanh 0.5, bignums) { (0.5) catanh ccvs } (+5.4930614433405484570e-1 + 0.0000000000000000000e0i) check
+(catanh 2 is on the branch cut, bignums) { (2) catanh ccvs } (+5.4930614433405484570e-1 + 1.5707963267948966192e0i) check
+
+(Matrix.ps version 1.3) bnt_section  20 setbnsize
+(mtrace) { [[1 2][3 4]] mfromrows mtrace } (5) check
+(mtrace bignums) { [[(1.5) 2][3 (0.25)]] mfromrows mtrace bnt_str } (+1.7500000000000000000e0) check
+(mtrace non-square) { [[1 2 3]] mfromrows mtrace } (ERR:rangecheck) check
+(mnorm) { [[1 2][3 4]] mfromrows mnorm } 5.47722558 approx
+(mnorm bignums) { [[(1) 2][3 4]] mfromrows mnorm bnt_str } (+5.4772255750516611346e0) check
+(mnorm1) { [[1 -2][3 4]] mfromrows mnorm1 } (6) check
+(mnorminf) { [[1 -2][3 4]] mfromrows mnorminf } (7) check
+(mcond) { [[1 2][3 4]] mfromrows mcond } 21 approx
+(mcond bignums) { [[(1) 2][3 4]] mfromrows mcond bnt_str } (+2.1000000000000000000e1) check
+(mcond singular) { [[1 2][2 4]] mfromrows mcond } (ERR:undefinedresult) check
+(mrank [[1 2][2 4]]) { [[1 2][2 4]] mfromrows mrank } (1) check
+(mrank [[1 2 3][4 5 6][7 8 9]]) { [[1 2 3][4 5 6][7 8 9]] mfromrows mrank } (2) check
+(mrank [[1 2 3][4 5 6][7 8 10]]) { [[1 2 3][4 5 6][7 8 10]] mfromrows mrank } (3) check
+(mrank [[0 0][0 0]]) { [[0 0][0 0]] mfromrows mrank } (0) check
+(mrank [[1 2 3][2 4 6]]) { [[1 2 3][2 4 6]] mfromrows mrank } (1) check
+(mrank [[1 0][0 1][1 1]]) { [[1 0][0 1][1 1]] mfromrows mrank } (2) check
+(mrank bignums) { [[(1) 2 3][4 5 6][7 8 9]] mfromrows mrank } (2) check
+(mrank nearly singular, bignums) { [[(1) 1][1 (1.000000000000001)]] mfromrows mrank } (2) check
+(mlu P) { [[1 2][3 4]] mfromrows mlu bnt_mstr 3 1 roll pop pop } (0 1; 1 0) check
+(mlu U) { [[1 2][3 4]] mfromrows mlu pop bnt_mstr exch pop } (3 4; 0 0.666667) check
+(mlu: L U equals P A) { [[2 1 1][4 3 3][8 7 9]] mfromrows dup mlu /bnt_P exch def /bnt_U exch def /bnt_L exch def bnt_P exch mmul bnt_L bnt_U mmul msub mtorows } [0 0 0 0 0 0 0 0 0] lapprox
+(mlu bignums, U) { [[2 1 1][4 3 3][8 7 9]] mfromrows 1 setbn mscale mlu pop exch pop mtorows 2 get 2 get bnt_str } (-6.6666666666666666667e-1) check
+(mlu non-square) { [[1 2 3]] mfromrows mlu } (ERR:rangecheck) check
+(meig 2x2) { [[1 2][3 4]] mfromrows meig } [-0.372281323 0 5.37228132 0] lapprox
+(meig rotation) { [[0 -1][1 0]] mfromrows meig } [0 -1 0 1] lapprox
+(meig 3x3 complex pair) { [[1 1 0][0 1 1][1 0 1]] mfromrows meig } [0.5 -0.866025404 0.5 0.866025404 2 0] lapprox
+(meig companion of \(x-1\)\(x-2\)\(x-3\)) { [[0 0 6][1 0 -11][0 1 6]] mfromrows meig } [1 0 2 0 3 0] lapprox
+(meig symmetric) { [[4 1 2][1 3 0][2 0 5]] mfromrows meig } [1.85489731 0 3.4760236 0 6.66907909 0] lapprox
+(meig triangular) { [[1 5 7][0 2 9][0 0 -3]] mfromrows meig } [-3 0 1 0 2 0] lapprox
+(meig 1x1) { [[4]] mfromrows meig } [4 0] lapprox
+(meig 2x2 bignums, first) { [[(1) 2][3 4]] mfromrows meig 0 get 0 get } (-3.722813232690143299253057341094646591101e-1) 19 bnapprox
+(meig 2x2 bignums, second) { [[(1) 2][3 4]] mfromrows meig 1 get 0 get } (+5.372281323269014329925305734109464659110e0) 19 bnapprox
+(meig 2x2 bignums, imaginary parts) { [[(1) 2][3 4]] mfromrows meig { 1 get bniszero } forall and } (true) check
+(meig rotation bignums) { [[(0) -1][1 0]] mfromrows meig 1 get 1 get } (+1.000000000000000000000000000000000000000e0) 19 bnapprox
+(meig companion bignums, root 2) { [[(0) 0 24][1 0 -26][0 1 9]] mfromrows meig 0 get 0 get } (+2.000000000000000000000000000000000000000e0) 19 bnapprox
+(meig companion bignums, root 3) { [[(0) 0 24][1 0 -26][0 1 9]] mfromrows meig 1 get 0 get } (+3.000000000000000000000000000000000000000e0) 19 bnapprox
+(meig companion bignums, root 4) { [[(0) 0 24][1 0 -26][0 1 9]] mfromrows meig 2 get 0 get } (+4.000000000000000000000000000000000000000e0) 19 bnapprox
+(meig non-square) { [[1 2 3]] mfromrows meig } (ERR:rangecheck) check
+
+(Numeric.ps interpolation) bnt_section  20 setbnsize
+(polyinterp [0, 1, 2, 3]) { [0 1 2 3] [1 2 5 10] polyinterp } [0 1 0 1] lapprox
+(polyinterp [-1, 0, 2]) { [-1 0 2] [3 1 7] polyinterp } [1.66666667 -0.333333333 1] lapprox
+(polyinterp [1, 2, 4, 5, 7]) { [1 2 4 5 7] [2 -1 3 0 5] polyinterp } [0.255555556 -3.9 20.0222222 -39.6 25.2222222] lapprox
+(polyinterp bignums) { [(1) 2 4 5 7] [2 -1 3 0 5] polyinterp bnt_list } (+2.5555555555555555556e-1 -3.9000000000000000000e0 +2.0022222222222222222e1 -3.9600000000000000000e1 +2.5222222222222222222e1) check
+(polyinterp repeated x) { [1 1] [2 3] polyinterp } (ERR:rangecheck) check
+(polyinterp lengths differ) { [1 2] [2] polyinterp } (ERR:rangecheck) check
+(spline second derivatives) { [0 1 2.5 4 6] [0 2 1 3 -1] spline 2 get } [0 -4.40983607 4.03278689 -3.72131148 0] lapprox
+(splineval 0) { [0 1 2.5 4 6] [0 2 1 3 -1] spline 0 splineval } [0] lapprox
+(splineval 0.5) { [0 1 2.5 4 6] [0 2 1 3 -1] spline 0.5 splineval } [1.27561475] lapprox
+(splineval 1) { [0 1 2.5 4 6] [0 2 1 3 -1] spline 1 splineval } [2] lapprox
+(splineval 2) { [0 1 2.5 4 6] [0 2 1 3 -1] spline 2 splineval } [1.26320583] lapprox
+(splineval 3.3) { [0 1 2.5 4 6] [0 2 1 3 -1] spline 3.3 splineval } [2.04718397] lapprox
+(splineval 5.9) { [0 1 2.5 4 6] [0 2 1 3 -1] spline 5.9 splineval } [-0.676266393] lapprox
+(splineval 6) { [0 1 2.5 4 6] [0 2 1 3 -1] spline 6 splineval } [-1] lapprox
+(splineval -1) { [0 1 2.5 4 6] [0 2 1 3 -1] spline -1 splineval } [-2] lapprox
+(splineval 7) { [0 1 2.5 4 6] [0 2 1 3 -1] spline 7 splineval } [-3.93032787] lapprox
+(splineval bignums) { [(0) 1 2.5 4 6] [0 2 1 3 -1] spline (3.3) splineval } (+2.047183970856102003642987250000000000000e0) 19 bnapprox
+(spline of two points is a line) { [0 2] [1 5] spline 0.5 splineval } (2.0) check
+(spline x not increasing) { [0 2 1] [1 2 3] spline } (ERR:rangecheck) check
+
+(Numeric.ps minimum, derivative, systems) bnt_section  20 setbnsize
+(fmin \(2x^2-3\)^2) { { dup mul 2 mul 3 sub dup mul } 0 3 fmin } 1.22474487 1e-3 bnt_approx
+(fmin cos on [2, 5]) { { 57.29577951 mul cos } 2 5 fmin } 3.14159265 1e-3 bnt_approx
+(fmin at an end) { { } 1 4 fmin } 1 1e-3 bnt_approx
+(fmin bignums, 10 digits) { { dup mulbn 2 setbn mulbn 3 setbn subbn dup mulbn } (0) (3) fmin } (+1.224744871391589049098642037352945695983e0) 9 bnapprox
+(fmin bignums, cos) { { cosbn } (2) (5) fmin } (+3.141592653589793238462643383279502884197e0) 9 bnapprox
+(fderiv x^4 at 2) { { dup mul dup mul } 2 fderiv } 32 1e-3 bnt_approx
+(fderiv sin at 1) { { 57.29577951 mul sin } 1 fderiv } 0.540302306 approx
+(fderiv exp at 0) { { 2.718281828 exch exp } 0 fderiv } 1 approx
+(fderiv exp at 1, bignums) { { expbn } (1) fderiv } (+2.718281828459045235360287471352662497757e0) 17 bnapprox
+(fderiv x^3 at 2, bignums) { { dup dup mulbn mulbn } (2) fderiv } (+1.200000000000000000000000000000000000000e1) 18 bnapprox
+(fderiv sin at 0.5, bignums) { { sinbn } (0.5) fderiv } (+8.775825618903727161162815826038296519916e-1) 17 bnapprox
+(fsolve circle and line) { { aload pop 2 copy dup mul exch dup mul add 4 sub 3 1 roll sub 2 array astore } [1 0.5] fsolve } [1.41421356 1.41421356] lapprox
+(fsolve 3 equations) { { aload pop /bnt_z exch def /bnt_y exch def /bnt_x exch def [ bnt_x bnt_y add bnt_z add 6 sub  bnt_x bnt_y mul bnt_z mul 6 sub  bnt_x dup mul bnt_y dup mul add bnt_z dup mul add 14 sub ] } [0.8 2.2 2.9] fsolve } [1 2 3] lapprox
+(fsolve bignums) { { aload pop 2 copy dup mulbn exch dup mulbn addbn 4 setbn subbn 3 1 roll subbn 2 array astore } [(1) (0.5)] fsolve bnt_list } (+1.4142135623730950488e0 +1.4142135623730950488e0) check
+(fsolve singular Jacobian) { { aload pop pop 0 2 array astore } [1 1] fsolve } (ERR:undefinedresult) check
+
+(Numeric.ps statistics) bnt_section  20 setbnsize
+(mean) { [2 4 4 4 5 5 7 9] mean } [5] lapprox
+(variance) { [2 4 4 4 5 5 7 9] variance } [4.57142857] lapprox
+(stddev) { [2 4 4 4 5 5 7 9] stddev } [2.13808994] lapprox
+(median even) { [2 4 4 4 5 5 7 9] median } (4.5) check
+(median odd) { [3 1 2] median } (2) check
+(mean bignums) { [(0.1) (0.2) (0.3) (0.4) (0.6)] mean bnt_str } (+3.2000000000000000000e-1) check
+(variance bignums) { [(0.1) (0.2) (0.3) (0.4) (0.6)] variance bnt_str } (+3.7000000000000000000e-2) check
+(stddev bignums) { [(0.1) (0.2) (0.3) (0.4) (0.6)] stddev bnt_str } (+1.9235384061671344752e-1) check
+(median bignums) { [(0.6) (0.1) (0.3)] median bnt_str } (+3.0000000000000000000e-1) check
+(covariance) { [1 2 3 4 5] [2 4 5 4 5] covariance } [1.5] lapprox
+(correlation) { [1 2 3 4 5] [2 4 5 4 5] correlation } [0.774596669] lapprox
+(correlation bignums) { [(1) 2 3 4 5] [2 4 5 4 5] correlation bnt_str } (+7.7459666924148337704e-1) check
+(mean of nothing) { [] mean } (ERR:rangecheck) check
+(variance of one value) { [1] variance } (ERR:rangecheck) check
+(correlation of a constant) { [1 2 3] [5 5 5] correlation } (ERR:undefinedresult) check
+
+(Numeric.ps differential equations) bnt_section  20 setbnsize
+(oderk4 y' = y, 10 steps) { { exch pop } 0 1 1 10 oderk4 10 get 1 get } 2.71828183 1e-4 bnt_approx
+(oderk4 gives n+1 points) { { exch pop } 0 1 1 10 oderk4 length } (11) check
+(oderk4 last t is t1) { { exch pop } 0 1 0.3 7 oderk4 7 get 0 get } (0.3) check
+(odesolve y' = y) { { exch pop } 0 1 1 2 odesolve 2 get 1 get } 2.71828183 approx
+(odesolve y' = t y, y\(2\)) { { mul } 0 1 2 1 odesolve 1 get 1 get } 7.3890561 5e-4 bnt_approx
+(odesolve harmonic oscillator at pi) { { exch pop aload pop neg exch 2 array astore } 0 [0 1] 3.14159265 3 odesolve 3 get 1 get } [0 -1] lapprox
+(oderk4 harmonic oscillator at pi/2) { { exch pop aload pop neg exch 2 array astore } 0 [0 1] 1.5707963 20 oderk4 20 get 1 get } [-1 0] lapprox
+(odesolve y' = y, bignums) { { exch pop } (0) (1) 1 2 odesolve 2 get 1 get bnt_str } (+2.7182818284590452354e0) check
+(odesolve harmonic oscillator, bignums) { { exch pop aload pop negbn exch 2 array astore } (0) [0 1] (1) 1 odesolve 1 get 1 get bnt_list } (-8.4147098480789650665e-1 +5.4030230586813971740e-1) check
+(odesolve y' = -2 t y^2, bignums) { { dup mulbn mulbn -2 setbn mulbn } (0) (1) (3) 1 odesolve 1 get 1 get } (+1.000000000000000000000000000000000000000e-1) 18 bnapprox
+(oderk4 0 steps is an error) { { } 0 1 1 0 oderk4 } (ERR:rangecheck) check
+
+(Numeric.ps Fourier transform) bnt_section  20 setbnsize
+(fft [1 2 3 4]) { [1 2 3 4] fft } [10 0 -2 2 -2 -9.79717439e-16 -2 -2] lapprox
+(ifft fft [1 2 3 4]) { [1 2 3 4] fft ifft } [1 0 2 0 3 0 4 0] lapprox
+(fft [1 2 3]) { [1 2 3] fft } [6 0 -1.5 0.866025404 -1.5 -0.866025404] lapprox
+(ifft fft [1 2 3]) { [1 2 3] fft ifft } [1 0 2 0 3 0] lapprox
+(fft [1 0 0 0 0 0 0 0]) { [1 0 0 0 0 0 0 0] fft } [1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0] lapprox
+(ifft fft [1 0 0 0 0 0 0 0]) { [1 0 0 0 0 0 0 0] fft ifft } [1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] lapprox
+(fft [[0 1] 2 -1 [3 -1] 0.5 0 2 1]) { [[0 1] 2 -1 [3 -1] 0.5 0 2 1] fft } [7.5 0 -1.20710678 1.87867966 0.5 3 -1.20710678 -5.53553391 -4.5 2 0.207106781 6.12132034 -1.5 -1 0.207106781 1.53553391] lapprox
+(ifft fft [[0 1] 2 -1 [3 -1] 0.5 0 2 1]) { [[0 1] 2 -1 [3 -1] 0.5 0 2 1] fft ifft } [0 1 2 0 -1 0 3 -1 0.5 0 0 0 2 0 1 0] lapprox
+(fft [5]) { [5] fft } [5 0] lapprox
+(ifft fft [5]) { [5] fft ifft } [5 0] lapprox
+(ifft) { [[10 0] [-2 2] [-2 0] [-2 -2]] ifft } [1 0 2 0 3 0 4 0] lapprox
+(fft bignums) { [(1) 2 3 4] fft bnt_clist } (+1.0000000000000000000e1 + 0.0000000000000000000e0i; -2.0000000000000000000e0 + 2.0000000000000000000e0i; -2.0000000000000000000e0 + 0.0000000000000000000e0i; -2.0000000000000000000e0 - 2.0000000000000000000e0i) check
+(fft 3 points, bignums) { [(1) 2 3] fft bnt_clist } (+6.0000000000000000000e0 + 0.0000000000000000000e0i; -1.5000000000000000000e0 + 8.6602540378443864676e-1i; -1.5000000000000000000e0 - 8.6602540378443864676e-1i) check
+(fft of nothing) { [] fft length } (0) check
+
+(Special.ps) bnt_section  20 setbnsize
+(gamma 5, bignums) { (5) gamma bnt_str } (+2.4000000000000000000e1) check
+(gamma 0.5, bignums) { (0.5) gamma bnt_str } (+1.7724538509055160273e0) check
+(gamma 4.5, bignums) { (4.5) gamma bnt_str } (+1.1631728396567448929e1) check
+(gamma 1.5, bignums) { (1.5) gamma bnt_str } (+8.8622692545275801365e-1) check
+(gamma 0.1, bignums) { (0.1) gamma bnt_str } (+9.5135076986687318363e0) check
+(gamma 10.3, bignums) { (10.3) gamma bnt_str } (+7.1643068906237524455e5) check
+(gamma -0.5, bignums) { (-0.5) gamma bnt_str } (-3.5449077018110320546e0) check
+(gamma -2.5, bignums) { (-2.5) gamma bnt_str } (-9.4530872048294188123e-1) check
+(gamma -1.3, bignums) { (-1.3) gamma bnt_str } (+3.3283470067886097069e0) check
+(gamma 30.25, bignums) { (30.25) gamma bnt_str } (+2.0628053137753468870e31) check
+(gamma 171.7, bignums) { (171.7) gamma bnt_str } (+2.6522392898427967995e308) check
+(gamma 5) { 5 gamma } 24 approx
+(gamma 0.5) { 0.5 gamma } 1.77245385 approx
+(gamma -1.5) { -1.5 gamma } 2.3632718 approx
+(gamma 3.7) { 3.7 gamma } 4.17065178 approx
+(gamma 0 is an error) { 0 gamma } (ERR:undefinedresult) check
+(gamma -3 is an error) { -3 gamma } (ERR:undefinedresult) check
+(gamma 1) { 1 gamma } (1.0) check
+(lngamma 0.5, bignums) { (0.5) lngamma bnt_str } (+5.7236494292470008707e-1) check
+(lngamma 1, bignums) { (1) lngamma bnt_str } (+0.0000000000000000000e0) check
+(lngamma 2, bignums) { (2) lngamma bnt_str } (+0.0000000000000000000e0) check
+(lngamma 10.5, bignums) { (10.5) lngamma bnt_str } (+1.3940625219403763633e1) check
+(lngamma 100, bignums) { (100) lngamma bnt_str } (+3.5913420536957539878e2) check
+(lngamma 1000.5, bignums) { (1000.5) lngamma bnt_str } (+5.9086741758486774887e3) check
+(lngamma -0.5, bignums) { (-0.5) lngamma bnt_str } (+1.2655121234846453965e0) check
+(lngamma 0.001, bignums) { (0.001) lngamma bnt_str } (+6.9071788853838536825e0) check
+(lngamma 100) { 100 lngamma } 359.134205 1e-3 bnt_approx
+(erf 0.5, bignums) { (0.5) erf bnt_str } (+5.2049987781304653768e-1) check
+(erf -1, bignums) { (-1) erf bnt_str } (-8.4270079294971486934e-1) check
+(erf 2, bignums) { (2) erf bnt_str } (+9.9532226501895273416e-1) check
+(erf 3, bignums) { (3) erf bnt_str } (+9.9997790950300141456e-1) check
+(erf 1e-5, bignums) { (1e-5) erf bnt_str } (+1.1283791670578999350e-5) check
+(erf 0.1, bignums) { (0.1) erf bnt_str } (+1.1246291601828489220e-1) check
+(erf 5.5, bignums) { (5.5) erf bnt_str } (+9.9999999999999264215e-1) check
+(erfc 0.5, bignums) { (0.5) erfc bnt_str } (+4.7950012218695346232e-1) check
+(erfc -1, bignums) { (-1) erfc bnt_str } (+1.8427007929497148693e0) check
+(erfc 2, bignums) { (2) erfc bnt_str } (+4.6777349810472658379e-3) check
+(erfc 3, bignums) { (3) erfc bnt_str } (+2.2090496998585441373e-5) check
+(erfc 5, bignums) { (5) erfc bnt_str } (+1.5374597944280348502e-12) check
+(erfc 10, bignums) { (10) erfc bnt_str } (+2.0884875837625447570e-45) check
+(erfc 1e-5, bignums) { (1e-5) erfc bnt_str } (+9.9998871620832942100e-1) check
+(erf 0.5) { 0.5 erf } 0.520499878 approx
+(erfc 0.5) { 0.5 erfc } 0.479500122 approx
+(erf -1) { -1 erf } -0.842700793 approx
+(erfc -1) { -1 erfc } 1.84270079 approx
+(erf 2.5) { 2.5 erf } 0.999593048 approx
+(erfc 2.5) { 2.5 erfc } 0.000406952017 approx
+(erf 4) { 4 erf } 0.999999985 approx
+(erfc 4) { 4 erfc } 1.54172579e-08 approx
+(normpdf 0, bignums) { (0) normpdf bnt_str } (+3.9894228040143267794e-1) check
+(normcdf 0, bignums) { (0) normcdf bnt_str } (+5.0000000000000000000e-1) check
+(normpdf 1, bignums) { (1) normpdf bnt_str } (+2.4197072451914334980e-1) check
+(normcdf 1, bignums) { (1) normcdf bnt_str } (+8.4134474606854294859e-1) check
+(normpdf -2, bignums) { (-2) normpdf bnt_str } (+5.3990966513188051951e-2) check
+(normcdf -2, bignums) { (-2) normcdf bnt_str } (+2.2750131948179207200e-2) check
+(normpdf 1.5, bignums) { (1.5) normpdf bnt_str } (+1.2951759566589172761e-1) check
+(normcdf 1.5, bignums) { (1.5) normcdf bnt_str } (+9.3319279873114193400e-1) check
+(norminv 0.975, bignums) { (0.975) norminv bnt_str } (+1.9599639845400542355e0) check
+(norminv 0.5, bignums) { (0.5) norminv bnt_str } (+0.0000000000000000000e0) check
+(norminv 0.025, bignums) { (0.025) norminv bnt_str } (-1.9599639845400542355e0) check
+(norminv 0.001, bignums) { (0.001) norminv bnt_str } (-3.0902323061678135415e0) check
+(norminv 0.9999, bignums) { (0.9999) norminv bnt_str } (+3.7190164854556805644e0) check
+(norminv 1e-20, bignums) { (1e-20) norminv bnt_str } (-9.2623400897984075737e0) check
+(normcdf 1.96) { 1.96 normcdf } 0.975002105 approx
+(norminv 0.975) { 0.975 norminv } 1.95996398 approx
+(norminv 0 is an error) { 0 norminv } (ERR:rangecheck) check
+(norminv 1 is an error) { 1 norminv } (ERR:rangecheck) check
+(besselj 0 1, bignums) { 0 (1) besselj bnt_str } (+7.6519768655796655145e-1) check
+(besselj 1 1, bignums) { 1 (1) besselj bnt_str } (+4.4005058574493351596e-1) check
+(besselj 0 10, bignums) { 0 (10) besselj bnt_str } (-2.4593576445134833520e-1) check
+(besselj 3 -2, bignums) { 3 (-2) besselj bnt_str } (-1.2894324947440205110e-1) check
+(besselj -1 2, bignums) { -1 (2) besselj bnt_str } (-5.7672480775687338720e-1) check
+(besselj 5 30, bignums) { 5 (30) besselj bnt_str } (-1.4324029551207707699e-1) check
+(besselj 2 0.001, bignums) { 2 (0.001) besselj bnt_str } (+1.2499998958333365885e-7) check
+(besselj 0 0, bignums) { 0 (0) besselj bnt_str } (+1.0000000000000000000e0) check
+(besselj 1 0, bignums) { 1 (0) besselj bnt_str } (+0.0000000000000000000e0) check
+(besselj 10 7.5, bignums) { 10 (7.5) besselj bnt_str } (+3.8998257889412210093e-2) check
+(besselj 0 2.404825558 \(a zero\)) { 0 2.404825558 besselj } 0 approx
+(besselj 1 3) { 1 3 besselj } 0.339058959 approx
+(besselj with a real order is an error) { 0.5 1 besselj } (ERR:typecheck) check
+
+(Special.ps precision 40) bnt_section  40 setbnsize
+(gamma 1/3) { (0.3333333333333333333333333333333333333333) gamma bnt_str } (+2.678938534707747633655692940974677644129e0) check
+(erf 0.7) { (0.7) erf bnt_str } (+6.778011938374184729756288092441513967163e-1) check
+(erfc 4) { (4) erfc bnt_str } (+1.541725790028001885215967348688404857215e-8) check
+(besselj 2 15) { 2 (15) besselj bnt_str } (+4.157167797525047472014925888876322472620e-2) check
+(norminv 0.01) { (0.01) norminv bnt_str } (-2.326347874040841100885606163346911723352e0) check
 
 () =
 bnt_pass =only ( passed, ) print bnt_fail =only ( failed) =

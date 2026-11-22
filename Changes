@@ -1,6 +1,23 @@
 pst-numeric: changes
 
-1.2  2026/11/21  first release on CTAN
+1.3  2026/11/21  first release on CTAN
+                 - bignums: ebn, rootbn, minbn, maxbn, idivbn, modbn; a
+                   faster division by small integers makes exp, sin, atan
+                   and the other series up to 8 times faster
+                 - matrices: meig (every eigenvalue of any square matrix),
+                   mlu, mrank, mtrace, mnorm, mnorm1, mnorminf, mcond
+                 - complex numbers: csin, ccos, ctan, csinh, ccosh, ctanh
+                   and their inverses casin, cacos, catan, casinh,
+                   cacosh, catanh
+                 - calc: polyinterp, spline, splineval, fmin, fderiv,
+                   fsolve, mean, median, variance, stddev, covariance,
+                   correlation, oderk4, odesolve, fft, ifft
+                 - new part special (option special): gamma, lngamma,
+                   erf, erfc, normpdf, normcdf, norminv, besselj
+                 - 308 new tests (889 in all); new sections in the manual
+                   and the showcase
+
+1.2  2026/11/21  (not released on CTAN)
                  - the library is now the PSTricks package pst-numeric
                    (tex/pst-numeric.tex, latex/pst-numeric.sty), with
                    options to load only some parts, \pstNumeric,

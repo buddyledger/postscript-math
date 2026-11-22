@@ -1,16 +1,19 @@
 pst-numeric: arbitrary precision arithmetic, matrices, complex numbers
 and numerical methods for PSTricks
 
-Version 1.2, 2026/11/21
+Version 1.3, 2026/11/21
 
 pst-numeric is a library of PostScript procedures for PSTricks. Its
 decimal numbers (bignums) carry as many significant digits as asked for,
 with arithmetic, square roots, exponentials, logarithms, trigonometric
 and hyperbolic functions and their inverses, pi, factorials and binomial
 coefficients. On top of that it has matrices (determinant, inverse,
-linear systems, least squares, symmetric eigenvalues), complex numbers,
-roots of functions, integrals and polynomials (values, roots, fitting),
-each working on ordinary reals or on bignums. The calculations run in
+linear systems, least squares, LU decomposition, eigenvalues), complex
+numbers with their elementary functions, roots of functions, integrals,
+polynomials, interpolation and splines, minima, derivatives, systems of
+equations, statistics, differential equations and the Fourier transform,
+each working on ordinary reals or on bignums, and gamma, error and Bessel
+functions and the normal distribution. The calculations run in
 the PostScript interpreter while the page is drawn, so they can feed
 plots directly.
 
@@ -20,7 +23,7 @@ plots directly.
     \psNumericShow{50 setbnsize pibn}
 
 The package options choose the parts (bignum, trig, matrix, complex,
-calc); each part is a separate dvips header. Like every PSTricks package
+calc, special); each part is a separate dvips header. Like every PSTricks package
 it needs the latex-dvips route, or xelatex.
 
 Files

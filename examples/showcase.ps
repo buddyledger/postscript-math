@@ -388,6 +388,28 @@ revision 100 mod dup 10 lt { exch (0) mergestr exch } if 10 string cvs mergestr
 (20 setbnsize)
 	(Back to the default precision of 20 digits.) sc_row
 
+(Roots, e, smaller and larger, integer division) sc_h2
+(ebn)
+	(e, the base of natural logarithms, to 20 digits.) sc_row
+(27 3 rootbn)
+	(The cube root of 27. rootbn takes the n-th root of x; a last Newton step makes exact roots come out exact.) sc_row
+(\(-32\) 5 rootbn)
+	(An odd root of a negative number is negative: the fifth root of -32 is -2.) sc_row
+(\(1e100\) 7 rootbn)
+	(The seventh root of 10^100, which is 10^\(100/7\).) sc_row
+(\(-4\) 2 rootbn)
+	(Deliberate error: an even root of a negative number is not real, so rootbn raises rangecheck.) sc_row
+(\(3.5\) 2 minbn)
+	(minbn and maxbn return the smaller and the larger of two numbers, as bignums.) sc_row
+(-17 5 idivbn)
+	(idivbn divides and rounds down: -17/5 = -3.4 becomes -4.) sc_row
+(-17 5 modbn)
+	(modbn is the remainder that goes with it, with the sign of the divisor: -17 = 5 x \(-4\) + 3.) sc_row
+(\(1e30\) 7 modbn)
+	(The remainder of 10^30 divided by 7 is 1, worked out exactly although 10^30 has 31 digits.) sc_row
+(\(7.5\) 2 modbn)
+	(The numbers need not be whole: 7.5 = 2 x 3 + 1.5.) sc_row
+
 % ================================================================ Trig
 (Trig.ps) sc_h1
 (CORDIC builds an angle from the fixed steps atan\(1\), atan\(1/2\), atan\(1/4\), and so on, using only additions and halvings. Results are ordinary PostScript reals, good to about 6 significant digits with the default 40 iterations.) sc_para
@@ -608,6 +630,28 @@ sc_labels
 ([[1 2] [3 4]] mfromrows meigsym)
 	(Deliberate error: meigsym only accepts symmetric matrices, and raises rangecheck otherwise.) sc_row
 
+(Trace, norms, rank, LU decomposition, any eigenvalues) sc_h2
+([[1 2] [3 4]] mfromrows mtrace)
+	(The trace, the sum of the diagonal: 1 + 4.) sc_row
+([[1 2] [3 4]] mfromrows mnorm)
+	(The Frobenius norm: the square root of the sum of the squares, sqrt 30.) sc_row
+([[1 -2] [3 4]] mfromrows mnorm1)
+	(The largest column sum of absolute values: |-2| + 4 = 6. mnorminf gives the largest row sum.) sc_row
+([[1 2] [3 4]] mfromrows mcond)
+	(The condition number in that norm, |A| |A^-1|. About 21, so about one digit can be lost in solving with this matrix.) sc_row
+([[1 2 3] [4 5 6] [7 8 9]] mfromrows mrank)
+	(The rank: the third row is twice the second minus the first, so only two rows are independent.) sc_row
+([[1 2] [3 4]] mfromrows mlu pop pop)
+	(mlu gives L, U and P with P A = L U. This row shows L, lower triangular with ones on the diagonal.) sc_row
+([[1 2] [3 4]] mfromrows mlu pop exch pop)
+	(U is upper triangular. P swaps the rows, because 3 is the larger pivot.) sc_row
+([[1 2] [3 4]] mfromrows meig)
+	(meig finds every eigenvalue of any square matrix, as complex numbers: \(5 -+ sqrt 33\)/2. It reduces the matrix to Hessenberg form and uses QR steps with Wilkinson shifts.) sc_rowl
+([[0 -1] [1 0]] mfromrows meig)
+	(A rotation by 90 degrees has no real eigenvalues: they are -i and i.) sc_rowl
+([[\(0\) 0 24] [1 0 -26] [0 1 9]] mfromrows meig)
+	(The companion matrix of \(x-2\)\(x-3\)\(x-4\), with bignums: its eigenvalues are the roots.) sc_rowl
+
 % ================================================================ Complex
 (Complex.ps) sc_h1
 (A complex number is the array [re im], and results print as re + im i. Wherever a complex number is expected, a plain number x counts as [x 0]. As with matrices, if any part is a bignum or a string such as \(0.1\), the calculation uses bignums.) sc_para
@@ -643,6 +687,20 @@ sc_labels
 	(The principal logarithm: ln i = i pi/2.) sc_row
 ([0 0] cln)
 	(Deliberate error: the logarithm of 0 is undefined.) sc_row
+
+(Trigonometric and hyperbolic functions) sc_h2
+([1 2] csin)
+	(sin\(1 + 2i\) = sin 1 cosh 2 + i cos 1 sinh 2. ccos, ctan, csinh, ccosh and ctanh work the same way.) sc_row
+([\(1\) 2] ctan)
+	(The tangent with bignums.) sc_row
+([1 2] casin)
+	(The inverse functions casin, cacos, catan, casinh, cacosh and catanh give principal values.) sc_row
+(2 casin)
+	(asin 2 is not real: pi/2 + 1.317i, the value C99 and Python give.) sc_row
+(\(0.5\) casin)
+	(A real argument whose result is real gets a real result, with an exact zero imaginary part: asin 0.5 = pi/6.) sc_row
+([0 1] catan)
+	(Deliberate error: atan has a pole at i, so catan raises rangecheck.) sc_row
 
 % ================================================================ Numeric
 (Numeric.ps) sc_h1
@@ -695,6 +753,76 @@ sc_labels
 	(The least-squares parabola through five points, as coefficients of x^2, x and 1. polyfit builds the system and solves it with mlstsq.) sc_rowl
 ([0 1 2 3 4] [\(1.1\) \(1.9\) \(5.2\) \(9.8\) \(17.1\)] 2 polyfit)
 	(The same fit with bignums. The exact coefficients are 143/140, -67/700 and 379/350, repeating decimals that are rounded to 20 digits.) sc_rowl
+
+(Interpolation) sc_h2
+([0 1 2 3] [1 2 5 10] polyinterp)
+	(The polynomial of lowest degree through the points \(0, 1\), \(1, 2\), \(2, 5\), \(3, 10\): x^2 + 1, with a zero cubic term.) sc_rowl
+([0 1 2 3] [0 1 0 1] spline 1.5 splineval)
+	(A natural cubic spline through four points, read at x = 1.5. spline returns the points and the second derivatives; splineval evaluates it.) sc_row
+([0 1 2 3] [0 1 0 1] spline 2 get)
+	(The second derivatives at the points; a natural spline has zero at both ends.) sc_rowl
+
+(Minimum, derivative, systems of equations) sc_h2
+({ 57.29577951 mul cos } 2 5 fmin)
+	(Where cos x is smallest between 2 and 5: pi. fmin uses Brent's method; it finds x to about half the digits, because near a minimum f changes only with the square of the distance.) sc_row
+({ expbn } \(1\) fderiv)
+	(The derivative of e^x at 1 is e. fderiv extrapolates central differences to step 0 \(Ridders' method\).) sc_row
+({ aload pop 2 copy dup mul exch dup mul add 4 sub 3 1 roll sub 2 array astore } [1 0.5] fsolve)
+	(fsolve solves F\(x\) = 0 for a list of unknowns by Newton's method. Here x^2 + y^2 = 4 and x = y, so x = y = sqrt 2.) sc_rowl
+
+(Statistics) sc_h2
+([2 4 4 4 5 5 7 9] mean)
+	(The mean of a list. variance and stddev use n - 1, as for a sample.) sc_row
+([2 4 4 4 5 5 7 9] stddev)
+	(The sample standard deviation.) sc_row
+([2 4 4 4 5 5 7 9] median)
+	(The median: the mean of the two middle values when there is an even number.) sc_row
+([1 2 3 4 5] [2 4 5 4 5] correlation)
+	(Pearson's correlation of two lists. covariance gives their sample covariance.) sc_row
+
+(Differential equations) sc_h2
+({ exch pop } 0 1 1 10 oderk4 10 get 1 get)
+	(y' = y with y\(0\) = 1, by 10 steps of the Runge-Kutta method: y\(1\) is close to e. The solvers return the list of points [t y].) sc_row
+({ exch pop } \(0\) \(1\) 1 1 odesolve 1 get 1 get)
+	(The same with odesolve, which extrapolates each step to the working precision \(Gragg-Bulirsch-Stoer\): e to 20 digits.) sc_row
+({ exch pop aload pop neg exch 2 array astore } 0 [0 1] 3.14159265 2 odesolve 2 get 1 get)
+	(A system: y1' = -y2, y2' = y1 from \(0, 1\) is a rotation, so at t = pi the solution is \(0, -1\).) sc_rowl
+
+(Fourier transform) sc_h2
+([1 2 3 4] fft)
+	(The discrete Fourier transform. With a power of 2 points it uses the fast radix-2 algorithm, otherwise the direct sum.) sc_rowl
+([1 2 3 4] fft ifft)
+	(ifft inverts it.) sc_rowl
+
+% ================================================================ Special
+(Special.ps) sc_h1
+(Special functions of a number, a bignum or a string. A number gives a real, computed with bignums at 12 digits; a bignum or a string gives a bignum at the current precision.) sc_para
+
+(Gamma function) sc_h2
+(\(0.5\) gamma)
+	(Gamma\(1/2\) = sqrt pi.) sc_row
+(\(-2.5\) gamma)
+	(Negative arguments use the reflection formula.) sc_row
+(\(100.5\) lngamma)
+	(The logarithm of the gamma function, for arguments where gamma itself would be huge.) sc_row
+(0 gamma)
+	(Deliberate error: gamma has poles at 0, -1, -2, ..., where it raises undefinedresult.) sc_row
+
+(Error function and normal distribution) sc_h2
+(\(0.5\) erf)
+	(The error function, by a series of positive terms for small x and a continued fraction for large x.) sc_row
+(\(5\) erfc)
+	(erfc = 1 - erf, computed directly so the small tail value keeps all its digits.) sc_row
+(\(1.96\) normcdf)
+	(The standard normal distribution function: P\(X <= 1.96\) is about 0.975. normpdf gives the density.) sc_row
+(\(0.975\) norminv)
+	(Its inverse, by Newton's method from Acklam's approximation.) sc_row
+
+(Bessel functions) sc_h2
+(0 \(1\) besselj)
+	(The Bessel function J0 at 1. besselj takes an integer order and any x.) sc_row
+(0 2.404825558 besselj)
+	(Near the first zero of J0. A real argument gives a real result.) sc_row
 
 % ================================================================ other
 (Utilities) sc_h1

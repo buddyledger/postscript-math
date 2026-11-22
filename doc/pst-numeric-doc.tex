@@ -77,7 +77,7 @@ the linear algebra and numerical methods built on them.
 \end{pspicture}
 \end{LTXexample}
 
-The library has five parts, each a dvips header that the package options
+The library has six parts, each a dvips header that the package options
 choose:
 
 \medskip
@@ -85,14 +85,20 @@ choose:
 \textrm{\bfseries Option} & \textrm{\bfseries Header} & \bfseries Contents\\\midrule
 bignum  & pst-numeric-bignum.pro  & decimal numbers of any precision: arithmetic,
   comparisons, roots, exponentials, logarithms, trigonometric and hyperbolic
-  functions and their inverses, $\pi$, factorials, binomial coefficients\\
+  functions and their inverses, $\pi$, $e$, factorials, binomial
+  coefficients, integer division and remainder\\
 trig    & pst-numeric-trig.pro    & trigonometric functions of reals by the
   CORDIC algorithm\\
 matrix  & pst-numeric-matrix.pro  & matrices of reals or bignums: products,
-  determinant, inverse, linear systems, least squares, symmetric eigenvalues\\
-complex & pst-numeric-complex.pro & complex numbers of reals or bignums\\
-calc    & pst-numeric-calc.pro    & roots of functions, integrals, polynomials
-  (values, roots, fitting), gcd and lcm\\\bottomrule
+  determinant, inverse, linear systems, least squares, LU decomposition, rank,
+  norms, eigenvalues\\
+complex & pst-numeric-complex.pro & complex numbers of reals or bignums, with
+  their elementary functions\\
+calc    & pst-numeric-calc.pro    & roots of functions, integrals, polynomials,
+  interpolation and splines, minima, derivatives, systems of equations,
+  statistics, differential equations, Fourier transform\\
+special & pst-numeric-special.pro & gamma, error and Bessel functions, normal
+  distribution\\\bottomrule
 \end{tabularx}
 
 
@@ -103,11 +109,12 @@ calc    & pst-numeric-calc.pro    & roots of functions, integrals, polynomials
 \Lcs{input} \texttt{pst-numeric.tex}
 \end{BDef}
 
-With no option, all five parts are loaded. The options \Loption{bignum},
-\Loption{trig}, \Loption{matrix}, \Loption{complex} and \Loption{calc} load
-only the parts named, and \Loption{all} loads every part. A part that
-another needs is loaded with it: \Loption{complex} loads \texttt{matrix}, and
-\Loption{calc} loads \texttt{matrix} and \texttt{complex}.
+With no option, all six parts are loaded. The options \Loption{bignum},
+\Loption{trig}, \Loption{matrix}, \Loption{complex}, \Loption{calc} and
+\Loption{special} load only the parts named, and \Loption{all} loads every
+part. A part that another needs is loaded with it: \Loption{complex} loads
+\texttt{matrix}, \Loption{calc} loads \texttt{matrix} and \texttt{complex},
+and \Loption{special} loads \texttt{bignum}.
 
 \begin{verbatim}
 \usepackage{pst-numeric}                 % every part
@@ -279,13 +286,28 @@ building or reading the arrays yourself.
 \Lps{sinhbn} \Lps{coshbn} \Lps{tanhbn} & \Larg{x} \To{} bignum\\
 \Lps{factbn} & \Larg{n} \To{} $n!$\\
 \Lps{binombn} & \Larg{n k} \To{} $\binom{n}{k}$\\
-\Lps{pibn} & --- \To{} $\pi$\\
+\Lps{pibn} \Lps{ebn} & --- \To{} $\pi$, $e$\\
+\Lps{rootbn} & \Larg{x n} \To{} $\sqrt[n]{x}$ for an integer $n\ge1$ (negative
+  $x$ for an odd $n$)\\
+\Lps{minbn} \Lps{maxbn} & \Larg{a b} \To{} the smaller, the larger\\
+\Lps{idivbn} \Lps{modbn} & \Larg{a b} \To{} $\lfloor a/b\rfloor$,
+  $a-b\lfloor a/b\rfloor$ (the remainder has the sign of $b$)\\
 \Lps{typchk} & any \To{} \texttt{(bignumtype)}, \texttt{(complextype)},
   \texttt{(matrixtype)} or the \PS type name\\
 \end{reference}
 
 $\pi$, $\ln 2$ and $\ln 10$ are worked out once for each precision and then
-kept.
+kept. \Lps{idivbn} and \Lps{modbn} work exactly on numbers of any size, and
+the quotient is exact as long as it has no more digits than the precision.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,2.0)
+\rput[l](0,1.5){\psNumericShow{(1e100) 7 rootbn}}
+\rput[l](0,1.0){\psNumericShow{(-32) 5 rootbn}}
+\rput[l](0,0.5){\psNumericShow{-17 5 idivbn}}
+\rput[l](0,0.0){\psNumericShow{(1e30) 7 modbn}}
+\end{pspicture}
+\end{LTXexample}
 
 
 \section{Trigonometry with CORDIC}
@@ -367,7 +389,32 @@ that matters. No operation changes its arguments, except \Lps{mput}.
 \Lps{meigsym} & \Larg{A} \To{} \texttt{[}\Larg{eigenvalues}\texttt{]}
   \Larg{V}, for a symmetric $A$; ascending, with the unit eigenvectors as the
   columns of $V$\\
+\Lps{meig} & \Larg{A} \To{} every eigenvalue of a square $A$, as complex
+  numbers sorted by real part\\
+\Lps{mlu} & \Larg{A} \To{} \Larg{L U P} with $PA=LU$\\
+\Lps{mrank} & \Larg{A} \To{} rank\\
+\Lps{mtrace} & \Larg{A} \To{} sum of the diagonal\\
+\Lps{mnorm} \Lps{mnorm1} \Lps{mnorminf} & \Larg{A} \To{} Frobenius norm,
+  largest column sum, largest row sum of $|a_{ij}|$\\
+\Lps{mcond} & \Larg{A} \To{} condition number $\|A\|_1\|A^{-1}\|_1$\\
 \end{reference}
+
+\Lps{meig} works on any square matrix: it reduces it to Hessenberg form and
+then applies QR steps in complex arithmetic with Wilkinson
+shifts~\cite{golub13}, so complex eigenvalues of a real matrix come out as
+pairs. \Lps{mlu} uses partial pivoting, and \Lps{mrank} counts the pivots
+that are larger than the working tolerance times the largest element.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,2.5)
+\rput[l](0,2.0){\psNumericShow{[[0 -1] [1 0]] mfromrows meig pstnum_list}}
+\rput[l](0,1.5){\psNumericShow{12 setbnsize [[(0) 0 24] [1 0 -26] [0 1 9]]
+  mfromrows meig { 0 get } forall 3 array astore pstnum_list}}
+\rput[l](0,1.0){\psNumericShow{[[1 2 3] [4 5 6] [7 8 9]] mfromrows mrank}}
+\rput[l](0,0.5){\psNumericShow{[[1 2] [3 4]] mfromrows mlu pop exch pop}}
+\rput[l](0,0.0){\psNumericShow{[[1 2] [3 4]] mfromrows mcond}}
+\end{pspicture}
+\end{LTXexample}
 
 
 \section{Complex numbers}
@@ -403,7 +450,26 @@ top is printed.
 \Lps{cexp} \Lps{cln} & \Larg{z} \To{} $e^z$, principal $\ln z$\\
 \Lps{cpow} & \Larg{z w} \To{} $z^w$\\
 \Lps{ccvs} & \Larg{z} \To{} string\\
+\Lps{csin} \Lps{ccos} \Lps{ctan} & \Larg{z} \To{} $\sin z$, $\cos z$, $\tan z$\\
+\Lps{csinh} \Lps{ccosh} \Lps{ctanh} & \Larg{z} \To{} $\sinh z$, $\cosh z$, $\tanh z$\\
+\Lps{casin} \Lps{cacos} \Lps{catan} & \Larg{z} \To{} principal $\arcsin z$,
+  $\arccos z$, $\arctan z$\\
+\Lps{casinh} \Lps{cacosh} \Lps{catanh} & \Larg{z} \To{} principal
+  $\operatorname{arsinh} z$, $\operatorname{arcosh} z$, $\operatorname{artanh} z$\\
 \end{reference}
+
+The inverse functions have the branch cuts of C99 and Python: for example
+$\arcsin 2=\pi/2+1.317\,i$. A real argument whose result is real gets a real
+result with an exact zero imaginary part.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,2.0)
+\rput[l](0,1.5){\psNumericShow{[1 2] csin}}
+\rput[l](0,1.0){\psNumericShow{[(1) 2] casin}}
+\rput[l](0,0.5){\psNumericShow{2 casin}}
+\rput[l](0,0.0){\psNumericShow{(0.5) catanh}}
+\end{pspicture}
+\end{LTXexample}
 
 
 \section{Roots, integrals and polynomials}\label{sec:calc}
@@ -448,6 +514,223 @@ loads. A root of multiplicity $m$ is found to only about $1/m$ of the
 digits. \Lps{froot} and \Lps{polyroots} stop after 500 iterations.
 
 
+\section{Interpolation}
+
+\Lps{polyinterp} gives the polynomial of lowest degree through a set of
+points, \Lps{spline} the natural cubic spline, which \Lps{splineval}
+evaluates. Here both go through the same five points: the spline (blue)
+stays close to the data, the polynomial of degree 4 (red, dashed) swings
+between them.
+
+\begin{LTXexample}[pos=l,preset=\centering,width=7cm]
+\pstVerb{\pstNumeric{/S [0 1 2.5 4 6]
+  [0 2 1 3 -1] spline def
+  /P [0 1 2.5 4 6] [0 2 1 3 -1]
+  polyinterp def}}
+\psset{unit=0.8cm}
+\begin{pspicture}(-0.3,-2)(6.4,3.6)
+\psaxes[labels=none]{->}(0,0)(0,-1.9)(6.3,3.5)
+\psplot[linecolor=blue,linewidth=1.5pt,
+  plotpoints=80]{0}{6}{\pstNumeric{S x splineval}}
+\psplot[linecolor=red,linestyle=dashed,
+  plotpoints=80]{0}{6}{\pstNumeric{P x polyval}}
+\psdots[dotstyle=*](0,0)(1,2)(2.5,1)(4,3)(6,-1)
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{polyinterp} & \texttt{[}\Larg{x}\dots\texttt{] [}\Larg{y}\dots\texttt{]}
+  \To{} interpolating polynomial (the $x$ must differ)\\
+\Lps{spline} & \texttt{[}\Larg{x}\dots\texttt{] [}\Larg{y}\dots\texttt{]}
+  \To{} \Larg{S}, natural cubic spline ($x$ increasing)\\
+\Lps{splineval} & \Larg{S x} \To{} its value at $x$ (the end pieces continue
+  beyond the points)\\
+\end{reference}
+
+
+\section{Minimum, derivative and systems of equations}
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,2.0)
+\rput[l](0,1.5){\psNumericShow{{ 57.29577951 mul cos } 2 5 fmin}}
+\rput[l](0,1.0){\psNumericShow{{ expbn } (1) fderiv}}
+\rput[l](0,0.5){\psNumericShow{{ aload pop 2 copy dup mul exch dup mul add
+  4 sub 3 1 roll sub 2 array astore } [1 0.5] fsolve pstnum_list}}
+\rput[l](0,0.0){\psNumericShow{{ aload pop 2 copy dup mulbn exch dup mulbn
+  addbn 4 setbn subbn 3 1 roll subbn 2 array astore } [(1) (0.5)] fsolve
+  pstnum_list}}
+\end{pspicture}
+\end{LTXexample}
+
+\Lps{fmin} uses Brent's method, parabolic steps with golden section as a
+fall-back. Near a smooth minimum a function changes only with the square of
+the distance, so the place of the minimum is found to about half the digits
+of the arithmetic, the value at it to all of them. \Lps{fderiv} extrapolates
+central differences to step zero (Ridders' method), and \Lps{fsolve} solves
+$F(x)=0$ for a list of unknowns by Newton's method, with the Jacobian from
+central differences. The last two examples solve $x^2+y^2=4$, $x=y$; the
+result is a list of two numbers, which \Lps{pstnum\_list} prints as a list
+rather than as a complex number.
+
+\begin{reference}
+\Lps{fmin} & \Larg{\{f\} a b} \To{} where $f$ is smallest in $[a,b]$\\
+\Lps{fderiv} & \Larg{\{f\} x} \To{} $f'(x)$\\
+\Lps{fsolve} & \Larg{\{F\}} \texttt{[}\Larg{x0}\dots\texttt{]} \To{}
+  \texttt{[}\Larg{x}\dots\texttt{]} with $F(x)=0$; $F$ maps a list of $n$
+  numbers to a list of $n$ numbers\\
+\end{reference}
+
+
+\section{Statistics}
+
+A data set is a list of numbers, bignums or strings. \Lps{variance} and
+\Lps{stddev} divide by $n-1$, as for a sample.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,1.5)
+\rput[l](0,1.0){\psNumericShow{[2 4 4 4 5 5 7 9] stddev}}
+\rput[l](0,0.5){\psNumericShow{[(0.1) (0.2) (0.3) (0.4) (0.6)] variance}}
+\rput[l](0,0.0){\psNumericShow{[1 2 3 4 5] [2 4 5 4 5] correlation}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{mean} \Lps{median} & \texttt{[}\Larg{x}\dots\texttt{]} \To{} mean, median\\
+\Lps{variance} \Lps{stddev} & \texttt{[}\Larg{x}\dots\texttt{]} \To{} sample
+  variance, standard deviation\\
+\Lps{covariance} \Lps{correlation} & \texttt{[}\Larg{x}\dots\texttt{]
+  [}\Larg{y}\dots\texttt{]} \To{} sample covariance, Pearson's $r$\\
+\end{reference}
+
+
+\section{Differential equations}
+
+The solvers integrate $y'=f(t,y)$ from $t_0$ to $t_1$, where $y$ is a number
+or a list of numbers (a system), and $f$ takes \Larg{t y} and returns $y'$
+of the same shape. They return the solution as a list of $n+1$ points
+\texttt{[[}\Larg{t0 y0}\texttt{] [}\Larg{t1 y1}\texttt{]}~\dots\texttt{]}.
+\Lps{oderk4} takes $n$ steps of the classical Runge--Kutta method;
+\Lps{odesolve} solves each of the $n$ steps to the working precision by
+Gragg--Bulirsch--Stoer extrapolation, halving a step that does not converge,
+so with bignums it gives every digit.
+
+The points can be drawn with \Lcs{listplot}, whose argument may be \PS code
+that leaves the coordinates on the stack. This is the phase portrait of the
+damped oscillator $p''=-p-0.2p'$, as the system $p'=v$, $v'=-p-0.2v$:
+
+\begin{LTXexample}[pos=l,preset=\centering,width=7cm]
+\psset{unit=1.6cm}
+\begin{pspicture}(-1.2,-1.2)(1.3,1.2)
+\psaxes[labels=none,ticks=none]{->}(0,0)(-1.15,-1.15)(1.25,1.1)
+\listplot[linecolor=blue]{\pstNumeric{
+  { exch pop aload pop exch
+    1 index 0.2 mul add neg
+    2 array astore }
+  0 [1 0] 25 250 oderk4
+  { 1 get aload pop } forall }}
+\uput[d](1.2,0){$p$}\uput[l](0,1.05){$v$}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,1.0)
+\rput[l](0,0.5){\psNumericShow{{ exch pop } 0 1 1 10 oderk4 10 get 1 get}}
+\rput[l](0,0.0){\psNumericShow{{ exch pop } (0) (1) 1 1 odesolve 1 get 1 get}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{oderk4} & \Larg{\{f\} t0 y0 t1 n} \To{} $n+1$ points, by $n$
+  Runge--Kutta steps\\
+\Lps{odesolve} & \Larg{\{f\} t0 y0 t1 n} \To{} $n+1$ points, each step to the
+  working precision\\
+\end{reference}
+
+
+\section{Fourier transform}
+
+\Lps{fft} computes the discrete Fourier transform
+$Z_k=\sum_j z_j e^{-2\pi i jk/n}$ of a list of complex numbers (or plain
+numbers), with the fast radix-2 algorithm when $n$ is a power of 2 and the
+direct sum otherwise; \Lps{ifft} is its inverse, with the factor $1/n$.
+Here the spectrum of $\sin(2\pi\cdot3t/32)+\frac12\sin(2\pi\cdot7t/32)$,
+sampled at 32 points, shows its two frequencies:
+
+\begin{LTXexample}[pos=l,preset=\centering,width=7cm]
+\pstVerb{\pstNumeric{/Z [ 0 1 31 {
+  11.25 mul dup 3 mul sin exch
+  7 mul sin 0.5 mul add } for ]
+  fft def}}
+\psset{xunit=0.35cm,yunit=0.25cm}
+\begin{pspicture}(-1,-1)(17,18)
+\psaxes[Dx=4,Dy=4]{->}(0,0)(16.5,17.5)
+\listplot[showpoints=true,dotstyle=*]{\pstNumeric{
+  0 1 16 { dup Z exch get cabs } for }}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{fft} \Lps{ifft} & \texttt{[}\Larg{z}\dots\texttt{]} \To{} transform,
+  inverse transform\\
+\end{reference}
+
+
+\section{Special functions}\label{sec:special}
+
+The part \texttt{special} has the gamma function, the error function, the
+normal distribution and Bessel functions of the first kind. Each takes a
+number, a bignum or a string. For a number the result is a real, worked out
+with bignums at 12 digits; for a bignum or a string it is a bignum at the
+current precision. The gamma function uses Stirling's series after shifting
+the argument, the error function a series of positive terms and, for large
+arguments, a continued fraction, and \Lps{norminv} Newton's method from
+Acklam's approximation.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,2.5)
+\rput[l](0,2.0){\psNumericShow{(0.5) gamma}}
+\rput[l](0,1.5){\psNumericShow{(100.5) lngamma}}
+\rput[l](0,1.0){\psNumericShow{(5) erfc}}
+\rput[l](0,0.5){\psNumericShow{(0.975) norminv}}
+\rput[l](0,0.0){\psNumericShow{0 (1) besselj}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{LTXexample}[pos=t,preset=\centering]
+\psset{xunit=0.8cm,yunit=2.5cm}
+\begin{pspicture}(-0.5,-0.6)(15.5,1.15)
+\psaxes[Dx=5,Dy=0.5]{->}(0,0)(0,-0.5)(15.5,1.1)
+\psplot[linecolor=red,plotpoints=90]{0}{15}{\pstNumeric{0 x besselj}}
+\psplot[linecolor=blue,plotpoints=90]{0}{15}{\pstNumeric{1 x besselj}}
+\psplot[linecolor=Green,plotpoints=90]{0}{15}{\pstNumeric{2 x besselj}}
+\rput[l](1.2,0.95){\red $J_0$}\rput[l](2.6,0.65){\blue $J_1$}
+\rput[l](4.2,0.5){\textcolor{Green}{$J_2$}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{LTXexample}[pos=t,preset=\centering]
+\psset{xunit=1.5cm,yunit=2.5cm}
+\begin{pspicture}(-3.5,-0.2)(4.5,1.15)
+\psaxes[Dy=0.5]{->}(0,0)(-3.3,0)(3.5,1.1)
+\psplot[linecolor=blue,plotpoints=60]{-3}{3}{\pstNumeric{x normpdf}}
+\psplot[linecolor=red,plotpoints=60]{-3}{3}{\pstNumeric{x normcdf}}
+\rput[l](1.2,0.95){\red $\Phi(x)$}\rput[l](0.5,0.42){\blue $\varphi(x)$}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{gamma} & \Larg{x} \To{} $\Gamma(x)$; \texttt{undefinedresult} at
+  $0,-1,-2,\dots$\\
+\Lps{lngamma} & \Larg{x} \To{} $\ln|\Gamma(x)|$\\
+\Lps{erf} \Lps{erfc} & \Larg{x} \To{} $\operatorname{erf}x$,
+  $1-\operatorname{erf}x$ (accurate in the tail)\\
+\Lps{normpdf} \Lps{normcdf} & \Larg{x} \To{} density and distribution
+  function of the standard normal distribution\\
+\Lps{norminv} & \Larg{p} \To{} $x$ with $\Phi(x)=p$, for $0<p<1$\\
+\Lps{besselj} & \Larg{n x} \To{} $J_n(x)$ for an integer $n$\\
+\end{reference}
+
+
 \section{Plots}\label{sec:plots}
 
 The procedures work anywhere \PST takes \PS code. Below, the parabola is
@@ -489,18 +772,23 @@ zero, a singular matrix) and \texttt{syntaxerror} (a string that
 \texttt{Error: /undefinedresult in /divbn}.
 
 Bignum arithmetic works one decimal digit at a time. At 20 digits each
-operation is instant. At 100 digits, \Lps{pibn} takes about five seconds the
-first time and \Lps{sinbn} about two. Integrals of bignums are slow, and the
-first one at a given precision spends about ten seconds working out the
-Gauss--Legendre points. Keep bignum code out of \Lcs{psplot} when you can,
-and compute in \Lcs{pstVerb} what several objects need.
+operation is instant and a function such as \Lps{expbn} takes a few
+hundredths of a second; at 100 digits a function takes up to a second or two.
+Integrals of bignums are slow, and the first one at a given precision spends
+several seconds working out the Gauss--Legendre points. The special functions
+work with bignums even for a real argument, so a plot of them takes longer
+than one of \PS's own functions. Keep bignum code out of \Lcs{psplot} when
+you can, and compute in \Lcs{pstVerb} what several objects need.
+
+With reals, \Lps{odesolve} and \Lps{fsolve} reach about five or six digits,
+the limit of \PS's single-precision reals, and \Lps{fmin} about three.
 
 
 \section{The library without \TeX}
 
 The parts are also ordinary \PS files, in the folder \texttt{source} of the
 package's repository and of its CTAN archive, and can be used with
-Ghostscript as a calculator. \LFile{Load.ps} loads all five and leaves the
+Ghostscript as a calculator. \LFile{Load.ps} loads all six and leaves the
 dictionary open:
 
 \begin{verbatim}
@@ -512,7 +800,7 @@ GS> 30 setbnsize 2 setbn lnbn bnPrint
 \texttt{-dNOSAFER} lets \texttt{Load.ps} run the other files. The dvips
 headers are generated from these files by \LFile{make\_headers.py}. The
 repository, \url{https://github.com/buddyledger/pst-numeric}, also has a
-test suite of 581 tests, run against both the files and the headers, and a
+test suite of 889 tests, run against both the files and the headers, and a
 showcase of every procedure.
 
 

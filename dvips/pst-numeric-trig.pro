@@ -4,7 +4,7 @@
 % Copyright 2012, 2026 Buddy Ledger
 % LaTeX Project Public License 1.3c or later, see LICENSE
 % https://github.com/buddyledger/pst-numeric
-/tx@NumericDict where { pop }{ /tx@NumericDict 600 dict def } ifelse
+/tx@NumericDict where { pop }{ /tx@NumericDict 1000 dict def } ifelse
 tx@NumericDict begin
 /pi 3.14159265358979 def
 /cordic_nmax 64 def

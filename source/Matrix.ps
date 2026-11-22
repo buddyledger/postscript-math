@@ -26,7 +26,7 @@
 % Every name is defined in tx@NumericDict, so that nothing clashes with other
 % PostScript code. Load.ps leaves the dictionary open; after loading a file
 % on its own, use  tx@NumericDict begin ... end  around calls.
-/tx@NumericDict where { pop }{ /tx@NumericDict 600 dict def } ifelse
+/tx@NumericDict where { pop }{ /tx@NumericDict 1000 dict def } ifelse
 tx@NumericDict begin
 % Version 1.1 (2026): added mfromrows, mtorows, mcopy, midentity, mtranspose,
 % madd, msub, mscale, mdet, minv, msolve, mlstsq, meigsym and mPrint. Every
@@ -103,6 +103,10 @@ m_realops begin
 		2 copy 0 eq exch 0 eq and { pop pop 0.0 }{
 			atan dup 180 gt { 360 sub } if 0.017453292519943295 mul } ifelse } def
 	/m_pi { 3.141592653589793 } def
+	/m_sinh { % series near 0, where e^x - e^-x would lose the digits
+		dup abs 0.5 lt { dup dup mul dup dup 5040 div 1 120 div add mul 1 6 div add mul 1 add mul }
+		{ 2.718281828459045 exch exp dup 1 exch div sub 2 div } ifelse } def
+	/m_cosh { 2.718281828459045 exch exp dup 1 exch div add 2 div } def
 end
 /m_bnops 40 dict def
 m_bnops begin
@@ -123,10 +127,12 @@ m_bnops begin
 	/m_sin { sinbn } def                    /m_cos { cosbn } def
 	/m_atan2 { atan2bn } def
 	/m_pi { pibn } def
+	/m_sinh { sinhbn } def                  /m_cosh { coshbn } def
 end
 /m_ops { { m_bnops }{ m_realops } ifelse } bind def   % bool -> dict
 /m_isstrbn { dup type /stringtype eq exch m_isbn or } bind def   % any -> bool
 /m_finm { [ exch { [ exch { m_fin } forall ] } forall ] } bind def
+/m_max { 2 copy m_gt { pop }{ exch pop } ifelse } bind def   % a b -> larger (ops dict current)
 
 % ---------------------------------------------------------------- building
 
@@ -435,6 +441,259 @@ end
 	vals vecs
 	end m_unguard
 	m_finm exch [ exch { m_fin } forall ] exch
+	end
+} bind def
+
+% ---------------------------------------------------------------- version 1.3
+
+%A mtrace -> sum of the diagonal   (A square)
+/mtrace {
+	dup m_hasbn m_ops begin
+	8 dict begin
+	/A exch def
+	A msize ne { A end end /mtrace errordict /rangecheck get exec } if
+	m_zero 1 1 A length { dup A 3 1 roll mget m_cv m_add } for
+	end m_fin end
+} bind def
+
+%A mnorm -> Frobenius norm, the square root of the sum of the squares
+/mnorm {
+	dup m_hasbn m_ops begin m_guard
+	m_zero exch { { m_cv dup m_mul m_add } forall } forall m_sqrt
+	m_unguard m_fin end
+} bind def
+%A mnorm1 -> largest sum of |elements| of a column
+/mnorm1 {
+	dup m_hasbn m_ops begin
+	m_zero exch { m_zero exch { m_cv m_abs m_add } forall m_max } forall
+	m_fin end
+} bind def
+%A mnorminf -> largest sum of |elements| of a row
+/mnorminf { mtranspose mnorm1 } bind def
+
+%A mcond -> condition number |A| |A^-1| in the norm mnorm1
+% (undefinedresult if A is singular)
+/mcond {
+	dup minv mnorm1 exch mnorm1
+	2 copy m_isbn exch m_isbn or { mulbn }{ mul } ifelse
+} bind def
+
+%A mrank -> rank of A   (Gaussian elimination with partial pivoting; an
+% element counts as zero below m_eps times the largest |element| of A)
+/mrank {
+	dup m_hasbn m_ops begin m_guard
+	20 dict begin
+	/A exch def A msize /n exch def /m exch def
+	/W [ 1 1 m { /i exch def [ 1 1 n { /j exch def A i j mget m_cv } for ] } for ] def
+	m_zero W { { m_abs m_max } forall } forall m_eps m_mul /tol exch def
+	/r 0 def
+	0 1 n 1 sub { /c exch def
+		r m lt {
+			/p r def /best W r get c get m_abs def
+			r 1 add 1 m 1 sub { /i exch def
+				W i get c get m_abs dup best m_gt { /best exch def /p i def }{ pop } ifelse
+			} for
+			best tol m_gt {
+				W p get W r get W exch p exch put W exch r exch put
+				/rowr W r get def /piv rowr c get def
+				r 1 add 1 m 1 sub { /i exch def /rowi W i get def
+					/f rowi c get piv m_div def
+					c 1 n 1 sub { /j exch def rowi j  rowi j get f rowr j get m_mul m_sub  put } for
+				} for
+				/r r 1 add def
+			} if
+		} if
+	} for
+	r
+	end m_unguard end
+} bind def
+
+%A mlu -> L U P   with P A = L U   (A square; partial pivoting)
+% L is lower triangular with ones on the diagonal, U upper triangular and P
+% a permutation matrix. A singular A gives a zero on the diagonal of U.
+/mlu {
+	dup m_hasbn m_ops begin m_guard
+	24 dict begin
+	/A exch def
+	A msize ne { A end m_unguard end /mlu errordict /rangecheck get exec } if
+	/n A length def
+	/W [ 1 1 n { /i exch def [ 1 1 n { /j exch def A i j mget m_cv } for ] } for ] def
+	/Lw [ 1 1 n { pop [ 1 1 n { pop m_zero } for ] } for ] def
+	/perm [ 0 1 n 1 sub { } for ] def
+	0 1 n 1 sub { /c exch def
+		/p c def /best W c get c get m_abs def
+		c 1 add 1 n 1 sub { /i exch def
+			W i get c get m_abs dup best m_gt { /best exch def /p i def }{ pop } ifelse
+		} for
+		p c ne {
+			[ W Lw perm ] { /arr exch def arr p get arr c get arr exch p exch put arr exch c exch put } forall
+		} if
+		/rowc W c get def /piv rowc c get def
+		piv m_isz not {
+			c 1 add 1 n 1 sub { /i exch def /rowi W i get def
+				/f rowi c get piv m_div def
+				Lw i get c f put
+				rowi c m_zero put
+				c 1 add 1 n 1 sub { /j exch def rowi j  rowi j get f rowc j get m_mul m_sub  put } for
+			} for
+		} if
+	} for
+	0 1 n 1 sub { /i exch def Lw i get i m_one put } for
+	Lw mfromrows W mfromrows
+	/P n n marray def
+	0 1 n 1 sub { /i exch def P i 1 add perm i get 1 add 1 mput } for
+	P
+	end m_unguard
+	3 1 roll m_finm exch m_finm exch 3 -1 roll
+	end
+} bind def
+
+% complex arithmetic on pairs re im (ops dict current)
+/m_cmul { % ar ai br bi -> re im
+	4 dict begin /m_bi exch def /m_br exch def /m_ai exch def /m_ar exch def
+	m_ar m_br m_mul m_ai m_bi m_mul m_sub  m_ar m_bi m_mul m_ai m_br m_mul m_add
+	end
+} bind def
+/m_cadd { exch 4 -1 roll m_add 3 1 roll m_add } bind def   % ar ai br bi -> re im
+/m_cnorm { m_abs exch m_abs m_add } bind def      % re im -> |re| + |im|
+/m_csqrt { % re im -> principal square root
+	4 dict begin /m_ci exch def /m_cr exch def
+	m_cr m_isz m_ci m_isz and { m_zero m_zero }{
+		/m_ca m_cr m_cr m_mul m_ci m_ci m_mul m_add m_sqrt def
+		m_cr m_isneg {
+			/m_ct m_ca m_cr m_sub m_two m_div m_sqrt def
+			m_ci m_abs m_two m_ct m_mul m_div
+			m_ci m_isneg { m_ct m_neg }{ m_ct } ifelse
+		}{
+			/m_ct m_ca m_cr m_add m_two m_div m_sqrt def
+			m_ct  m_ci m_two m_ct m_mul m_div
+		} ifelse
+	} ifelse
+	end
+} bind def
+
+%A meig -> [ [re im] ... ]   every eigenvalue of a square matrix, as complex
+% numbers sorted by real part. Reduction to Hessenberg form, then QR steps
+% in complex arithmetic with Wilkinson shifts.
+/meig {
+	dup m_hasbn m_ops begin m_guard
+	50 dict begin
+	/A exch def A msize /n exch def /m exch def
+	m n ne { A end m_unguard end /meig errordict /rangecheck get exec } if
+	/Hr [ 1 1 n { /i exch def [ 1 1 n { /j exch def A i j mget m_cv } for ] } for ] def
+	% Hessenberg form by stabilised elementary similarity transformations
+	1 1 n 2 sub { /k exch def /c k 1 sub def
+		/p k def /best Hr k get c get m_abs def
+		k 1 add 1 n 1 sub { /i exch def
+			Hr i get c get m_abs dup best m_gt { /best exch def /p i def }{ pop } ifelse
+		} for
+		p k ne {
+			Hr p get Hr k get Hr exch p exch put Hr exch k exch put
+			Hr { /row exch def row p get row k get row exch p exch put row exch k exch put } forall
+		} if
+		/piv Hr k get c get def
+		piv m_isz not {
+			k 1 add 1 n 1 sub { /i exch def
+				/f Hr i get c get piv m_div def
+				f m_isz not {
+					c 1 n 1 sub { /j exch def Hr i get j  Hr i get j get f Hr k get j get m_mul m_sub  put } for
+					Hr i get c m_zero put
+					0 1 n 1 sub { /j exch def Hr j get k  Hr j get k get f Hr j get i get m_mul m_add  put } for
+				} if
+			} for
+		} if
+	} for
+	/Hi [ 1 1 n { pop [ 1 1 n { pop m_zero } for ] } for ] def
+	m_zero Hr { { m_abs m_max } forall } forall /anorm exch def
+	anorm m_isz { /anorm m_one def } if
+	/tol m_tol def
+	/er n array def /ei n array def
+	/hi n 1 sub def /iter 0 def /total 0 def
+	/hget { 2 copy Hr 3 -1 roll get exch get 3 1 roll Hi 3 -1 roll get exch get } bind def   % i j -> re im
+	/hput { 3 index Hi exch get 3 index 3 -1 roll put Hr 3 index get 3 1 roll put pop } bind def % i j re im ->
+	{
+		hi 0 lt { exit } if
+		/l hi def
+		{ l 0 le { exit } if
+		  /s l 1 sub l 1 sub hget m_cnorm l l hget m_cnorm m_add def
+		  s m_isz { /s anorm def } if
+		  l l 1 sub hget m_cnorm s tol m_mul m_gt not { l l 1 sub m_zero m_zero hput exit } if
+		  /l l 1 sub def
+		} loop
+		l hi eq total 30 n mul gt or {
+			hi hi hget ei hi 3 -1 roll put er hi 3 -1 roll put
+			/hi hi 1 sub def /iter 0 def
+		}{
+			/iter iter 1 add def /total total 1 add def
+			% shift: the eigenvalue of the trailing 2x2 block closer to its last element
+			hi 1 sub hi 1 sub hget /ai exch def /ar exch def
+			hi 1 sub hi hget /bi exch def /br exch def
+			hi hi 1 sub hget /ci exch def /cr exch def
+			hi hi hget /di exch def /dr exch def
+			iter 10 mod 0 eq {
+				/mur dr cr m_abs m_add def /mui di def            % exceptional shift
+			}{
+				/hr_ ar dr m_sub m_two m_div def /hi_ ai di m_sub m_two m_div def
+				hr_ hi_ hr_ hi_ m_cmul br bi cr ci m_cmul m_cadd
+				m_csqrt /qi exch def /qr exch def
+				/sr ar dr m_add m_two m_div def /si ai di m_add m_two m_div def
+				% of sr + q and sr - q, take the one nearer d
+				sr qr m_add dr m_sub si qi m_add di m_sub m_cnorm
+				sr qr m_sub dr m_sub si qi m_sub di m_sub m_cnorm
+				m_gt { /mur sr qr m_sub def /mui si qi m_sub def }{ /mur sr qr m_add def /mui si qi m_add def } ifelse
+			} ifelse
+			l 1 hi { /k exch def k k hget mui m_sub exch mur m_sub exch k k 4 2 roll hput } for
+			/gc hi array def /gs hi array def
+			l 1 hi 1 sub { /k exch def
+				k k hget /xi exch def /xr exch def
+				k 1 add k hget /yi exch def /yr exch def
+				/rr xr dup m_mul xi dup m_mul m_add yr dup m_mul m_add yi dup m_mul m_add m_sqrt def
+				rr m_isz { /cr_ m_one def /ci_ m_zero def /sr_ m_zero def /si_ m_zero def }{
+					/cr_ xr rr m_div def /ci_ xi rr m_div def /sr_ yr rr m_div def /si_ yi rr m_div def
+				} ifelse
+				gc k [ cr_ ci_ ] put gs k [ sr_ si_ ] put
+				k 1 hi { /j exch def
+					k j hget /ui exch def /ur exch def
+					k 1 add j hget /vi exch def /vr exch def
+					k j  cr_ ci_ m_neg ur ui m_cmul  sr_ si_ m_neg vr vi m_cmul  m_cadd  hput
+					k 1 add j  sr_ m_neg si_ m_neg ur ui m_cmul  cr_ ci_ vr vi m_cmul  m_cadd  hput
+				} for
+			} for
+			l 1 hi 1 sub { /k exch def
+				gc k get aload pop /ci_ exch def /cr_ exch def
+				gs k get aload pop /si_ exch def /sr_ exch def
+				l 1 k 1 add hi 2 copy gt { exch } if pop { /j exch def
+					j k hget /ui exch def /ur exch def
+					j k 1 add hget /vi exch def /vr exch def
+					j k  ur ui cr_ ci_ m_cmul  vr vi sr_ si_ m_cmul  m_cadd  hput
+					j k 1 add  ur ui sr_ m_neg si_ m_cmul  vr vi cr_ ci_ m_neg m_cmul  m_cadd  hput
+				} for
+			} for
+			l 1 hi { /k exch def k k hget mui m_add exch mur m_add exch k k 4 2 roll hput } for
+		} ifelse
+	} loop
+	% parts below the working accuracy become exactly 0
+	/lim anorm tol m_mul m_one type /integertype eq { 10 }{ 1000 } ifelse m_cv m_mul def
+	0 1 n 1 sub { /k exch def
+		ei k get m_abs lim m_gt not { ei k m_zero put } if
+		er k get m_abs lim m_gt not { er k m_zero put } if
+	} for
+	% sort by real part, then imaginary part
+	/idx [ 0 1 n 1 sub { } for ] def
+	1 1 n 1 sub { /k exch def
+		/cur idx k get def /j k 1 sub def
+		{ j 0 lt { exit } if
+		  /o idx j get def
+		  /dre er o get er cur get m_sub def
+		  dre m_abs lim m_gt not { ei o get ei cur get m_gt }{ dre m_isneg not } ifelse
+		  not { exit } if
+		  idx j 1 add o put /j j 1 sub def
+		} loop
+		idx j 1 add cur put
+	} for
+	[ idx { /k exch def [ er k get ei k get ] } forall ]
+	end m_unguard
+	[ exch { aload pop m_fin exch m_fin exch 2 array astore } forall ]
 	end
 } bind def
 
