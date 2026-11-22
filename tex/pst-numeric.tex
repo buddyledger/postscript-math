@@ -24,7 +24,7 @@
 %
 \edef\PstAtCode{\the\catcode`\@}\catcode`\@=11\relax
 %
-\def\fileversion{1.4.1}
+\def\fileversion{1.5}
 \def\filedate{2026/11/22}
 \message{`PST-numeric' v\fileversion, \filedate\space (BL)}
 %
@@ -106,7 +106,7 @@
 %   label       drawn before the result followed by " = " (^{} and _{} work)
 %   tensorLabels  slice labels such as (1,:,:) above a tensor's slices
 %   regShow     the lines of \psNumericRegression, from eq params coef r2
-%               adjr2 s n dof tval sse
+%               adjr2 s n dof tval sse xbar ybar sxx syy sxy dropped ciw
 %   regPlot     what \psNumericRegPlot draws: fit, ci, pi, data, residuals
 %               or stdresiduals
 \pst@addfams{pst-numeric}

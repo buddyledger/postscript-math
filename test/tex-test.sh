@@ -119,6 +119,7 @@ cat > pres.tex <<'EOF'
 \rput[l](0,-1.5){\psNumericMatrix[label=A]{[[1 -2.5] [3 4]] mfromrows}}
 \rput[l](5,-1.5){\psNumericMatrix{[[[1 2] [3 4]] [[5 6] [7 8]]] tensor}}
 \rput[l](0,-4){\psNumericRegression[regShow=eq r2 dof]{fit}}
+\rput[l](7,-4){\psNumericRegression[regShow=sxx xbar dropped ciw]{fit}}
 \psset{xunit=0.3cm,yunit=0.2cm}
 \rput(30,-20){\psNumericRegPlot{fit}{0}{7}\psNumericRegPlot[regPlot=pi]{fit}{0}{7}%
   \psNumericRegPlot[regPlot=data]{fit}{0}{0}}
@@ -126,7 +127,7 @@ cat > pres.tex <<'EOF'
 \end{document}
 EOF
 build pres || exit 1
-for want in "0.667" "1.50e" "1,25" "0,5i" "2.5" "(2,:,:)" "y = " "2.02x" "0.9982" "dof = 4"; do
+for want in "0.667" "1.50e" "1,25" "0,5i" "2.5" "(2,:,:)" "y = " "2.02x" "0.9982" "dof = 4" "17.5" "mean x = 3.5" "dropped = 0"; do
   expect pres.txt "$want"
 done
 

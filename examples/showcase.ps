@@ -852,6 +852,16 @@ sc_labels
 	(With the intercept fixed at 1. Weights and a confidence level go in the same dictionary.) sc_rowl
 ([1 2 3 4 5 6] [7.1 10.6 15.5 21.2 27.1 34.2] << /model /power /yoffset 5 >> regress /params get dup /a get exch /b get 2 array astore)
 	(y = 5 + a x^b: /yoffset fits y - 5 and adds 5 back, as GLLSR's Yint did \(King's law\).) sc_rowl
+([293 294 295 296 297 298 299 300 301 302] [1.3 3.1 7.2 12.5 20.1 28.4 40.2 51.0 65.3 79.6] 4 regress 297.5 regeval)
+	(A quartic far from x = 0: regress centres and scales x, so it works with single precision reals.) sc_rowl
+([0 1 2 3 4] [5 2.1 8.3 17.9 33.0] << /model /power /drop true >> regress dup /dropped get exch /xused get 2 array astore)
+	(/drop leaves out the points a transform cannot take; /xused are the points fitted.) sc_rowl
+([1 4 9 16 25] [3.1 4.9 7.2 8.8 11.1] << /model 1 /xtrans { sqrt } >> regress 36 regeval)
+	(Your own transforms: y = a + b sqrt\(x\). /ytrans and /yback transform y.) sc_rowl
+([1 2 3 4 5 6] [2.1 3.9 6.2 7.8 10.1 12.2] linreg dup /sxx get exch /sxy get 2 array astore)
+	(S_xx and S_xy; also /xbar, /ybar and /syy.) sc_rowl
+([1 2 3 4 5] [3.1 12.2 26.8 48.5 75.3] /power regress 0 regevalt)
+	(regevalt, regcit and regpit work in the space of the fit: ln y at ln x = 0.) sc_rowl
 ([1 2 3 4 5 6] [2.1 3.9 6.2 7.8 10.1 12.2] { dup 57.29578 mul sin 2 array astore } regress /coef get)
 	(Your own basis functions: here y = c1 x + c2 sin x, with x in radians \(PostScript's sin takes degrees\).) sc_rowl
 

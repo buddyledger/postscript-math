@@ -350,7 +350,12 @@ lists the lines, separated by spaces: \texttt{eq} the fitted equation,
 coefficient $\pm$ its standard error, \texttt{r2} and \texttt{adjr2} the
 coefficient of determination and its adjusted value, \texttt{s} the
 residual standard error, \texttt{n}, \texttt{dof}, \texttt{tval} the
-$t$~quantile used for the bands, \texttt{sse} the sum of squared residuals.
+$t$~quantile used for the bands, \texttt{sse} the sum of squared residuals,
+\texttt{xbar}, \texttt{ybar}, \texttt{sxx}, \texttt{syy}, \texttt{sxy} the
+means and sums of squares of the data in the space of the fit,
+\texttt{dropped} the number of points left out, and \texttt{ciw} the half
+width of the confidence band at the smallest $X$, at $\bar X$ and at the
+largest $X$ (the statistics \LPack{pst-fit}'s \texttt{printconfig} prints).
 Numbers are printed in the current format, \texttt{auto} with four digits
 when \Lkeyword{numFormat} is \texttt{raw}.
 
@@ -401,6 +406,8 @@ building or reading the arrays yourself.
 \Lps{setbnsize} & \Larg{n} \To{} --- (digits of every later result; at least 1)\\
 \Lps{setbn} & integer, real, string or bignum \To{} bignum\\
 \Lps{bncvs} \Lps{bncvr} & bignum \To{} string, real\\
+\Lps{setbnx} & number \To{} bignum; a real with all its binary digits
+  ($0.1$ is $0.100000001490116\dots$), not the 6 digits of \texttt{cvs}\\
 \Lps{addbn} \Lps{subbn} \Lps{mulbn} & \Larg{a b} \To{} $a+b$, $a-b$, $ab$\\
 \Lps{divbn} & \Larg{a b} \To{} $a/b$\\
 \Lps{negbn} \Lps{absbn} & \Larg{a} \To{} $-a$, $|a|$\\
@@ -976,9 +983,32 @@ The model is one of
 \item a dictionary with \texttt{/model} and any of \texttt{/weights [}\Larg{w}\dots\texttt{]},
   \texttt{/intercept} \Larg{c} (the constant term fixed at $c$, so the curve
   passes through $(0,c)$; in the space of the fit), \texttt{/yoffset}
-  \Larg{c} ($y-c$ is fitted and $c$ added back) and \texttt{/level}
-  \Larg{p} (the confidence level of the bands, default 0.95).
+  \Larg{c} ($y-c$ is fitted and $c$ added back), \texttt{/level}
+  \Larg{p} (the confidence level of the bands, default 0.95) and the
+  options below.
 \end{itemize}
+More options, most of them for \LPack{pst-fit}:
+\begin{itemize}
+\item \texttt{/xtrans}, \texttt{/ytrans}, \texttt{/yback} \Larg{\{proc\}}: your own
+  transforms with an integer model: the polynomial is fitted to
+  $(\mathit{xtrans}(x),\mathit{ytrans}(y))$ and \texttt{yback} takes it back
+  to $y$; \texttt{ytrans} and \texttt{yback} go together;
+\item \texttt{/drop true}: leave out points a transform cannot take, instead of
+  \texttt{rangecheck}; \texttt{/dropped} counts them;
+\item \texttt{/tval} \Larg{t}: the $t$ value of the bands, instead of the quantile;
+\item \texttt{/bignum true}: compute with bignums even when all data are reals;
+\item \texttt{/exact true}: convert reals with \Lps{setbnx}, with all their binary digits;
+\item \texttt{/exactt true}: in bignum mode compute the $t$ value with bignums
+  too; otherwise it comes from reals, which is enough for the bands and
+  some seconds faster.
+\end{itemize}
+For polynomials and the transforms, \Lps{regress} centres and scales the
+(transformed) $x$ to $[-1,1]$ before the fit (with \texttt{/intercept} it
+only scales), and \Lps{regeval}, \Lps{regci} and \Lps{regpi} evaluate in
+these coordinates. So a fit at $x=293\dots302$ is right with the single
+precision reals of Ghostscript; \texttt{/coef} and \texttt{/cov} are
+transformed back to $x$, and with reals their last digits can be off there
+even though the curve is right.
 With \texttt{/yoffset} the transforms fit curves that approach $c$ instead
 of 0: $y=c+ax^b$ for \texttt{/power}, $y=c+ae^{bx}$ for \texttt{/exp}, and
 a Gauss curve on the baseline $c$. This is what \LPack{pst-fit}'s
@@ -988,7 +1018,8 @@ different thing: it fixes the constant term after the transform (for
 polynomial without a constant term (\LPack{pst-fit}'s \texttt{ReduceOrder}).
 The transforms are fitted in the transformed space, and their statistics
 are those of that fit. Data a transform cannot take, such as $x\le0$ for
-\texttt{/power}, give \texttt{rangecheck}; they are not left out silently.
+\texttt{/power}, give \texttt{rangecheck}; they are left out only with
+\texttt{/drop true}.
 
 The result \Larg{R} holds, among others:
 \begin{reference}
@@ -1000,6 +1031,8 @@ The result \Larg{R} holds, among others:
 \texttt{/sse} \texttt{/sst} \texttt{/ssr} & sums of squares\\
 \texttt{/tval} \texttt{/level} & the $t$ value of the bands and their level\\
 \texttt{/fitted} \texttt{/resid} \texttt{/stdresid} & fitted values, residuals, studentized residuals\\
+\texttt{/xbar} \texttt{/ybar} \texttt{/sxx} \texttt{/syy} \texttt{/sxy} & weighted means and sums of squares of the data, in the space of the fit\\
+\texttt{/dropped} \texttt{/xused} \texttt{/yused} & points left out by \texttt{/drop}, and the points fitted\\
 \texttt{/model} \texttt{/intercept} \texttt{/yoffset} \texttt{/x} \texttt{/y} \texttt{/weights} & the input, normalized\\
 \end{reference}
 
@@ -1057,6 +1090,9 @@ The residuals show whether a straight line suits the data;
   band of the mean, $\hat y\pm t\,s\sqrt{b(x)^{\mathsf T}(X^{\mathsf T}WX)^{-1}b(x)}$\\
 \Lps{regpi} & \Larg{R x} \To{} \texttt{[}\Larg{lo hi}\texttt{]}, prediction
   band for a new value, with $1+b(x)^{\mathsf T}(X^{\mathsf T}WX)^{-1}b(x)$\\
+\Lps{regevalt} \Lps{regcit} \Lps{regpit} & \Larg{R X} \To{} the same in the
+  space of the fit: $X$ and the result transformed ($X=\ln x$, $Y=\ln y$ for
+  \texttt{/power}), without \texttt{/yoffset}\\
 \end{reference}
 
 

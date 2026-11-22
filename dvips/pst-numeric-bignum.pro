@@ -209,6 +209,28 @@ end
 } bind def
 /bnPrint { bncvs = } bind def
 /bncvr { bncvs cvr } bind def
+/setbnx {
+	dup type /realtype ne { setbn }{
+	12 dict begin /bnn bnn 6 add def
+	dup 0 lt /ng exch def abs
+	/k 0 def
+	{ dup dup floor eq k 1100 ge or { exit } if 2 mul /k k 1 add def } loop
+	/v exch def
+	/acc 0 setbn def /sc 1 setbn def
+	{ v 1048576 div floor /hi exch def
+	  v hi 1048576 mul sub cvi setbn sc mulbn acc addbn /acc exch def
+	  hi 0 eq { exit } if
+	  /v hi def /sc sc 1048576 setbn mulbn def } loop
+	/pw 1 setbn def /b5 5 setbn def /e k def
+	{ e 0 eq { exit } if
+	  e 2 mod 1 eq { /pw pw b5 mulbn def } if
+	  /e e 2 idiv def e 0 gt { /b5 b5 b5 mulbn def } if } loop
+	acc pw mulbn
+	k 0 gt { (1e-) k 10 string cvs mergestr setbn mulbn } if
+	ng { negbn } if
+	end bn_renorm
+	} ifelse
+} bind def
 /bn_copy { aload pop 3 1 roll dup length string copy 3 -1 roll 3 array astore } bind def
 /negbn {
 	dup bniszero { bn_copy }{

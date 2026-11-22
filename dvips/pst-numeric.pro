@@ -453,6 +453,19 @@ tx@NumericDict begin
 	  wd (dof) eq { (dof = ) R /dof get v pstnum_cat } if
 	  wd (sse) eq { (SSE = ) R /sse get v pstnum_cat } if
 	  wd (tval) eq { (t = ) R /tval get v pstnum_cat } if
+	  wd (xbar) eq { (mean x = ) R /xbar get v pstnum_cat } if
+	  wd (ybar) eq { (mean y = ) R /ybar get v pstnum_cat } if
+	  wd (sxx) eq { (S_{xx} = ) R /sxx get v pstnum_cat } if
+	  wd (syy) eq { (S_{yy} = ) R /syy get v pstnum_cat } if
+	  wd (sxy) eq { (S_{xy} = ) R /sxy get v pstnum_cat } if
+	  wd (dropped) eq { (dropped = ) R /dropped get v pstnum_cat } if
+	  wd (ciw) eq {
+		% half width of the confidence band, in the space of the fit, at the
+		% smallest X, at the mean of X and at the largest X
+		/hw { aload pop dup type /arraytype eq { exch subbn 2 setbn divbn }{ exch sub 2 div } ifelse v } def
+		(\001D_{CI} = ) R R /n_xlo get regcit hw pstnum_cat (, ) pstnum_cat
+		R R /xbar get regcit hw pstnum_cat (, ) pstnum_cat
+		R R /n_xhi get regcit hw pstnum_cat } if
 	  wd (coef) eq {
 		0 1 R /coef get length 1 sub { /j exch def
 			(c_{) j 3 string cvs pstnum_cat (} = ) pstnum_cat R /coef get j get v pstnum_cat

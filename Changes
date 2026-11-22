@@ -1,6 +1,24 @@
 pst-numeric: changes
 
-1.4.1  2026/11/22  first release on CTAN
+1.5    2026/11/22  first release on CTAN
+                 - regress centres and scales x for polynomials and the
+                   transforms, so fits far from x = 0 work with single
+                   precision reals (pst-fit's precision test: degree 4 at
+                   x = 293..302 failed before, degree 2 was off in the 4th
+                   digit); /coef and /cov are transformed back
+                 - regress options for pst-fit: /xtrans, /ytrans, /yback
+                   (CustomFit), /drop (leave out invalid points, counted
+                   in /dropped), /tval (tvp), /bignum, /exact, /exactt;
+                   in bignum mode the t value now comes from reals unless
+                   /exactt is given (seconds faster)
+                 - new results /xbar /ybar /sxx /syy /sxy /xused /yused
+                 - regevalt, regcit, regpit: evaluation in the space of
+                   the fit (plotcoord=trans)
+                 - setbnx: a real to a bignum with all its binary digits
+                 - regShow words xbar ybar sxx syy sxy dropped ciw
+                 - 71 new tests
+
+1.4.1  2026/11/22  (not released on CTAN)
                  - regress: option /yoffset c fits y - c and adds c back
                    (y = c + a x^b, y = c + a e^(bx), a Gauss curve on a
                    baseline), as pst-fit's Yint does; regeval, regci,

@@ -833,7 +833,8 @@ end
 	} ifelse
 } bind def
 /n_rfin { % R -> R, its bignums rounded to bnn
-	[ /coef /se /cov /sse /sst /ssr /r2 /adjr2 /s /level /tval /fitted /resid /stdresid /n_P /n_yoc ]
+	[ /coef /se /cov /sse /sst /ssr /r2 /adjr2 /s /level /tval /fitted /resid /stdresid /n_P /n_yoc
+	  /n_cfi /xbar /ybar /sxx /syy /sxy /n_xlo /n_xhi ]
 	{ 1 index exch 2 copy get n_finv put } forall
 	dup /params get dup [ exch { pop } forall ] { 1 index exch 2 copy get n_finv put } forall pop
 } bind def
@@ -850,11 +851,20 @@ end
 	/n_mdl exch def /n_Y exch def /n_X exch def
 	count /n_cnt exch def /n_rgop /regress def /n_open false def
 	/n_W null def /n_c null def /n_lev null def /n_yo null def
+	/n_xtu null def /n_ytu null def /n_ybu null def /n_tvu null def
+	/n_drop false def /n_fbn false def /n_exact false def /n_exactt false def
 	/n_mdl load type /dicttype eq {
 		/n_mdl load /weights known { /n_W /n_mdl load /weights get def } if
 		/n_mdl load /intercept known { /n_c /n_mdl load /intercept get def } if
 		/n_mdl load /level known { /n_lev /n_mdl load /level get def } if
 		/n_mdl load /yoffset known { /n_yo /n_mdl load /yoffset get def } if
+		[ /xtrans /n_xtu /ytrans /n_ytu /yback /n_ybu /tval /n_tvu
+		  /drop /n_drop /bignum /n_fbn /exact /n_exact /exactt /n_exactt ] dup length 2 idiv {
+			dup 0 get /n_mdl load exch known { dup 1 get /n_mdl load 2 index 0 get get def } if
+			2 1 index length 2 sub getinterval } repeat pop
+		[ /n_drop /n_fbn /n_exact /n_exactt ] { load type /booleantype ne { /typecheck n_rgerr } if } forall
+		[ /n_xtu /n_ytu /n_ybu ] { load dup null eq { pop }{
+			dup type /arraytype ne exch xcheck not or { /typecheck n_rgerr } if } ifelse } forall
 		/n_mdl /n_mdl load /model known { /n_mdl load /model get }{ null } ifelse def
 	} if
 	n_X type /arraytype ne n_Y type /arraytype ne or { /typecheck n_rgerr } if
@@ -880,8 +890,13 @@ end
 	n_mod /log10 eq { /n_xt { m_ln 10 m_cv m_ln m_div } def } if
 	n_mod /power eq n_mod /exp eq or n_mod /gauss eq or {
 		/n_ychk { m_zero m_gt } def /n_yt { m_ln } def /n_yb { m_exp } def } if
-	n_mod /basis eq { /n_bas [ /n_mdl load /exec load /n_bcv cvx ] cvx def }{
-		/n_bas [ n_deg /n_polyb cvx ] cvx def } ifelse
+	n_mod /basis eq { /n_bas [ /n_mdl load /exec load /n_bcv cvx ] cvx def } if
+	/n_xtu load null ne /n_ytu load null ne or /n_ybu load null ne or {
+		n_mod type /integertype ne { /rangecheck n_rgerr } if
+		/n_ytu load null eq /n_ybu load null eq ne { /rangecheck n_rgerr } if
+		/n_xtu load null ne { /n_xt /n_xtu load def } if
+		/n_ytu load null ne { /n_yt /n_ytu load def /n_yb /n_ybu load def } if
+	} if
 	/n_icpt n_c null ne def
 	n_icpt n_mod /basis eq and { /rangecheck n_rgerr } if
 	/n_bn n_X n_hasbn n_Y n_hasbn or def
@@ -889,8 +904,11 @@ end
 	n_icpt { /n_bn n_bn n_c m_isstrbn or def } if
 	n_lev null ne { /n_bn n_bn n_lev m_isstrbn or def } if
 	n_yo null ne { /n_bn n_bn n_yo m_isstrbn or def } if
+	n_tvu null ne { /n_bn n_bn n_tvu m_isstrbn or def } if
+	/n_bn n_bn n_fbn or def
 	/n_L currentdict def
 	n_bn m_ops begin m_guard n_L begin /n_open true def
+	n_bn n_exact and { /m_cv { setbnx } def } if
 	n_lev null eq { /n_lev n_bn { (0.95) }{ 0.95 } ifelse def } if
 	/n_levc n_lev m_cv def
 	n_levc m_zero m_gt n_levc m_one m_lt and not { /rangecheck n_rgerr } if
@@ -899,22 +917,44 @@ end
 	n_W null ne { n_W length n_n ne { /rangecheck n_rgerr } if } if
 	n_icpt { /n_cc n_c m_cv def } if
 	/n_yoc n_yo null eq { null }{ n_yo m_cv } ifelse def
-	/n_Bs n_n array def /n_Yt n_n array def /n_sw n_n array def /n_wv n_n array def
+	/n_Xa n_n array def /n_Ya n_n array def /n_sw n_n array def /n_wv n_n array def
+	/n_xu n_n array def /n_yu n_n array def /n_m0 0 def
 	0 1 n_n 1 sub { /n_i exch def
 		/n_x n_X n_i get m_cv def /n_y n_Y n_i get m_cv def
 		n_yoc null ne { /n_y n_y n_yoc m_sub def } if
-		n_x n_xchk not { /rangecheck n_rgerr } if
-		n_y n_ychk not { /rangecheck n_rgerr } if
-		/n_b n_x n_xt n_bas def
-		n_Yt n_i n_y n_yt put
-		n_icpt { /n_b n_b 1 n_b length 1 sub getinterval def } if
-		n_Bs n_i n_b put
 		n_W null eq { m_one }{ n_W n_i get m_cv } ifelse
 		dup m_zero m_gt not { pop /rangecheck n_rgerr } if
-		dup n_wv n_i 3 -1 roll put
-		m_sqrt n_sw n_i 3 -1 roll put
+		/n_wi exch def
+		/n_ok n_x n_xchk n_y n_ychk and def
+		n_ok {
+			count /n_c0 exch def
+			{ n_x n_xt n_y n_yt } stopped
+			{ count n_c0 sub { pop } repeat /n_ok false def }
+			{ /n_ytv exch def /n_xtv exch def } ifelse
+		} if
+		n_ok {
+			n_Xa n_m0 n_xtv put n_Ya n_m0 n_ytv put
+			n_wv n_m0 n_wi put n_sw n_m0 n_wi m_sqrt put
+			n_xu n_m0 n_X n_i get put n_yu n_m0 n_Y n_i get put
+			/n_m0 n_m0 1 add def
+		}{ n_drop not { /rangecheck n_rgerr } if } ifelse
 	} for
+	/n_dropped n_n n_m0 sub def /n_n n_m0 def
 	n_n 0 eq { /rangecheck n_rgerr } if
+	[ /n_Xa /n_Ya /n_sw /n_wv /n_xu /n_yu ] { dup load 0 n_n getinterval def } forall
+	/n_Yt n_Ya def
+	/n_lo n_Xa 0 get def /n_hi n_lo def
+	n_Xa { dup n_lo m_lt { dup /n_lo exch def } if dup n_hi m_gt { /n_hi exch def }{ pop } ifelse } forall
+	n_mod /basis ne {
+		n_icpt { /n_mc m_zero def /n_hc n_lo m_abs n_hi m_abs m_max def }
+		{ /n_mc n_lo n_hi m_add m_two m_div def /n_hc n_hi n_lo m_sub m_two m_div def } ifelse
+		n_hc m_isz { /n_hc m_one def } if
+		/n_bas [ n_mc /m_cv cvx /m_sub cvx n_hc /m_cv cvx /m_div cvx n_deg /n_polyb cvx ] cvx def
+	} if
+	/n_Bs [ 0 1 n_n 1 sub { /n_i exch def
+		n_Xa n_i get n_bas
+		n_icpt { dup length 1 sub 1 exch getinterval } if
+	} for ] def
 	/n_k n_Bs 0 get length def
 	n_k 1 lt n_n n_k le or { /rangecheck n_rgerr } if
 	n_Bs { length n_k ne { /rangecheck n_rgerr } if } forall
@@ -969,23 +1009,60 @@ end
 	1 1 n_kf { /n_a exch def 1 1 n_kf { /n_bb exch def n_cov n_a n_bb m_zero mput } for } for
 	1 1 n_k { /n_a exch def 1 1 n_k { /n_bb exch def
 		n_cov n_a n_off add n_bb n_off add  n_P n_a n_bb mget n_s2 m_mul  mput } for } for
+	/n_cfi n_cof def
+	n_mod /basis ne {
+		/n_nm m_zero n_mc m_sub def
+		/n_pm [ m_one n_deg { dup n_nm m_mul } repeat ] def
+		/n_ph [ m_one n_deg { dup n_hc m_div } repeat ] def
+		/n_Tm [ 0 1 n_deg { /n_a exch def [
+			/n_bc 1 def
+			0 1 n_deg { /n_bb exch def
+				n_bb n_a lt { m_zero }{
+					n_bc m_cv n_pm n_bb n_a sub get m_mul n_ph n_bb get m_mul
+					/n_bc n_bc n_bb 1 add mul n_bb 1 add n_a sub idiv def
+				} ifelse
+			} for ] } for ] def
+		/n_cof [ 0 1 n_deg { /n_a exch def
+			m_zero 0 1 n_deg { /n_bb exch def n_Tm n_a get n_bb get n_cfi n_bb get m_mul m_add } for
+		} for ] def
+		/n_cvi n_cov def
+		/n_cov n_kf n_kf marray def
+		1 1 n_kf { /n_a exch def 1 1 n_kf { /n_bb exch def
+			m_zero 1 1 n_kf { /n_j exch def 1 1 n_kf { /n_l exch def
+				n_Tm n_a 1 sub get n_j 1 sub get  n_cvi n_j n_l mget m_mul  n_Tm n_bb 1 sub get n_l 1 sub get m_mul  m_add
+			} for } for
+			n_cov n_a n_bb 4 -1 roll mput
+		} for } for
+	} if
 	/n_se [ 1 1 n_kf { dup n_cov 3 1 roll mget m_sqrt } for ] def
+	/n_swx m_zero def
+	0 1 n_n 1 sub { /n_i exch def /n_swx n_swx n_wv n_i get n_Xa n_i get m_mul m_add def } for
+	/n_xbar n_swx n_swt m_div def
+	/n_sxx m_zero def /n_sxy m_zero def
+	0 1 n_n 1 sub { /n_i exch def
+		/n_dx n_Xa n_i get n_xbar m_sub def
+		/n_sxx n_dx dup m_mul n_wv n_i get m_mul n_sxx m_add def
+		/n_sxy n_dx n_Yt n_i get n_ybar m_sub m_mul n_wv n_i get m_mul n_sxy m_add def } for
 	/n_sr [ 0 1 n_n 1 sub { /n_i exch def
 		/n_1h m_one n_h n_i get m_sub def
 		n_s m_isz n_1h m_tol m_gt not or { m_zero }{
 			n_res n_i get n_sw n_i get m_mul  n_s n_1h m_sqrt m_mul  m_div } ifelse
 	} for ] def
-	/n_tv /tinv where { pop m_one n_levc m_add m_two m_div n_dof n_tinvc }{ null } ifelse def
+	/n_tv n_tvu null ne { n_tvu m_cv }{
+		/tinv where { pop
+			m_one n_levc m_add m_two m_div
+			n_bn n_exactt not and { bncvr n_dof tinv m_cv }{ n_dof n_tinvc } ifelse
+		}{ null } ifelse } ifelse def
 	/n_par 6 dict def
 	n_mod type /integertype eq n_mod /basis eq or { n_par /coef n_cof put }{
 	n_mod /power eq n_mod /exp eq or { n_par /a n_cof 0 get m_exp put n_par /b n_cof 1 get put }{
 	n_mod /gauss eq {
-		/n_c2g n_cof 2 get def
+		/n_c2g n_cfi 2 get def
 		n_c2g m_isneg not { /undefinedresult n_rgerr } if
-		/n_sg2 m_one m_neg m_two n_c2g m_mul m_div def            % sigma^2 = -1/(2 c2)
-		n_par /sigma n_sg2 m_sqrt put
-		n_par /mu n_cof 1 get n_sg2 m_mul put
-		n_par /A n_cof 0 get  n_cof 1 get dup m_mul 4 m_cv n_c2g m_mul m_div  m_sub m_exp put
+		/n_sg2 m_one m_neg m_two n_c2g m_mul m_div def            % sigma_u^2 = -1/(2 c2)
+		n_par /sigma n_sg2 m_sqrt n_hc m_mul put
+		n_par /mu n_cfi 1 get n_sg2 m_mul n_hc m_mul n_mc m_add put
+		n_par /A n_cfi 0 get  n_cfi 1 get dup m_mul 4 m_cv n_c2g m_mul m_div  m_sub m_exp put
 	}{ n_par /a n_cof 0 get put n_par /b n_cof 1 get put } ifelse } ifelse } ifelse
 	/n_R 40 dict def
 	n_R /model n_mod put
@@ -998,6 +1075,9 @@ end
 	n_R /r2 n_r2 put n_R /adjr2 n_ar2 put n_R /s n_s put
 	n_R /level n_levc put n_R /tval n_tv put
 	n_R /fitted n_fit put n_R /resid n_res put n_R /stdresid n_sr put
+	n_R /xbar n_xbar put n_R /ybar n_ybar put n_R /sxx n_sxx put n_R /syy n_sst put n_R /sxy n_sxy put
+	n_R /dropped n_dropped put n_R /xused n_xu put n_R /yused n_yu put
+	n_R /n_cfi n_cfi put n_R /n_xlo n_lo put n_R /n_xhi n_hi put
 	n_R /n_xt /n_xt load put n_R /n_yb /n_yb load put n_R /n_bas /n_bas load put
 	n_R /n_xchk /n_xchk load put
 	n_R /n_P n_P put n_R /n_icpt n_icpt put n_R /n_bn n_bn put
@@ -1005,9 +1085,10 @@ end
 	4 1 roll pop pop pop
 } bind def
 /linreg { 1 regress } bind def
-/n_rgbeg { % R x /opname -> R x; ops dict, guard and a local dict begun, n_Yh the fit at x
-	3 1 roll 2 copy 24 dict begin
+/n_rgbeg { % R x /opname tr -> R x; ops dict, guard and a local dict begun, n_Yh the fit at x
+	exch 4 2 roll 2 copy 24 dict begin
 	/n_x exch def /n_R exch def
+	4 -1 roll /n_tr exch def
 	3 -1 roll /n_rgop exch def
 	count /n_cnt exch def /n_open false def
 	n_R type /dicttype ne { /typecheck n_rgerr } if
@@ -1015,9 +1096,13 @@ end
 	/n_L currentdict def
 	n_R /n_bn get n_x m_isstrbn or m_ops begin m_guard n_L begin /n_open true def
 	/n_xc n_x m_cv def
-	n_xc n_R /n_xchk get exec not { /rangecheck n_rgerr } if
-	/n_b n_xc n_R /n_xt get exec n_R /n_bas get exec def
-	/n_cf n_R /coef get def
+	n_tr { n_xc }{
+		n_xc n_R /n_xchk get exec not { /rangecheck n_rgerr } if
+		count /n_c0 exch def
+		{ n_xc n_R /n_xt get exec } stopped { count n_c0 sub { pop } repeat /rangecheck n_rgerr } if
+	} ifelse
+	n_R /n_bas get exec /n_b exch def
+	/n_cf n_R /n_cfi get def
 	/n_Yh m_zero 0 1 n_b length 1 sub { /n_j exch def n_b n_j get n_cf n_j get m_cv m_mul m_add } for def
 } bind def
 /n_yadd { % Y -> Y + yoffset   (inside n_rgbeg)
@@ -1032,13 +1117,16 @@ end
 		n_bv n_a 1 sub get n_bv n_c 1 sub get m_mul n_P n_a n_c mget m_cv m_mul m_add } for } for
 	n_pr { m_one m_add } if
 	m_sqrt n_R /s get m_cv m_mul n_R /tval get m_cv m_mul /n_hw exch def
-	n_Yh n_hw m_sub n_R /n_yb get exec n_yadd
-	n_Yh n_hw m_add n_R /n_yb get exec n_yadd
+	n_Yh n_hw m_sub n_tr not { n_R /n_yb get exec n_yadd } if
+	n_Yh n_hw m_add n_tr not { n_R /n_yb get exec n_yadd } if
 	end m_unguard m_fin exch m_fin exch end end
 } bind def
-/regeval { /regeval n_rgbeg n_Yh n_R /n_yb get exec n_yadd end m_unguard m_fin end end 3 1 roll pop pop } bind def
-/regci { /regci n_rgbeg false n_band 2 array astore 3 1 roll pop pop } bind def
-/regpi { /regpi n_rgbeg true n_band 2 array astore 3 1 roll pop pop } bind def
+/regeval { /regeval false n_rgbeg n_Yh n_R /n_yb get exec n_yadd end m_unguard m_fin end end 3 1 roll pop pop } bind def
+/regci { /regci false n_rgbeg false n_band 2 array astore 3 1 roll pop pop } bind def
+/regpi { /regpi false n_rgbeg true n_band 2 array astore 3 1 roll pop pop } bind def
+/regevalt { /regevalt true n_rgbeg n_Yh end m_unguard m_fin end end 3 1 roll pop pop } bind def
+/regcit { /regcit true n_rgbeg false n_band 2 array astore 3 1 roll pop pop } bind def
+/regpit { /regpit true n_rgbeg true n_band 2 array astore 3 1 roll pop pop } bind def
 /n_rngs 1 def
 /rngseed {
 	dup type /integertype ne { /rngseed errordict /typecheck get exec } if

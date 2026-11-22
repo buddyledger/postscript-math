@@ -1,7 +1,7 @@
 pst-numeric: arbitrary precision arithmetic, matrices, complex numbers
 and numerical methods for PSTricks
 
-Version 1.4.1, 2026/11/22
+Version 1.5, 2026/11/22
 
 pst-numeric is a library of PostScript procedures for PSTricks. Its
 decimal numbers (bignums) carry as many significant digits as asked for,

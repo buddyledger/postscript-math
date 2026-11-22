@@ -48,7 +48,7 @@ Like every PSTricks package it needs the `latex`–`dvips` route (or `xelatex`).
 | `dvips/` | `pst-numeric-<part>.pro`, each part as a dvips header (generated), and `pst-numeric.pro`, the package's own helpers | yes |
 | `doc/` | The manual: [`pst-numeric-doc.pdf`](doc/pst-numeric-doc.pdf), its source and bibliography | yes |
 | `source/` | The library's PostScript files, `Load.ps` to load them all, `make_headers.py` to generate the headers, and `gs.bat` to run Ghostscript on Windows | yes, without `gs.bat` |
-| `test/` | `test_bignum.ps` (1524 tests of the library; more cases in `tests_*.py`), `make_tests.py` that generates it, and `tex-test.sh` with `tex-test.tex` (tests of the package with latex and dvips) | no |
+| `test/` | `test_bignum.ps` (1595 tests of the library; more cases in `tests_*.py`), `make_tests.py` that generates it, and `tex-test.sh` with `tex-test.tex` (tests of the package with latex and dvips) | no |
 | `examples/` | [`showcase.pdf`](examples/showcase.pdf), every public procedure with a live result, with its source `showcase.ps` and `make_showcase.bat`; and `bignumfactorial.ps` | no |
 | `tools/` | `make-doc.sh` builds the manual, `make-ctan.py` builds the CTAN archive | no |
 
@@ -145,7 +145,7 @@ once with `\psNumericDef{name}{code}`.
 | `vector` | `column` or `row` | `column` |
 | `label` | text drawn before the result with “ = ” (`^{}` and `_{}` work) | empty |
 | `tensorLabels` | slice labels such as (1,:,:) | true |
-| `regShow` | lines of `\psNumericRegression`: `eq params coef r2 adjr2 s n dof tval sse` | `eq r2 s` |
+| `regShow` | lines of `\psNumericRegression`: `eq params coef r2 adjr2 s n dof tval sse xbar ybar sxx syy sxy dropped ciw` (`ciw`: half width of the confidence band at the smallest X, at X̄ and at the largest X) | `eq r2 s` |
 | `regPlot` | `fit`, `ci`, `pi`, `data`, `residuals`, `stdresiduals` | `fit` |
 
 Rounding works on the decimal digits, so a bignum is rounded correctly
@@ -254,6 +254,7 @@ Stack effects are shown as `inputs → outputs`. `bn` is a bignum.
 | `bncvs` | `bn → string` | e.g. `(+1.2500000000000000000e-3)` |
 | `bnPrint` | `bn → –` | prints `bncvs` |
 | `bncvr` | `bn → real` | limited to the range and precision of a real |
+| `setbnx` | `number → bn` | a real with all its binary digits (0.1 → 0.100000001490116…), not the 6 digits of `cvs`; anything else as `setbn` |
 
 **Arithmetic**
 
@@ -317,7 +318,7 @@ them, so `stopped` catches them and Ghostscript reports them as, for example,
 Arithmetic works one decimal digit at a time. At 20 digits each operation is
 instant and a function takes a few hundredths of a second. At 100 digits,
 `pibn` takes about 1.5 s the first time (it's cached after that) and `sinbn`
-about 0.3 s. The full test suite (1524 tests) takes about four minutes, mostly for
+about 0.3 s. The full test suite (1595 tests) takes about four minutes, mostly for
 bignum integrals, polynomial roots, the special functions, and the
 distributions, matrix decompositions and regressions with bignums.
 
@@ -487,11 +488,12 @@ return a bignum. It runs at 6 digits above `bnn`, so it shouldn't change
 | `skewness` `kurtosis` | `[x …] → number` | adjusted sample skewness G1 and excess kurtosis G2 (Excel's SKEW and KURT); at least 3 and 4 values, a constant list gives `undefinedresult` |
 | `quantile` | `[x …] p → number` | R type 7 (Excel's PERCENTILE.INC): x₍ₕ₎ interpolated at h = (n − 1)p, 0 ≤ p ≤ 1; p = 0.5 is the median |
 | `histogram` | `[x …] a b k → [c₁ … cₖ]` | counts in k equal bins on [a, b], the last bin closed; values outside are not counted |
-| `regress` | `[x …] [y …] model → R` | linear least squares with statistics (GLLSR of pst-fit). model: an integer degree, `/linear`, a basis procedure `{ x → [b₁(x) … bₖ(x)] }`, `/power` (a xᵇ), `/exp` (a eᵇˣ), `/log10`, `/ln` (a + b log x), `/recip` (a + b/x), `/gauss` (A e^(−(x−μ)²/2σ²)), or a dictionary with `/model` and optional `/weights [w …]`, `/intercept c`, `/yoffset c` (fit y − c and add c back: y = c + a xᵇ, y = c + a eᵇˣ, a Gauss curve on a baseline; pst-fit's `Yint`), `/level p` (default 0.95). Householder QR; transforms are fitted in the transformed space. Invalid data for a transform, too few points, an unknown model give `rangecheck`; dependent columns and a `/gauss` without maximum give `undefinedresult` |
+| `regress` | `[x …] [y …] model → R` | linear least squares with statistics (GLLSR of pst-fit). model: an integer degree, `/linear`, a basis procedure `{ x → [b₁(x) … bₖ(x)] }`, `/power` (a xᵇ), `/exp` (a eᵇˣ), `/log10`, `/ln` (a + b log x), `/recip` (a + b/x), `/gauss` (A e^(−(x−μ)²/2σ²)), or a dictionary with `/model` and optional `/weights [w …]`, `/intercept c`, `/yoffset c` (fit y − c and add c back: y = c + a xᵇ, y = c + a eᵇˣ, a Gauss curve on a baseline; pst-fit's `Yint`), `/level p` (default 0.95), `/xtrans {…}` `/ytrans {…}` `/yback {…}` (own transforms with an integer model; ytrans and yback together), `/drop true` (leave out invalid points), `/tval t`, `/bignum true`, `/exact true` (reals through `setbnx`), `/exactt true` (bignum t value; otherwise from reals in bignum mode). Householder QR after centring and scaling x to [−1, 1] (only scaling with `/intercept`), so fits far from x = 0 work with single precision reals; transforms are fitted in the transformed space. Invalid data for a transform, too few points, an unknown model give `rangecheck`; dependent columns and a `/gauss` without maximum give `undefinedresult` |
 | `linreg` | `[x …] [y …] → R` | the straight line, `1 regress` |
 | `regeval` | `R x → y` | the fitted curve at x, in the original coordinates |
 | `regci` | `R x → [lo hi]` | confidence band of the mean response, ŷ ± t s √(b(x)ᵀ(XᵀWX)⁻¹b(x)), transformed back |
 | `regpi` | `R x → [lo hi]` | prediction band for a new observation: the same with 1 + b(x)ᵀ(XᵀWX)⁻¹b(x) |
+| `regevalt` `regcit` `regpit` | `R X → Y`, `[lo hi]` | the same in the space of the fit, X and the result transformed (X = ln x, Y = ln y for /power); no yoffset |
 | `rngseed` | `n → –` | seeds the generator (any integer) |
 | `rnguniform` | `– → real` | uniform in (0, 1): Park–Miller minimal standard with Schrage's method, the same on every interpreter |
 | `rngnormal` | `– → real` | standard normal (Box–Muller) |
@@ -516,7 +518,12 @@ the space of the fit, Ȳ its weighted mean), `/r2` = 1 − sse/sst, `/adjr2` =
 `/tval`, the (1 + level)/2 quantile of Student's t with dof degrees of
 freedom (from `tinv`). `/fitted` and `/resid` are in the space of the fit;
 `/stdresid` are internally studentized residuals √w e/(s√(1 − h)), h the
-leverage. Keys starting with `n_` are internal.
+leverage. `/xbar` `/ybar` `/sxx` `/syy` `/sxy` are the weighted means and
+sums of squares of the data in the space of the fit; `/dropped` counts the
+points `/drop` left out, `/xused` and `/yused` are the points fitted (as
+given). `/coef` and `/cov` are transformed back from the centred x, so with
+reals far from 0 their last digits can be off while the curve is right.
+Keys starting with `n_` are internal.
 
 A polynomial is an array of coefficients, highest power first: `[1 0 -2]` is
 x² − 2.
