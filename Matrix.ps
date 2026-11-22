@@ -23,11 +23,11 @@
 % This work consists of the files listed in README.md.
 %
 
-% Every name is defined in tx@PostScriptMathDict, so that nothing clashes with other
+% Every name is defined in tx@NumericDict, so that nothing clashes with other
 % PostScript code. Load.ps leaves the dictionary open; after loading a file
-% on its own, use  tx@PostScriptMathDict begin ... end  around calls.
-/tx@PostScriptMathDict where { pop }{ /tx@PostScriptMathDict 600 dict def } ifelse
-tx@PostScriptMathDict begin
+% on its own, use  tx@NumericDict begin ... end  around calls.
+/tx@NumericDict where { pop }{ /tx@NumericDict 600 dict def } ifelse
+tx@NumericDict begin
 % Version 1.1 (2026): added mfromrows, mtorows, mcopy, midentity, mtranspose,
 % madd, msub, mscale, mdet, minv, msolve, mlstsq, meigsym and mPrint. Every
 % operation accepts bignum elements when bignumlibrary.ps is loaded.
@@ -465,6 +465,6 @@ end
 
 %~ A B mmul
 
-end % tx@PostScriptMathDict
+end % tx@NumericDict
 
 %%EOF

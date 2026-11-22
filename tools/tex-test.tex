@@ -1,0 +1,25 @@
+% Test of the TeX interface of pst-numeric, run by tools/tex-test.sh.
+% Every part is loaded; tools/tex-test.sh compares the printed results.
+\documentclass{article}
+\usepackage{pst-numeric}
+\usepackage{pst-plot}
+\newcommand\result[1]{\par\noindent
+  \begin{pspicture}(0,-0.1)(12,0.4)\psNumericShow{#1}\end{pspicture}}
+\begin{document}
+\result{30 setbnsize 2 setbn sqrtbn}
+\result{20 setbnsize 1 setbn expbn}
+\result{60 30 binombn}
+\result{[[1 2] [3 4]] mfromrows mdet}
+\result{[[1 2] [3 4]] mfromrows minv}
+\result{[1 2] [3 4] cmul}
+\result{{ dup mulbn 2 setbn subbn } (1) (2) froot}
+\result{[1 0 -2] 3 polyval}
+\result{[1 2 5] polyroots pstnum_list}
+\result{30 corsin}
+\result{(text is kept)}
+
+% the library inside an ordinary PSTricks plot
+\begin{pspicture}(0,-1)(4,4)
+\psplot[linecolor=red]{0}{3}{\pstNumeric{[0.25 0 -1] x polyval}}
+\end{pspicture}
+\end{document}

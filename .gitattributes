@@ -2,3 +2,4 @@
 *.bat text eol=crlf
 *.zip binary
 *.pdf binary
+*.sh text eol=lf

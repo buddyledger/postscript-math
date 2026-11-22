@@ -1,0 +1,99 @@
+%% pst-numeric.tex: decimal numbers with any number of digits, matrices,
+%% complex numbers and numerical methods in PostScript, for PSTricks
+%%
+%% Copyright 2012, 2026 Buddy Ledger
+%%
+%% This work may be distributed and/or modified under the
+%% conditions of the LaTeX Project Public License, either version 1.3c
+%% of this license or (at your option) any later version.
+%% The latest version of this license is in
+%%   https://www.latex-project.org/lppl.txt
+%% and version 1.3c or later is part of all distributions of LaTeX
+%% version 2008 or later.
+%%
+%% This work has the LPPL maintenance status `author-maintained'.
+%%
+%% The Current Maintainer of this work is Buddy Ledger.
+%%
+%% This work consists of the files listed in README.md.
+%%
+\csname PSTnumericLoaded\endcsname
+\let\PSTnumericLoaded\endinput
+\ifx\PSTricksLoaded\endinput\else\input pstricks.tex\fi
+%
+\edef\PstAtCode{\the\catcode`\@}\catcode`\@=11\relax
+%
+\def\fileversion{1.2}
+\def\filedate{2026/11/21}
+\message{`PST-numeric' v\fileversion, \filedate\space (BL)}
+%
+% The parts to load, a comma-separated list without spaces. Define
+% \pstNumericParts before loading, or (in LaTeX) use the package options,
+% which set it. The default is every part.
+%   bignum   decimal numbers with any number of digits (bignumlibrary.ps)
+%   trig     CORDIC trigonometry on reals (Trig.ps)
+%   matrix   matrices of reals or bignums (Matrix.ps)
+%   complex  complex numbers (Complex.ps), needs matrix
+%   calc     roots, integrals, polynomials (Numeric.ps), needs matrix and complex
+\ifx\pstNumericParts\pstnum@undefined
+  \def\pstNumericParts{bignum,trig,matrix,complex,calc}\fi
+%
+\def\pstnum@empty{}
+\def\pstnum@relax{\relax}
+\def\pstnum@gobble#1{}
+\def\pstnum@known{,bignum,trig,matrix,complex,calc,}
+\def\pstnum@want#1{\expandafter\let\csname pstnum@want@#1\endcsname\pstnum@empty}
+\def\pstnum@check#1#2{% #1: what follows #2 in the known list, empty if #2 is unknown
+  \def\pstnum@tmp{#1}%
+  \ifx\pstnum@tmp\pstnum@empty
+    \errmessage{pst-numeric: unknown part `#2' (use bignum, trig, matrix, complex or calc)}%
+  \else\pstnum@want{#2}\fi}
+\def\pstnum@mark#1,{%
+  \def\pstnum@tmp{#1}%
+  \ifx\pstnum@tmp\pstnum@relax\else
+    \ifx\pstnum@tmp\pstnum@empty\else
+      \def\pstnum@try##1,#1,##2\pstnum@end{\pstnum@check{##2}{#1}}%
+      \expandafter\pstnum@try\pstnum@known#1,\pstnum@end
+    \fi
+    \expandafter\pstnum@mark
+  \fi}
+\expandafter\pstnum@mark\pstNumericParts,\relax,
+% parts that other parts need
+\ifcsname pstnum@want@calc\endcsname\pstnum@want{complex}\pstnum@want{matrix}\fi
+\ifcsname pstnum@want@complex\endcsname\pstnum@want{matrix}\fi
+%
+\pstheader{pst-numeric.pro}% the helpers of this interface
+\def\pstnum@load#1{%
+  \ifcsname pstnum@want@#1\endcsname
+    \expandafter\pstheader\else\expandafter\pstnum@gobble\fi
+  {pst-numeric-#1.pro}}
+\pstnum@load{bignum}
+\pstnum@load{trig}
+\pstnum@load{matrix}
+\pstnum@load{complex}
+\pstnum@load{calc}
+%
+% The dictionary that holds every procedure of the library.
+\def\pstNumericDict{tx@NumericDict}
+% PostScript code run with the library's procedures, for use inside any
+% PostScript argument of PSTricks:  \psplot{0}{1}{\pstNumeric{x 2 mul}}
+\def\pstNumeric#1{ tx@NumericDict begin #1 end }
+%
+% \psNumericShow[pstricks options]{code} prints the result that the code
+% leaves on the stack, at the current point, as a zero-width object: put it
+% in a pspicture that leaves room for the text. A bignum is printed with all
+% its digits, a complex number as a + bi, a matrix as [a b; c d]. Font and
+% size are set by \psNumericFont and \psNumericFontSize (in pt).
+\def\psNumericFont{Courier}
+\def\psNumericFontSize{10}
+\def\psNumericShow{\futurelet\pstnum@next\pstnum@showi}
+\def\pstnum@showi{%
+  \ifx\pstnum@next[\expandafter\pstnum@show
+  \else\expandafter\pstnum@show\expandafter[\expandafter]\fi}
+\def\pstnum@show[#1]#2{%
+  \pscustom[#1]{\moveto(0,0)%
+    \code{/\psNumericFont\space findfont \psNumericFontSize\space scalefont setfont
+      \pstNumeric{#2 pstnum_cvs} show}}}
+%
+\catcode`\@=\PstAtCode\relax
+\endinput

@@ -21,11 +21,11 @@
 % This work consists of the files listed in README.md.
 %
 
-% Every name is defined in tx@PostScriptMathDict, so that nothing clashes with other
+% Every name is defined in tx@NumericDict, so that nothing clashes with other
 % PostScript code. Load.ps leaves the dictionary open; after loading a file
-% on its own, use  tx@PostScriptMathDict begin ... end  around calls.
-/tx@PostScriptMathDict where { pop }{ /tx@PostScriptMathDict 600 dict def } ifelse
-tx@PostScriptMathDict begin
+% on its own, use  tx@NumericDict begin ... end  around calls.
+/tx@NumericDict where { pop }{ /tx@NumericDict 600 dict def } ifelse
+tx@NumericDict begin
 % Version 1.0 (2026) - complete rewrite of v0.5
 % Version 1.1 (2026) - added sqrtbn, expbn, powbn, atanbn, asinbn, acosbn,
 %   atan2bn, sinhbn, coshbn, tanhbn, factbn and binombn
@@ -747,6 +747,6 @@ end
 end
 } bind def
 
-end % tx@PostScriptMathDict
+end % tx@NumericDict
 
 %%EOF

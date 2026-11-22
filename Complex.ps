@@ -21,11 +21,11 @@
 % This work consists of the files listed in README.md.
 %
 
-% Every name is defined in tx@PostScriptMathDict, so that nothing clashes with other
+% Every name is defined in tx@NumericDict, so that nothing clashes with other
 % PostScript code. Load.ps leaves the dictionary open; after loading a file
-% on its own, use  tx@PostScriptMathDict begin ... end  around calls.
-/tx@PostScriptMathDict where { pop }{ /tx@PostScriptMathDict 600 dict def } ifelse
-tx@PostScriptMathDict begin
+% on its own, use  tx@NumericDict begin ... end  around calls.
+/tx@NumericDict where { pop }{ /tx@NumericDict 600 dict def } ifelse
+tx@NumericDict begin
 % A complex number is the array [re im]. Its parts are ordinary numbers, or
 % bignums when bignumlibrary.ps is loaded. If any part of any argument is a
 % bignum or a string such as (0.1), the calculation uses bignums at the
@@ -157,6 +157,6 @@ tx@PostScriptMathDict begin
 } bind def
 /cPrint { ccvs = } bind def
 
-end % tx@PostScriptMathDict
+end % tx@NumericDict
 
 %%EOF

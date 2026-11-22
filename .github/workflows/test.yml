@@ -1,0 +1,36 @@
+# Runs the library's tests with Ghostscript, against the .ps files and the
+# dvips headers, and the tests of the TeX interface with latex and dvips.
+name: test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The dvips headers are up to date
+        run: |
+          python3 make_headers.py
+          git diff --exit-code -- dvips || { echo "::error::Run make_headers.py and commit dvips/"; exit 1; }
+
+      - name: Library tests (Ghostscript)
+        run: |
+          docker run --rm -v "$PWD:/pkg:ro" -w /pkg texlive/texlive:latest bash -c '
+            set -e
+            for mode in "" "-dPSM_HEADERS"; do
+              gs -q -dNODISPLAY -dNOSAFER -dBATCH $mode test_bignum.ps > /tmp/out.txt 2>&1 || true
+              grep -v "^==" /tmp/out.txt | tail -4
+              grep -q "ALL TESTS PASSED" /tmp/out.txt
+            done' 2>&1 | tee test.log
+          grep -c "ALL TESTS PASSED" test.log | grep -qx 2
+
+      - name: TeX interface tests (latex, dvips, Ghostscript)
+        run: docker run --rm -v "$PWD:/pkg:ro" texlive/texlive:latest bash /pkg/tools/tex-test.sh

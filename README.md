@@ -1,7 +1,10 @@
-# PostScript maths library
+# PostScript maths library (pst-numeric)
 
-A small maths library written in PostScript and run with Ghostscript as a
-calculator (no page output). It has five parts:
+A small maths library written in PostScript. It can be run with Ghostscript
+as a calculator (no page output), or used from LaTeX as the PSTricks package
+**pst-numeric**, where the calculations run while the page is drawn and can
+feed plots (see [Using it from LaTeX](#using-it-from-latex-pst-numeric)).
+It has five parts:
 
 | File | What it does |
 |---|---|
@@ -11,8 +14,13 @@ calculator (no page output). It has five parts:
 | `Complex.ps` | Complex numbers of reals or bignums: arithmetic, modulus and argument, sqrt, exp, ln, powers |
 | `Numeric.ps` | Roots of functions, integrals, polynomials (values, roots, fitting), gcd and lcm |
 | `Load.ps` | Loads all five and opens the library's dictionary |
-| `dvips/*.pro` | Each part as a dvips header, for use from TeX (generated) |
-| `make_headers.py` | Generates the headers in `dvips/` (Python 3, standard library only) |
+| `tex/pst-numeric.tex`, `latex/pst-numeric.sty` | The PSTricks package pst-numeric |
+| `dvips/pst-numeric-*.pro` | Each part as a dvips header, for the package (generated) |
+| `dvips/pst-numeric.pro` | The package's own PostScript helpers |
+| `make_headers.py` | Generates the part headers in `dvips/` (Python 3, standard library only) |
+| [`doc/pst-numeric-doc.pdf`](doc/pst-numeric-doc.pdf), `doc/pst-numeric-doc.tex` | Manual of the package, and its source |
+| `tools/tex-test.sh`, `tools/tex-test.tex` | Tests of the package with latex and dvips |
+| `tools/make-doc.sh` | Builds the manual |
 | `test_bignum.ps` | Regression tests for all five files |
 | `make_tests.py` | Generates `test_bignum.ps` (Python 3, standard library only) |
 | [`showcase.pdf`](showcase.pdf) | Every public function with a live result, plus CORDIC plots (11 pages) |
@@ -52,9 +60,11 @@ Maintainer of this work is Buddy Ledger.
 
 This work consists of the files `bignumlibrary.ps`, `Trig.ps`, `Matrix.ps`,
 `Complex.ps`, `Numeric.ps`, `Load.ps`, `gs.bat`, `runme.bat`, `test_bignum.ps`, `make_tests.py`,
-`make_headers.py`, `dvips/postscript-math-bignum.pro`, `dvips/postscript-math-trig.pro`,
-`dvips/postscript-math-matrix.pro`, `dvips/postscript-math-complex.pro`,
-`dvips/postscript-math-numeric.pro`,
+`make_headers.py`, `tex/pst-numeric.tex`, `latex/pst-numeric.sty`,
+`dvips/pst-numeric.pro`, `dvips/pst-numeric-bignum.pro`, `dvips/pst-numeric-trig.pro`,
+`dvips/pst-numeric-matrix.pro`, `dvips/pst-numeric-complex.pro`,
+`dvips/pst-numeric-calc.pro`, `doc/pst-numeric-doc.tex`, `doc/pst-numeric-doc.pdf`,
+`tools/tex-test.sh`, `tools/tex-test.tex`, `tools/make-doc.sh`,
 `showcase.ps`, `showcase.pdf`, `make_showcase.bat`,
 `Examples/bignumfactorial.ps` and `README.md`.
 
@@ -78,7 +88,7 @@ for PostScript you trust.
 
 ## The library's dictionary
 
-Every name the library defines is in one dictionary, `tx@PostScriptMathDict`,
+Every name the library defines is in one dictionary, `tx@NumericDict`,
 so nothing clashes with other PostScript code or with your own names. Loading
 the library adds only that one name to `userdict`.
 
@@ -92,35 +102,57 @@ yourself:
 
 ```postscript
 (Matrix.ps) run
-tx@PostScriptMathDict begin
+tx@NumericDict begin
   [[1 2] [3 4]] mfromrows mdet =
 end
 ```
 
-## Using it from TeX: dvips headers
+## Using it from LaTeX: pst-numeric
 
-`dvips/` has each part as a separate dvips header, so a document loads only
-the parts it uses:
+```latex
+\usepackage{pst-numeric}                % every part
+\usepackage[matrix,complex]{pst-numeric}
+...
+\psplot{0}{3}{\pstNumeric{[0.25 0 -1] x polyval}}
+\begin{pspicture}(0,0)(8,0.4)
+  \psNumericShow{30 setbnsize 2 setbn sqrtbn}  % prints +1.41421356237309504880168872421e0
+\end{pspicture}
+```
 
-| Header | Part | Load these first |
+`\pstNumeric{code}` runs PostScript code with the library's dictionary open,
+inside any PostScript argument of PSTricks. `\psNumericShow{code}` prints the
+result. The options `bignum`, `trig`, `matrix`, `complex` and `calc` (Numeric.ps)
+choose the parts; `complex` loads `matrix` too, and `calc` loads both. The
+[manual](doc/pst-numeric-doc.pdf) has the details and examples. Like every
+PSTricks package it needs the `latex`–`dvips` route (or `xelatex`).
+
+Each part is a separate dvips header in `dvips/`, so a document carries only
+what it uses:
+
+| Header | Part | Needs |
 |---|---|---|
-| `postscript-math-bignum.pro` | `bignumlibrary.ps` | |
-| `postscript-math-trig.pro` | `Trig.ps` | |
-| `postscript-math-matrix.pro` | `Matrix.ps` | bignum, for bignum matrices |
-| `postscript-math-complex.pro` | `Complex.ps` | matrix; bignum, for bignums |
-| `postscript-math-numeric.pro` | `Numeric.ps` | matrix and complex; bignum, for bignums |
+| `pst-numeric-bignum.pro` | `bignumlibrary.ps` | |
+| `pst-numeric-trig.pro` | `Trig.ps` | |
+| `pst-numeric-matrix.pro` | `Matrix.ps` | bignum, for bignum matrices |
+| `pst-numeric-complex.pro` | `Complex.ps` | matrix; bignum, for bignums |
+| `pst-numeric-calc.pro` | `Numeric.ps` | matrix and complex; bignum, for bignums |
+| `pst-numeric.pro` | the package's helpers (`pstnum_cvs`, `pstnum_list`) | |
 
-A header is its `.ps` file without the comment and blank lines (DSC lines
-must not appear in a dvips header). The headers are generated, so don't edit
+A part header is its `.ps` file without the comment and blank lines (DSC
+lines must not appear in a dvips header). These are generated, so don't edit
 them: change the `.ps` file and run
 
 ```bat
 python make_headers.py
 ```
 
-The test suite runs against the headers too (see [Tests](#tests)). The
-`postscript-math-` file names are provisional, until the library has a name
-as a TeX package.
+`pst-numeric.pro` is written by hand.
+
+To build the manual, with TeX Live or its Docker image:
+
+```bash
+docker run --rm -v "$PWD:/pkg" texlive/texlive:latest bash /pkg/tools/make-doc.sh
+```
 
 ## bignumlibrary.ps
 
@@ -409,15 +441,30 @@ The first line of output says which were tested. The first section checks
 that loading adds only the library's dictionary to `userdict` and leaves the
 stacks as they were.
 
-## Changes since version 1.1
+The package itself is tested with latex, dvips and Ghostscript: every part
+is loaded and its printed results compared, the options are checked to load
+the right headers, and unknown options and parts must give errors.
 
-- Every name is now defined in `tx@PostScriptMathDict` instead of `userdict`.
+```bash
+docker run --rm -v "$PWD:/pkg:ro" texlive/texlive:latest bash /pkg/tools/tex-test.sh
+```
+
+GitHub Actions runs all of these on every push: the library tests both ways,
+a check that the headers in `dvips/` are up to date, and the package tests.
+
+## Changes in version 1.2 (November 2026)
+
+- The library is now also the PSTricks package **pst-numeric**
+  (`tex/pst-numeric.tex`, `latex/pst-numeric.sty`), with options to load
+  only some parts, `\pstNumeric` and `\psNumericShow`, a manual, and tests
+  with latex and dvips.
+- Every name is now defined in `tx@NumericDict` instead of `userdict`.
   `Load.ps` opens the dictionary, so code that starts with `(Load.ps) run`
   works unchanged.
 - Each part is available as a dvips header in `dvips/`, built by
   `make_headers.py`.
 - 6 new tests for the namespace (581 in all), and the suite can run against
-  the headers.
+  the headers. The tests also pass with Ghostscript 10.08.
 
 ## Changes in version 1.1 (November 2026)
 
