@@ -4,7 +4,7 @@
 % Copyright 2012, 2026 Buddy Ledger
 % LaTeX Project Public License 1.3c or later, see LICENSE
 % https://github.com/buddyledger/pst-numeric
-% Needs: matrix, complex, bignum (only for bignums)
+% Needs: matrix, complex, special, bignum
 /tx@NumericDict where { pop }{ /tx@NumericDict 1000 dict def } ifelse
 tx@NumericDict begin
 /gcd { % a b (integers) -> greatest common divisor, >= 0

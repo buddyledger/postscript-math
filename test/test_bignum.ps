@@ -35,10 +35,12 @@ userdict length countdictstack
 	(dvips/pst-numeric-complex.pro) run
 	(dvips/pst-numeric-calc.pro) run
 	(dvips/pst-numeric-special.pro) run
+	(dvips/pst-numeric-tensor.pro) run
 	(the dvips headers)
 }{
 	(source/bignumlibrary.ps) run (source/Trig.ps) run (source/Matrix.ps) run
 	(source/Complex.ps) run (source/Numeric.ps) run (source/Special.ps) run
+	(source/Tensor.ps) run
 	(the .ps files)
 } ifelse
 countdictstack userdict length

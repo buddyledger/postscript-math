@@ -36,6 +36,7 @@ FILES = [
     "dvips/pst-numeric-complex.pro",
     "dvips/pst-numeric-calc.pro",
     "dvips/pst-numeric-special.pro",
+    "dvips/pst-numeric-tensor.pro",
     "latex/pst-numeric.sty",
     "tex/pst-numeric.tex",
     "source/bignumlibrary.ps",
@@ -44,6 +45,7 @@ FILES = [
     "source/Complex.ps",
     "source/Numeric.ps",
     "source/Special.ps",
+    "source/Tensor.ps",
     "source/Load.ps",
     "source/make_headers.py",
 ]

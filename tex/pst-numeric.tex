@@ -35,22 +35,23 @@
 %   matrix   matrices of reals or bignums (Matrix.ps)
 %   complex  complex numbers (Complex.ps), needs matrix
 %   calc     roots, integrals, polynomials, interpolation, statistics,
-%            differential equations, Fourier transform (Numeric.ps), needs
-%            matrix and complex
-%   special  gamma, error and Bessel functions, normal distribution
+%            regression, differential equations, Fourier transform
+%            (Numeric.ps), needs matrix, complex and special
+%   special  gamma, error and Bessel functions, distributions
 %            (Special.ps), needs bignum
+%   tensor   tensors of any rank (Tensor.ps), needs matrix
 \ifx\pstNumericParts\pstnum@undefined
-  \def\pstNumericParts{bignum,trig,matrix,complex,calc,special}\fi
+  \def\pstNumericParts{bignum,trig,matrix,complex,calc,special,tensor}\fi
 %
 \def\pstnum@empty{}
 \def\pstnum@relax{\relax}
 \def\pstnum@gobble#1{}
-\def\pstnum@known{,bignum,trig,matrix,complex,calc,special,}
+\def\pstnum@known{,bignum,trig,matrix,complex,calc,special,tensor,}
 \def\pstnum@want#1{\expandafter\let\csname pstnum@want@#1\endcsname\pstnum@empty}
 \def\pstnum@check#1#2{% #1: what follows #2 in the known list, empty if #2 is unknown
   \def\pstnum@tmp{#1}%
   \ifx\pstnum@tmp\pstnum@empty
-    \errmessage{pst-numeric: unknown part `#2' (use bignum, trig, matrix, complex, calc or special)}%
+    \errmessage{pst-numeric: unknown part `#2' (use bignum, trig, matrix, complex, calc, special or tensor)}%
   \else\pstnum@want{#2}\fi}
 \def\pstnum@mark#1,{%
   \def\pstnum@tmp{#1}%
@@ -63,7 +64,8 @@
   \fi}
 \expandafter\pstnum@mark\pstNumericParts,\relax,
 % parts that other parts need
-\ifcsname pstnum@want@calc\endcsname\pstnum@want{complex}\pstnum@want{matrix}\fi
+\ifcsname pstnum@want@calc\endcsname\pstnum@want{complex}\pstnum@want{matrix}\pstnum@want{special}\fi
+\ifcsname pstnum@want@tensor\endcsname\pstnum@want{matrix}\fi
 \ifcsname pstnum@want@complex\endcsname\pstnum@want{matrix}\fi
 \ifcsname pstnum@want@special\endcsname\pstnum@want{bignum}\fi
 %
@@ -78,6 +80,7 @@
 \pstnum@load{complex}
 \pstnum@load{calc}
 \pstnum@load{special}
+\pstnum@load{tensor}
 %
 % The dictionary that holds every procedure of the library.
 \def\pstNumericDict{tx@NumericDict}

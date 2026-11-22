@@ -6,7 +6,7 @@
 \ProvidesPackage{pst-numeric}[2026/11/21 v1.3 package wrapper for
   pst-numeric.tex (BL)]
 % Options choose the parts to load (the default is all of them):
-% bignum, trig, matrix, complex, calc, special, all
+% bignum, trig, matrix, complex, calc, special, tensor, all
 \def\pstnum@opts{}
 \def\pstnum@opt#1{\DeclareOption{#1}{\edef\pstnum@opts{\pstnum@opts#1,}}}
 \pstnum@opt{bignum}
@@ -15,9 +15,10 @@
 \pstnum@opt{complex}
 \pstnum@opt{calc}
 \pstnum@opt{special}
-\DeclareOption{all}{\edef\pstnum@opts{\pstnum@opts bignum,trig,matrix,complex,calc,special,}}
+\pstnum@opt{tensor}
+\DeclareOption{all}{\edef\pstnum@opts{\pstnum@opts bignum,trig,matrix,complex,calc,special,tensor,}}
 \DeclareOption*{\PackageError{pst-numeric}{Unknown option `\CurrentOption'}%
-  {The options are bignum, trig, matrix, complex, calc, special and all.}}
+  {The options are bignum, trig, matrix, complex, calc, special, tensor and all.}}
 \ProcessOptions\relax
 \ifx\pstnum@opts\@empty\else\let\pstNumericParts\pstnum@opts\fi
 \input{pst-numeric.tex}

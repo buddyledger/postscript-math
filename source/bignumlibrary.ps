@@ -786,7 +786,7 @@ end
 /bn_isnumlike {          % any -> bool: integer, real or bignum
 	dup type dup /integertype eq exch /realtype eq or { pop true }{ bn_isbnshape } ifelse
 } bind def
-/typchk { % any -> (bignumtype) (complextype) (matrixtype) or (<type>)
+/typchk { % any -> (bignumtype) (complextype) (matrixtype) (tensortype) or (<type>)
 10 dict begin
 	dup /object exch def
 	type 20 string cvs /query exch def
@@ -807,7 +807,7 @@ end
 			}{ false } ifelse
 			{ (bignumtype) }{ query } ifelse
 		} ifelse } ifelse
-	}{ query } ifelse
+	}{ query (dicttype) eq { object /shape known }{ false } ifelse { (tensortype) }{ query } ifelse } ifelse
 end
 } bind def
 
