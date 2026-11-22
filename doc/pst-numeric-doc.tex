@@ -1,281 +1,535 @@
-% pst-numeric-doc.tex: manual of pst-numeric
-% Build with tools/make-doc.sh (latex, dvips, ps2pdf).
-% Copyright 2026 Buddy Ledger
-% LaTeX Project Public License 1.3c or later, see LICENSE
-\documentclass[11pt,a4paper]{article}
-\usepackage[T1]{fontenc}
-\usepackage{lmodern}
-\usepackage[margin=2.5cm]{geometry}
-\usepackage{amsmath,array,booktabs}
+%% pst-numeric-doc.tex: manual of pst-numeric
+%% Build with tools/make-doc.sh (latex, biber, makeindex, dvips, ps2pdf).
+%%
+%% Copyright 2026 Buddy Ledger
+%% This work may be distributed and/or modified under the conditions of the
+%% LaTeX Project Public License, either version 1.3c of this license or (at
+%% your option) any later version. See LICENSE.
+\documentclass[11pt,english,BCOR=10mm,DIV=12,bibliography=totoc,parskip=false,
+   headings=small,headinclude=false,footinclude=false,oneside]{pst-doc}
 \usepackage{pst-numeric}
+\let\pstNumericFV\fileversion
 \usepackage{pst-plot}
-\usepackage[hidelinks]{hyperref}
+\addbibresource{\jobname.bib}
 
-\newcommand\pkg{\texttt{pst-numeric}}
-\newcommand\cs[1]{\texttt{\textbackslash#1}}
-\newcommand\st[1]{\texttt{#1}}
-% shows PostScript code and, under it, the result it leaves on the stack
-\newcommand\demo[1]{\par\smallskip\noindent
-  \texttt{\detokenize{#1}}\par\nopagebreak\noindent
-  \hspace*{1.5em}$\to$\hspace{0.5em}%
-  \begin{pspicture}(0,-0.05)(12,0.3)\psNumericShow{#1}\end{pspicture}\par\smallskip}
+% pst-doc's \PS and \PST eat the space that follows them
+\DeclareRobustCommand\PS{\texttt{PostScript}\xspace}
+\DeclareRobustCommand\PST{\texttt{PSTricks}\xspace}
+\newcommand\pkg{\LPack{pst-numeric}}
+\newcommand\nxpkg{\texttt{pst-numeric}}
+% a reference table: procedure(s) | stack effect and notes
 \newenvironment{reference}
-  {\par\smallskip\noindent\begin{tabular}{@{}>{\raggedright\ttfamily}p{0.33\linewidth}>{\raggedright\arraybackslash}p{0.62\linewidth}@{}}\toprule}
-  {\bottomrule\end{tabular}\par\medskip}
+  {\par\smallskip\noindent\tabularx{\linewidth}{@{}>{\raggedright\ttfamily}p{0.36\linewidth}>{\RaggedRight\arraybackslash}X@{}}\toprule
+   \textrm{\bfseries Procedure} & \bfseries Stack: inputs $\to$ outputs\\\midrule}
+  {\bottomrule\endtabularx\par\medskip}
+\newcommand\To{\ensuremath{\to}}
 
-\title{\pkg: numbers with any number of digits, matrices, complex numbers
-  and numerical methods for PSTricks\\[1ex]\large Version 1.2}
-\author{Buddy Ledger}
-\date{21 November 2026}
+\renewcommand\bgImage{%
+  \pstVerb{\pstNumeric{/docR [1 0 0 0 0 0 0 -1] polyroots def}}%
+  \psset{unit=2.5cm}%
+  \begin{pspicture}(-1.4,-1.4)(1.4,1.4)
+    \psaxes[labels=none,ticks=none,linecolor=gray]{->}(0,0)(-1.35,-1.35)(1.35,1.35)
+    \pscircle[linecolor=gray,linestyle=dashed](0,0){1}
+    \multido{\i=0+1}{7}{%
+      \psdot[dotscale=2,linecolor=Orange!85!Red](!\pstNumeric{docR \i\space get aload pop})}
+    \rput[lb](0.6,1.1){\sffamily\small roots of $z^7-1$, by \texttt{polyroots}}
+  \end{pspicture}}
 
-\setlength\emergencystretch{3em}
 \begin{document}
-\maketitle
 
+\title{\texttt{pst-numeric}}
+\subtitle{Arbitrary precision arithmetic, matrices, complex numbers and
+  numerical methods for PSTricks; v.\pstNumericFV}
+\author{Buddy Ledger}
+\docauthor{}
+\date{\today}
+\settitle
+
+\tableofcontents
+
+\clearpage
 \begin{abstract}
-\pkg{} is a library of PostScript procedures for PSTricks. Its decimal
-numbers (\emph{bignums}) carry as many significant digits as you ask for,
-where PostScript's own reals have about seven. On top of that it has
-matrices, complex numbers, roots of functions, integrals and polynomials,
-each working on ordinary reals or on bignums. The calculations run in the
-PostScript interpreter while the page is drawn, so they can feed plots
-directly.
+\noindent
+\pkg{} is a library of \PS procedures for \PST. Its decimal numbers
+(\emph{bignums}) carry as many significant digits as you ask for, where
+\PS's own reals have about seven. On top of that it has matrices, complex
+numbers, roots of functions, integrals and polynomials, each working on
+ordinary reals or on bignums. The calculations run in the \PS interpreter
+while the page is drawn, so they can feed plots directly.
 \end{abstract}
 
-\section{Loading}
+
+\section{Introduction}
+
+\PS has integers and single-precision reals. A real keeps about seven
+significant digits, so $10^8+1-10^8$ comes out as 0, and a calculation
+that subtracts nearly equal numbers can lose all of its digits. \pkg{} adds
+decimal numbers of any precision, written in \PS and run by the \PS
+interpreter that draws the page (Ghostscript, or a printer), together with
+the linear algebra and numerical methods built on them.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(12,1.5)
+\rput[l](0,1){reals:}       \rput[l](3,1){\psNumericShow{1e8 1 add 1e8 sub}}
+\rput[l](0,0.5){bignums:}   \rput[l](3,0.5){\psNumericShow{
+                    (1e8) setbn 1 setbn addbn (1e8) setbn subbn}}
+\rput[l](0,0){$\pi$, 50 digits:} \rput[l](3,0){\psNumericShow{50 setbnsize pibn}}
+\end{pspicture}
+\end{LTXexample}
+
+The library has five parts, each a dvips header that the package options
+choose:
+
+\medskip
+\noindent\begin{tabularx}{\linewidth}{@{}>{\ttfamily}l>{\ttfamily}lX@{}}\toprule
+\textrm{\bfseries Option} & \textrm{\bfseries Header} & \bfseries Contents\\\midrule
+bignum  & pst-numeric-bignum.pro  & decimal numbers of any precision: arithmetic,
+  comparisons, roots, exponentials, logarithms, trigonometric and hyperbolic
+  functions and their inverses, $\pi$, factorials, binomial coefficients\\
+trig    & pst-numeric-trig.pro    & trigonometric functions of reals by the
+  CORDIC algorithm\\
+matrix  & pst-numeric-matrix.pro  & matrices of reals or bignums: products,
+  determinant, inverse, linear systems, least squares, symmetric eigenvalues\\
+complex & pst-numeric-complex.pro & complex numbers of reals or bignums\\
+calc    & pst-numeric-calc.pro    & roots of functions, integrals, polynomials
+  (values, roots, fitting), gcd and lcm\\\bottomrule
+\end{tabularx}
+
+
+\section{Loading the package}
+
+\begin{BDef}
+\Lcs{usepackage}\OptArgs\Largb{pst-numeric}\\
+\Lcs{input} \texttt{pst-numeric.tex}
+\end{BDef}
+
+With no option, all five parts are loaded. The options \Loption{bignum},
+\Loption{trig}, \Loption{matrix}, \Loption{complex} and \Loption{calc} load
+only the parts named, and \Loption{all} loads every part. A part that
+another needs is loaded with it: \Loption{complex} loads \texttt{matrix}, and
+\Loption{calc} loads \texttt{matrix} and \texttt{complex}.
 
 \begin{verbatim}
-\usepackage{pst-numeric}            % every part
-\usepackage[matrix,complex]{pst-numeric}
+\usepackage{pst-numeric}                 % every part
+\usepackage[matrix]{pst-numeric}         % matrices of reals only
+\usepackage[bignum,calc]{pst-numeric}    % numerical methods with bignums
 \end{verbatim}
 
-The library has five parts, each in its own dvips header, so that a document
-carries only what it uses. The options choose them; with no option, all five
-are loaded.
-
-\begin{reference}
-\textrm{Option} & \textrm{Part}\\\midrule
-bignum & decimal numbers with any number of digits (\st{pst-numeric-bignum.pro})\\
-trig & CORDIC trigonometry on reals (\st{pst-numeric-trig.pro})\\
-matrix & matrices of reals or bignums (\st{pst-numeric-matrix.pro})\\
-complex & complex numbers; loads \st{matrix} too\\
-calc & roots, integrals, polynomials, gcd; loads \st{matrix} and \st{complex} too\\
-all & all five\\
-\end{reference}
-
-Matrices, complex numbers and \st{calc} work on reals without \st{bignum};
-load it as well to use them with bignums. Instead of options, a document can
-define \cs{pstNumericParts} before loading the package, as a list without
-spaces: \verb|\def\pstNumericParts{bignum,matrix}|.
-
-\pkg{} needs PSTricks and works with the \texttt{latex}--\texttt{dvips}
-route (or \texttt{xelatex}), like every PSTricks package.
-
-\section{Using the procedures}
-
-Every procedure is defined in one PostScript dictionary,
-\st{tx@NumericDict} (the macro \cs{pstNumericDict} expands to its name), so
-that none of its names clash with PSTricks or with other packages. PostScript
-code that uses the library must open that dictionary. \cs{pstNumeric} does
-this: \verb|\pstNumeric{code}| expands to
-\verb*| tx@NumericDict begin code end |, and can be used inside any
-PostScript argument of PSTricks:
+Matrices, complex numbers and \texttt{calc} work on reals without
+\texttt{bignum}; load it too to use them with bignums. Instead of options, a
+document, or a \TeX{} format other than \LaTeX, can define
+\Lcs{pstNumericParts} before loading the package, as a list without spaces:
 
 \begin{verbatim}
-\psplot{0}{3}{\pstNumeric{[0.25 0 -1] x polyval}}
+\def\pstNumericParts{bignum,matrix}
+\input pst-numeric.tex
 \end{verbatim}
 
-\cs{psNumericShow}\verb|[|\textit{options}\verb|]{|\textit{code}\verb|}| runs
-the code and prints the result it leaves on the stack, at the current point,
-in \cs{psNumericFont} (\st{Courier}) at \cs{psNumericFontSize} (10\,pt). It
-is a PSTricks object of zero width, so put it in a \st{pspicture} that leaves
-room for the text. The options are PSTricks options, \st{linecolor} giving
-the colour of the text. A bignum is printed with all its digits, a complex
-number as $a + b\,$\st{i}, a matrix as \st{[a b; c d]}, a list as
-\st{[a, b, c]}; a string is printed as it is. Every result in this manual
-is printed this way, while the page is drawn.
+An unknown option or part is an error. Every document also gets the small
+header \LFile{pst-numeric.pro}, which prints results for
+\Lcs{psNumericShow}.
+
+Like every \PST package, \pkg{} needs the \Lprog{latex}--\Lprog{dvips}
+route, or \Lprog{xelatex}. The calculations are done by the \PS interpreter
+that renders the page, for example by \Lprog{ps2pdf}. \pkg{} reads and
+writes no files, so it works in Ghostscript's default \texttt{SAFER} mode.
+
+
+\section{The \TeX{} interface}
+
+\subsection{Running library code}
+
+\begin{BDef}
+\Lcs{pstNumeric}\Largb{PostScript code}\\
+\Lcs{pstNumericDict}
+\end{BDef}
+
+Every procedure of the library is defined in one \PS dictionary,
+\texttt{tx@NumericDict}, so that none of its names clash with \PST or other
+packages. \PS code that uses the library has to open that dictionary.
+\Lcs{pstNumeric} does this: it expands to
+\verb*| tx@NumericDict begin |\Larg{code}\verb*| end |, so it can be used
+in any argument of \PST that takes \PS code, such as \Lcs{psplot},
+\Lcs{pstVerb}, \Lcs{code} and coordinates of the form
+\texttt{(!}\Larg{code}\texttt{)}. \Lcs{pstNumericDict} expands to the name of the
+dictionary.
+
+\begin{LTXexample}[pos=l,preset=\centering,width=6cm]
+\psset{unit=1.2cm}
+\begin{pspicture}(-0.3,-1.2)(3.4,2)
+\psaxes[labels=none]{->}(0,0)(-0.2,-1.1)(3.3,1.9)
+\psplot[linecolor=red,linewidth=1.5pt]{0}{3}{%
+  \pstNumeric{[0.5 0 -1] x polyval}}
+\psdot(!\pstNumeric{
+  { [0.5 0 -1] exch polyval } 0 3 froot 0})
+\end{pspicture}
+\end{LTXexample}
+
+The parabola $0.5x^2-1$ is drawn with \Lps{polyval}, and its root is found
+by \Lps{froot} and marked with a dot.
+
+\subsection{Printing results}
+
+\begin{BDef}
+\Lcs{psNumericShow}\OptArgs\Largb{PostScript code}\\
+\Lcs{psNumericFont}\quad Default: \texttt{Courier}\\
+\Lcs{psNumericFontSize}\quad Default: \texttt{10} (pt)
+\end{BDef}
+
+\Lcs{psNumericShow} runs the code with the library's dictionary open and
+prints the result it leaves on the stack, at the current point, in the \PS
+font \Lcs{psNumericFont} at \Lcs{psNumericFontSize}. It is a \PST object of
+zero width, like \Lcs{pscustom}, so put it in a \Lenv{pspicture} that
+leaves room for the text. The optional argument takes \PST keywords;
+\Lkeyword{linecolor} is the colour of the text.
+
+How the result is printed depends on its type:
+
+\medskip
+\noindent\begin{tabularx}{\linewidth}{@{}lX@{}}\toprule
+\bfseries Result & \bfseries Printed as\\\midrule
+bignum & all its digits, \texttt{+1.4142135623730950488e0}\\
+complex number, \texttt{[re im]} & \texttt{re + im i}\\
+matrix & its rows, \texttt{[1 2; 3 4]}\\
+list (other array) & \texttt{[a, b, c]}\\
+string & as it is\\
+anything else & as \PS's \texttt{cvs} converts it\\\bottomrule
+\end{tabularx}
+\medskip
 
 A list of two numbers looks the same as a complex number, and a list of
-complex numbers the same as a matrix. Write \st{pstnum\_list} after the code
-to print such a result as a list:
+complex numbers the same as a matrix. Write \Lps{pstnum\_list} after the
+code to print such a result as a list.
 
-\demo{[1 2 3] polyder pstnum_list}
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(12,1.5)
+\rput[l](0,1){\psNumericShow{[1 2] [3 4] cmul}}
+\rput[l](0,0.5){\psNumericShow[linecolor=blue]{[1 2 3] polyder pstnum_list}}
+\def\psNumericFont{Times-Roman}\def\psNumericFontSize{12}
+\rput[l](0,0){\psNumericShow{(Any string is printed as it is.)}}
+\end{pspicture}
+\end{LTXexample}
 
-\paragraph{Precision.} \st{n setbnsize} sets the number of significant
-digits of bignums (20 at the start). Inside \cs{pstNumeric} it applies until
-the end of the page, because dvips restores the PostScript memory after each
-page; a later \st{setbnsize} changes it again. Anything else the code
-defines with \st{def} also goes into \st{tx@NumericDict}, so avoid the
-names of the library's procedures.
+\subsection{Precision and names}
 
-\section{Decimal numbers with any number of digits}
+\Lps{setbnsize} sets the number of significant digits of bignums, 20 at the
+start of each page. A \texttt{setbnsize} in one \Lcs{pstNumeric} applies to
+the code that follows on the same page, because dvips restores the \PS
+memory after each page.
 
-A bignum is made with \st{setbn} from an integer, a real or a string. Pass
-strings for exact values: a real has only about seven digits, so
-\st{0.1 setbn} is not exactly one tenth, but \st{(0.1) setbn} is.
+Anything the code defines with \texttt{def} goes into
+\texttt{tx@NumericDict}, the dictionary open at the time. That is how results
+are kept for later code on the page (see section~\ref{sec:plots}), but avoid
+the names of the library's procedures.
 
-\demo{(0.1) setbn (0.2) setbn addbn}
-\demo{50 setbnsize pibn 20 setbnsize}
-\demo{30 setbnsize 2 setbn sqrtbn 20 setbnsize}
-\demo{1 setbn expbn}
-\demo{(-50) setbn expbn}
-\demo{2 setbn 90 setbn powbn}
-\demo{25 factbn}
-\demo{60 30 binombn}
-\demo{(0.5) setbn asinbn 6 setbn mulbn}
+
+\section{Decimal numbers of any precision}\label{sec:bignum}
+
+A bignum is made with \Lps{setbn} from an integer, a real or a string.
+Pass strings for exact values: a real has only about seven digits, so
+\texttt{0.1 setbn} is not exactly one tenth, but \texttt{(0.1) setbn} is. A
+string can have a sign, a decimal point and an exponent, as in
+\texttt{(-1.25e-3)}.
+
+Every result is rounded to the current precision, half away from zero.
+\Lps{addbn}, \Lps{subbn}, \Lps{mulbn} and \Lps{divbn} are exact before that
+rounding, so their results are correctly rounded; the functions work with
+six extra digits and then round.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,4.5)
+\rput[l](0,4.0){\psNumericShow{(0.1) setbn (0.2) setbn addbn}}
+\rput[l](0,3.5){\psNumericShow{30 setbnsize 2 setbn sqrtbn}}
+\rput[l](0,3.0){\psNumericShow{1 setbn expbn}}
+\rput[l](0,2.5){\psNumericShow{(-50) setbn expbn}}
+\rput[l](0,2.0){\psNumericShow{2 setbn 90 setbn powbn}}
+\rput[l](0,1.5){\psNumericShow{25 factbn}}
+\rput[l](0,1.0){\psNumericShow{60 30 binombn}}
+\rput[l](0,0.5){\psNumericShow{(0.5) setbn asinbn 6 setbn mulbn}}
+\rput[l](0,0.0){\psNumericShow{(1e50) setbn sinbn}}
+\end{pspicture}
+\end{LTXexample}
+
+A bignum is the array \texttt{[}\Larg{sign digits exponent}\texttt{]}: a
+boolean, \texttt{true} for positive or zero; a string of as many digits as
+the precision; and an integer, the value being the digits read as a whole
+number times $10^{\textit{exponent}}$. Use the procedures rather than
+building or reading the arrays yourself.
 
 \begin{reference}
-\textrm{Procedure} & \textrm{Stack: inputs $\to$ outputs}\\\midrule
-setbnsize & \st{n} $\to$ (digits of every later result)\\
-setbn & integer, real, string or bignum $\to$ bignum\\
-bncvs, bncvr & bignum $\to$ string, real\\
-addbn subbn mulbn divbn & \st{a b} $\to$ bignum\\
-negbn absbn truncbn roundbn & \st{a} $\to$ bignum\\
-cmpbn & \st{a b} $\to$ $-1$, 0 or 1\\
-eqbn nebn gtbn gebn ltbn lebn & \st{a b} $\to$ boolean (\st{a b gtbn} is $a>b$)\\
-bniszero & \st{a} $\to$ boolean\\
-sqrtbn expbn lnbn log10bn & \st{x} $\to$ bignum\\
-powbn & \st{x y} $\to$ $x^y$ (exact for whole-number $y$)\\
-sinbn cosbn tanbn & \st{x} $\to$ bignum ($x$ in radians)\\
-atanbn asinbn acosbn & \st{x} $\to$ bignum\\
-atan2bn & \st{y x} $\to$ angle of the point $(x,y)$, in $(-\pi,\pi]$\\
-sinhbn coshbn tanhbn & \st{x} $\to$ bignum\\
-factbn & \st{n} $\to$ $n!$\\
-binombn & \st{n k} $\to$ $\binom{n}{k}$\\
-pibn & $\to$ $\pi$\\
+\Lps{setbnsize} & \Larg{n} \To{} --- (digits of every later result; at least 1)\\
+\Lps{setbn} & integer, real, string or bignum \To{} bignum\\
+\Lps{bncvs} \Lps{bncvr} & bignum \To{} string, real\\
+\Lps{addbn} \Lps{subbn} \Lps{mulbn} & \Larg{a b} \To{} $a+b$, $a-b$, $ab$\\
+\Lps{divbn} & \Larg{a b} \To{} $a/b$\\
+\Lps{negbn} \Lps{absbn} & \Larg{a} \To{} $-a$, $|a|$\\
+\Lps{truncbn} \Lps{roundbn} & \Larg{a} \To{} integer part, nearest integer\\
+\Lps{cmpbn} & \Larg{a b} \To{} $-1$, 0 or 1\\
+\Lps{eqbn} \Lps{nebn} \Lps{gtbn} \Lps{gebn} \Lps{ltbn} \Lps{lebn} &
+  \Larg{a b} \To{} boolean (\texttt{a b gtbn} is $a>b$)\\
+\Lps{bniszero} & \Larg{a} \To{} boolean\\
+\Lps{sqrtbn} \Lps{expbn} & \Larg{x} \To{} $\sqrt{x}$, $e^x$\\
+\Lps{lnbn} \Lps{log10bn} & \Larg{x} \To{} $\ln x$, $\log_{10}x$\\
+\Lps{powbn} & \Larg{x y} \To{} $x^y$ (exact for a whole-number $y$, which
+  allows a negative $x$)\\
+\Lps{sinbn} \Lps{cosbn} \Lps{tanbn} & \Larg{x} \To{} bignum ($x$ in radians,
+  of any size)\\
+\Lps{asinbn} \Lps{acosbn} \Lps{atanbn} & \Larg{x} \To{} bignum\\
+\Lps{atan2bn} & \Larg{y x} \To{} angle of the point $(x,y)$, in $(-\pi,\pi]$\\
+\Lps{sinhbn} \Lps{coshbn} \Lps{tanhbn} & \Larg{x} \To{} bignum\\
+\Lps{factbn} & \Larg{n} \To{} $n!$\\
+\Lps{binombn} & \Larg{n k} \To{} $\binom{n}{k}$\\
+\Lps{pibn} & --- \To{} $\pi$\\
+\Lps{typchk} & any \To{} \texttt{(bignumtype)}, \texttt{(complextype)},
+  \texttt{(matrixtype)} or the \PS type name\\
 \end{reference}
+
+$\pi$, $\ln 2$ and $\ln 10$ are worked out once for each precision and then
+kept.
+
+
+\section{Trigonometry with CORDIC}
+
+The part \texttt{trig} computes the trigonometric functions of ordinary
+reals with the CORDIC algorithm~\cite{volder59}, which builds an angle from
+the fixed steps $\arctan 1$, $\arctan\frac12$, $\arctan\frac14$,~\dots{}
+using only additions and halvings. Its results agree with \PS's own
+\texttt{sin} and \texttt{cos} to about six digits; it is there as an
+example of the method, and for interpreters whose built-in functions are
+coarse. Angles are in radians.
+
+\begin{LTXexample}[pos=l,preset=\centering,width=6.5cm]
+\psset{xunit=0.8cm,yunit=1.2cm}
+\begin{pspicture}(-0.3,-1.3)(6.8,1.4)
+\psaxes[labels=none]{->}(0,0)(0,-1.2)(6.7,1.3)
+\psplot[linecolor=red,linewidth=2pt,
+  plotpoints=50]{0}{6.28}{\pstNumeric{x corsin}}
+\psplot[linecolor=blue,linestyle=dashed,
+  plotpoints=50]{0}{6.28}{\pstNumeric{x corcos}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{corsin} \Lps{corcos} \Lps{cortan} & \Larg{x} \To{} real\\
+\Lps{corcot} \Lps{corsec} \Lps{corcsc} & \Larg{x} \To{} real\\
+\Lps{coratan} & \Larg{x y} \To{} $\arctan(y/x)$ in $[-\pi/2,\pi/2]$\\
+\Lps{cordiccossin} & \Larg{$\beta$ n} \To{} $2\times1$ matrix
+  $[\cos\beta;\sin\beta]$, $n\le 64$ steps\\
+\Lps{cordicatan} & \Larg{x y n} \To{} $\arctan(y/x)$, $n\le 64$ steps\\
+\end{reference}
+
+The part also defines \texttt{pi} as a real.
+
 
 \section{Matrices}
 
-A matrix is made from its rows with \st{mfromrows}. If any element is a
-bignum or a string, the calculation uses bignums. The determinant of
-\st{[[0.1 0.2] [0.3 0.4]]} is $-0.02$, so the fourth and fifth examples
-should give 0: with reals there is a small error, with strings there is
-none.
+A matrix is made from its rows with \Lps{mfromrows}. Indices start at 1.
+Every operation works on ordinary numbers; if any element is a bignum or a
+string, the whole calculation uses bignums at the current precision.
 
-\demo{[[1 2] [3 4]] mfromrows [[5 6] [7 8]] mfromrows mmul}
-\demo{[[2 1] [1 3]] mfromrows mdet}
-\demo{[[2 1] [1 3]] mfromrows minv}
-\demo{[[0.1 0.2] [0.3 0.4]] mfromrows mdet 0.02 add}
-\demo{[[(0.1) (0.2)] [(0.3) (0.4)]] mfromrows mdet (0.02) setbn addbn}
-\demo{[[2 1] [1 3]] mfromrows [[3] [5]] mfromrows msolve}
-\demo{[[1 1] [1 2] [1 3] [1 4]] mfromrows [[6] [5] [7] [10]] mfromrows mlstsq}
-\demo{[[2 1] [1 2]] mfromrows meigsym pop pstnum_list}
+The determinant of $\left[\begin{smallmatrix}0.1&0.2\\0.3&0.4\end{smallmatrix}\right]$
+is $-0.02$, so the second and third results below should be zero. With
+reals there is a small error, with strings there is none.
+
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,3.5)
+\rput[l](0,3.0){\psNumericShow{[[1 2] [3 4]] mfromrows [[5 6] [7 8]] mfromrows mmul}}
+\rput[l](0,2.5){\psNumericShow{[[0.1 0.2] [0.3 0.4]] mfromrows mdet 0.02 add}}
+\rput[l](0,2.0){\psNumericShow{[[(0.1) (0.2)] [(0.3) (0.4)]] mfromrows mdet (0.02) setbn addbn}}
+\rput[l](0,1.5){\psNumericShow{[[2 1] [1 3]] mfromrows minv}}
+\rput[l](0,1.0){\psNumericShow{[[2 1] [1 3]] mfromrows [[3] [5]] mfromrows msolve}}
+\rput[l](0,0.5){\psNumericShow{[[1 1] [1 2] [1 3] [1 4]] mfromrows [[6] [5] [7] [10]] mfromrows mlstsq}}
+\rput[l](0,0.0){\psNumericShow{[[2 1] [1 2]] mfromrows meigsym pop pstnum_list}}
+\end{pspicture}
+\end{LTXexample}
+
+\Lps{mdet}, \Lps{minv} and \Lps{msolve} use Gauss--Jordan elimination with
+partial pivoting, \Lps{mlstsq} uses Householder QR and \Lps{meigsym} the
+cyclic Jacobi method~\cite{golub13}. With reals, results have about seven
+significant digits, fewer for ill-conditioned matrices; use bignums when
+that matters. No operation changes its arguments, except \Lps{mput}.
 
 \begin{reference}
-\textrm{Procedure} & \textrm{Stack}\\\midrule
-marray & \st{m n} $\to$ $m\times n$ zero matrix\\
-mfromrows, mtorows & \st{[[row] [row] ...]} $\to$ \st{M}, and back\\
-midentity & \st{n} $\to$ identity\\
-mcopy mtranspose & \st{M} $\to$ matrix\\
-mget, mput & \st{M i j} $\to$ value; \st{M i j value} $\to$ (changes \st{M})\\
-msize & \st{M} $\to$ \st{m n}\\
-madd msub mmul & \st{A B} $\to$ matrix\\
-mscale & \st{M s} $\to$ $s\cdot M$\\
-mdet minv & \st{A} $\to$ determinant, inverse\\
-msolve & \st{A B} $\to$ \st{X} with $AX=B$\\
-mlstsq & \st{A B} $\to$ least-squares \st{X} (Householder QR)\\
-meigsym & \st{A} $\to$ \st{[values] V} for a symmetric \st{A} (Jacobi)\\
+\Lps{marray} & \Larg{m n} \To{} $m\times n$ zero matrix\\
+\Lps{mfromrows} & \texttt{[[}\Larg{row}\texttt{] [}\Larg{row}\texttt{]}
+  \dots\texttt{]} \To{} \Larg{M}\\
+\Lps{mtorows} & \Larg{M} \To{} list of rows\\
+\Lps{midentity} & \Larg{n} \To{} $n\times n$ identity\\
+\Lps{mcopy} \Lps{mtranspose} & \Larg{M} \To{} copy, $M^{\mathsf T}$\\
+\Lps{mget} & \Larg{M i j} \To{} element\\
+\Lps{mput} & \Larg{M i j value} \To{} --- (changes \Larg{M})\\
+\Lps{msize} & \Larg{M} \To{} \Larg{m n} (rows, columns)\\
+\Lps{madd} \Lps{msub} \Lps{mmul} & \Larg{A B} \To{} $A+B$, $A-B$, $AB$\\
+\Lps{mscale} & \Larg{M s} \To{} $sM$\\
+\Lps{mdet} \Lps{minv} & \Larg{A} \To{} $\det A$, $A^{-1}$\\
+\Lps{msolve} & \Larg{A B} \To{} $X$ with $AX=B$\\
+\Lps{mlstsq} & \Larg{A B} \To{} $X$ minimising $\|AX-B\|$, for $m\ge n$\\
+\Lps{meigsym} & \Larg{A} \To{} \texttt{[}\Larg{eigenvalues}\texttt{]}
+  \Larg{V}, for a symmetric $A$; ascending, with the unit eigenvectors as the
+  columns of $V$\\
 \end{reference}
+
 
 \section{Complex numbers}
 
-A complex number is the array \st{[re im]}; a plain number $x$ counts as
-\st{[x 0]}. As with matrices, a bignum or string part makes the calculation
-use bignums.
+A complex number is the array \texttt{[}\Larg{re im}\texttt{]}. Wherever one
+is expected, a plain number, bignum or string $x$ counts as
+\texttt{[}$x$\texttt{ 0]}. As with matrices, a bignum or string part makes
+the calculation use bignums.
 
-\demo{[1 2] [3 4] cmul}
-\demo{[1 2] [3 4] cdiv}
-\demo{[-4 0] csqrt}
-\demo{[(0) 1] [0 1] cpow}
-\demo{[(1) 2] 10 cpow}
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,2.5)
+\rput[l](0,2.0){\psNumericShow{[1 2] [3 4] cdiv}}
+\rput[l](0,1.5){\psNumericShow{[-4 0] csqrt}}
+\rput[l](0,1.0){\psNumericShow{[(0) 1] [0 1] cpow}}
+\rput[l](0,0.5){\psNumericShow{[(1) 2] 10 cpow}}
+\rput[l](0,0.0){\psNumericShow{[0 1] cabs [0 1] carg}}
+\end{pspicture}
+\end{LTXexample}
 
-\begin{reference}
-\textrm{Procedure} & \textrm{Stack}\\\midrule
-cpx & \st{re im} $\to$ \st{z}\\
-cre cim cabs carg & \st{z} $\to$ real part, imaginary part, modulus, argument\\
-cadd csub cmul cdiv & \st{a b} $\to$ \st{z}\\
-cneg cconj csqrt cexp cln & \st{z} $\to$ \st{z}\\
-cpow & \st{z w} $\to$ $z^w$\\
-ccvs & \st{z} $\to$ string\\
-\end{reference}
-
-\section{Roots, integrals and polynomials}
-
-A function is a procedure that takes $x$ and returns $f(x)$; with bignums it
-receives a bignum and must return one. A polynomial is the list of its
-coefficients, highest power first.
-
-\demo{{ dup mul 2 sub } 0 2 froot}
-\demo{{ dup mulbn 2 setbn subbn } (1) (2) froot}
-\demo{{ dup mul } 0 1 fintegrate}
-\demo{[1 0 -2] 3 polyval}
-\demo{[1 2] [1 -2] polymul pstnum_list}
-\demo{[1 -6 11 -6] polyroots pstnum_list}
-\demo{[0 1 2 3 4] [1.1 1.9 5.2 9.8 17.1] 2 polyfit}
-\demo{84 36 gcd}
+The third line is $i^i=e^{-\pi/2}$, a real number. A part much smaller than
+the modulus can show rounding noise instead of zero: the imaginary part of
+\texttt{[0 pibn] cexp} is $-3.7\cdot10^{-20}$, because \Lps{pibn} is $\pi$
+rounded to 20 digits. The last example leaves two results; only the one on
+top is printed.
 
 \begin{reference}
-\textrm{Procedure} & \textrm{Stack}\\\midrule
-froot & \st{\{f\} a b} $\to$ root of $f$ between $a$ and $b$ (Illinois)\\
-fintegrate & \st{\{f\} a b} $\to$ $\int_a^b f$ (adaptive Gauss--Legendre)\\
-polyval & \st{p x} $\to$ $p(x)$, $x$ real, bignum or complex\\
-polyder & \st{p} $\to$ $p'$\\
-polyadd polymul & \st{p q} $\to$ polynomial\\
-polyroots & \st{p} $\to$ every root, as complex numbers (Durand--Kerner)\\
-polyfit & \st{[x ...] [y ...] d} $\to$ least-squares polynomial of degree $d$\\
-gcd lcm & \st{a b} $\to$ integer\\
+\Lps{cpx} & \Larg{re im} \To{} \Larg{z}\\
+\Lps{cre} \Lps{cim} & \Larg{z} \To{} real part, imaginary part\\
+\Lps{cabs} \Lps{carg} & \Larg{z} \To{} $|z|$, argument in $(-\pi,\pi]$\\
+\Lps{cadd} \Lps{csub} \Lps{cmul} \Lps{cdiv} & \Larg{a b} \To{} \Larg{z}\\
+\Lps{cneg} \Lps{cconj} & \Larg{z} \To{} $-z$, $\bar z$\\
+\Lps{csqrt} & \Larg{z} \To{} $\sqrt z$, the root with real part $\ge 0$\\
+\Lps{cexp} \Lps{cln} & \Larg{z} \To{} $e^z$, principal $\ln z$\\
+\Lps{cpow} & \Larg{z w} \To{} $z^w$\\
+\Lps{ccvs} & \Larg{z} \To{} string\\
 \end{reference}
 
-\section{Plots}
 
-The procedures work anywhere PSTricks takes PostScript code. Here the
-parabola is fitted once, with \cs{pstVerb}, and its coefficients are kept in
-\st{tx@NumericDict} as \st{fitcoef}; the second curve is the integral
-$\int_0^x e^{-t^2}\,dt$, worked out by \st{fintegrate} for each point.
+\section{Roots, integrals and polynomials}\label{sec:calc}
 
-\begin{verbatim}
-\pstVerb{\pstNumeric{/fitcoef [0 1 2 3 4] [1.1 1.9 5.2 9.8 17.1]
-  2 polyfit def}}
-\psplot{0}{4}{\pstNumeric{fitcoef x polyval}}
-\psplot{0}{4}{\pstNumeric{{ dup mul neg 2.718281828 exch exp }
-  0 x fintegrate 10 mul}}
-\end{verbatim}
+A function is a procedure that takes $x$ and returns $f(x)$. If the other
+arguments are bignums or strings, it receives a bignum and must return one.
+It runs at six digits above the current precision, so it must not change
+the precision. A polynomial is the list of its coefficients, highest power
+first: \texttt{[1 0 -2]} is $x^2-2$.
 
-\begin{center}
-\pstVerb{\pstNumeric{/fitcoef [0 1 2 3 4] [1.1 1.9 5.2 9.8 17.1] 2 polyfit def}}
-\psset{xunit=2cm,yunit=0.3cm}
+\begin{LTXexample}[pos=t]
+\begin{pspicture}(0,-0.2)(14,4.0)
+\rput[l](0,3.5){\psNumericShow{{ dup mul 2 sub } 0 2 froot}}
+\rput[l](0,3.0){\psNumericShow{{ dup mulbn 2 setbn subbn } (1) (2) froot}}
+\rput[l](0,2.5){\psNumericShow{{ dup mul } 0 1 fintegrate}}
+\rput[l](0,2.0){\psNumericShow{[1 0 -2] 3 polyval}}
+\rput[l](0,1.5){\psNumericShow{[1 2] [1 -2] polymul pstnum_list}}
+\rput[l](0,1.0){\psNumericShow{[1 -6 11 -6] polyroots pstnum_list}}
+\rput[l](0,0.5){\psNumericShow{[0 1 2 3 4] [1.1 1.9 5.2 9.8 17.1] 2 polyfit}}
+\rput[l](0,0.0){\psNumericShow{84 36 gcd}}
+\end{pspicture}
+\end{LTXexample}
+
+\begin{reference}
+\Lps{froot} & \Larg{\{f\} a b} \To{} a root of $f$ between $a$ and $b$;
+  $f(a)$ and $f(b)$ must differ in sign (Illinois method)\\
+\Lps{fintegrate} & \Larg{\{f\} a b} \To{} $\int_a^b f(x)\,dx$
+  (Gauss--Legendre with 16 and 32 points, halving the interval where they
+  disagree)\\
+\Lps{polyval} & \Larg{p x} \To{} $p(x)$, $x$ real, bignum or complex\\
+\Lps{polyder} & \Larg{p} \To{} $p'$\\
+\Lps{polyadd} \Lps{polymul} & \Larg{p q} \To{} $p+q$, $pq$\\
+\Lps{polyroots} & \Larg{p} \To{} every root, as complex numbers sorted by
+  real part (Durand--Kerner)\\
+\Lps{polyfit} & \texttt{[}\Larg{x}\dots\texttt{] [}\Larg{y}\dots\texttt{]}
+  \Larg{d} \To{} least-squares polynomial of degree $d$\\
+\Lps{gcd} \Lps{lcm} & \Larg{a b} \To{} integer\\
+\end{reference}
+
+\Lps{polyroots} needs the part \texttt{complex}, which \Loption{calc}
+loads. A root of multiplicity $m$ is found to only about $1/m$ of the
+digits. \Lps{froot} and \Lps{polyroots} stop after 500 iterations.
+
+
+\section{Plots}\label{sec:plots}
+
+The procedures work anywhere \PST takes \PS code. Below, the parabola is
+fitted once, with \Lcs{pstVerb}, and its coefficients are kept in
+\texttt{tx@NumericDict} as \texttt{fitcoef}; the second curve is the integral
+$10\int_0^x e^{-t^2}\,dt$, worked out by \Lps{fintegrate} for each point of
+the plot. The point where the two curves cross is found by \Lps{froot} and
+marked.
+
+\begin{LTXexample}[pos=t,preset=\centering]
+\pstVerb{\pstNumeric{/fitcoef [0 1 2 3 4] [1.1 1.9 5.2 9.8 17.1] 2 polyfit def
+  /erfx { { dup mul neg 2.718281828 exch exp } 0 3 -1 roll fintegrate 10 mul } def}}
+\psset{xunit=2.5cm,yunit=0.35cm}
 \begin{pspicture}(-0.3,-1.5)(4.4,19)
 \psaxes[Dy=5,ticksize=0 4pt]{->}(0,0)(4.3,18.5)
 \psdots[dotstyle=*](0,1.1)(1,1.9)(2,5.2)(3,9.8)(4,17.1)
 \psplot[linecolor=red,linewidth=1pt]{0}{4}{\pstNumeric{fitcoef x polyval}}
-\psplot[linecolor=blue,linewidth=1pt,plotpoints=60]{0}{4}{\pstNumeric{{ dup mul neg 2.718281828 exch exp } 0 x fintegrate 10 mul}}
+\psplot[linecolor=blue,linewidth=1pt,plotpoints=60]{0}{4}{\pstNumeric{x erfx}}
+\psdot[dotscale=1.5,linecolor=Orange!85!Red](!\pstNumeric{
+  { dup fitcoef exch polyval exch erfx sub } 1 4 froot dup erfx})
 \rput[r](3.3,15){\red fitted parabola}
 \rput[l](0.5,11.5){\blue $10\int_0^x e^{-t^2}\,dt$}
 \end{pspicture}
-\end{center}
+\end{LTXexample}
+
+Code in \Lcs{psplot} runs once for each of the \Lkeyword{plotpoints}, so an
+expensive calculation that does not depend on $x$ belongs in \Lcs{pstVerb},
+as the fit does here.
+
 
 \section{Errors and limits}
 
-Wrong input raises the usual PostScript errors: \st{rangecheck} (for
-example the square root of a negative bignum, or \st{froot} without a sign
-change), \st{undefinedresult} (division by zero, a singular matrix) and
-\st{syntaxerror} (a string \st{setbn} cannot read). The error stops the
-page, and Ghostscript or the PostScript viewer reports it.
+Wrong input raises the usual \PS errors~\cite{PLRM}, as built-in operators
+do: \texttt{rangecheck} (for example the square root of a negative bignum,
+or \Lps{froot} without a sign change), \texttt{undefinedresult} (division by
+zero, a singular matrix) and \texttt{syntaxerror} (a string that
+\Lps{setbn} cannot read). The error stops the page, and Ghostscript or the
+\PS viewer reports it, for example as
+\texttt{Error: /undefinedresult in /divbn}.
 
-Bignum arithmetic works one decimal digit at a time: instant at 20 digits,
-slower at 100 (\st{pibn} about 5\,s the first time). Integrals with bignums
-are slow; the first one at a given precision spends about 10\,s working out
-the Gauss--Legendre points.
+Bignum arithmetic works one decimal digit at a time. At 20 digits each
+operation is instant. At 100 digits, \Lps{pibn} takes about five seconds the
+first time and \Lps{sinbn} about two. Integrals of bignums are slow, and the
+first one at a given precision spends about ten seconds working out the
+Gauss--Legendre points. Keep bignum code out of \Lcs{psplot} when you can,
+and compute in \Lcs{pstVerb} what several objects need.
 
-\section{More}
 
-The library is also a standalone PostScript library for Ghostscript, with a
-test suite of 581 tests and a showcase of every procedure, at
-\url{https://github.com/buddyledger/postscript-math}. Its README describes
-every procedure in more detail.
+\section{The library without \TeX}
 
-\pkg{} may be distributed and modified under the LaTeX Project Public
-License 1.3c or later.
+The parts are also ordinary \PS files, in the folder \texttt{source} of the
+package's repository and of its CTAN archive, and can be used with
+Ghostscript as a calculator. \LFile{Load.ps} loads all five and leaves the
+dictionary open:
+
+\begin{verbatim}
+gs -dNOSAFER -dNODISPLAY Load.ps
+GS> 30 setbnsize 2 setbn lnbn bnPrint
++6.93147180559945309417232121458e-1
+\end{verbatim}
+
+\texttt{-dNOSAFER} lets \texttt{Load.ps} run the other files. The dvips
+headers are generated from these files by \LFile{make\_headers.py}. The
+repository, \url{https://github.com/buddyledger/pst-numeric}, also has a
+test suite of 581 tests, run against both the files and the headers, and a
+showcase of every procedure.
+
+
+\section{License}
+
+\pkg{} is copyright 2012, 2026 Buddy Ledger. It may be distributed and/or
+modified under the conditions of the \LaTeX{} Project Public License,
+either version 1.3c of this license or (at your option) any later version,
+and has the maintenance status \enquote{author-maintained}.
+
+
+\bgroup
+\raggedright
+\nocite{*}
+\printbibliography
+\egroup
+
+\printindex
 
 \end{document}

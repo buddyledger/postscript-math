@@ -1,104 +1,139 @@
-# PostScript maths library (pst-numeric)
+# pst-numeric
 
-A small maths library written in PostScript. It can be run with Ghostscript
-as a calculator (no page output), or used from LaTeX as the PSTricks package
-**pst-numeric**, where the calculations run while the page is drawn and can
-feed plots (see [Using it from LaTeX](#using-it-from-latex-pst-numeric)).
-It has five parts:
+Arbitrary precision arithmetic, matrices, complex numbers and numerical
+methods for PSTricks.
 
-| File | What it does |
-|---|---|
-| `bignumlibrary.ps` | Decimal floating-point numbers with as many significant digits as you ask for: arithmetic, comparisons, sqrt, exp, powers, logarithms, trigonometric and hyperbolic functions and their inverses, pi, factorials |
-| `Trig.ps` | sin/cos/tan/atan for ordinary PostScript reals using the CORDIC algorithm |
-| `Matrix.ps` | Matrices of reals or bignums: build, add, multiply, transpose, determinant, inverse, linear systems, least squares, symmetric eigenvalues |
-| `Complex.ps` | Complex numbers of reals or bignums: arithmetic, modulus and argument, sqrt, exp, ln, powers |
-| `Numeric.ps` | Roots of functions, integrals, polynomials (values, roots, fitting), gcd and lcm |
-| `Load.ps` | Loads all five and opens the library's dictionary |
-| `tex/pst-numeric.tex`, `latex/pst-numeric.sty` | The PSTricks package pst-numeric |
-| `dvips/pst-numeric-*.pro` | Each part as a dvips header, for the package (generated) |
-| `dvips/pst-numeric.pro` | The package's own PostScript helpers |
-| `make_headers.py` | Generates the part headers in `dvips/` (Python 3, standard library only) |
-| [`doc/pst-numeric-doc.pdf`](doc/pst-numeric-doc.pdf), `doc/pst-numeric-doc.tex` | Manual of the package, and its source |
-| `tools/tex-test.sh`, `tools/tex-test.tex` | Tests of the package with latex and dvips |
-| `tools/make-doc.sh` | Builds the manual |
-| `test_bignum.ps` | Regression tests for all five files |
-| `make_tests.py` | Generates `test_bignum.ps` (Python 3, standard library only) |
-| [`showcase.pdf`](showcase.pdf) | Every public function with a live result, plus CORDIC plots (11 pages) |
-| `showcase.ps`, `make_showcase.bat` | Source of the showcase and the script that builds it |
+**pst-numeric** is a library of PostScript procedures for PSTricks. Its
+decimal numbers (*bignums*) carry as many significant digits as you ask for,
+where PostScript's own reals have about seven. On top of that it has
+matrices, complex numbers, roots of functions, integrals and polynomials,
+each working on ordinary reals or on bignums. The calculations run in the
+PostScript interpreter while the page is drawn, so they can feed plots
+directly. The same library also runs on its own in Ghostscript, as a
+calculator.
 
-## Showcase
-
-[showcase.pdf](showcase.pdf) runs every public procedure and typesets the code
-next to its result, with a note under each row explaining what it shows. Red
-results are errors raised on purpose, to show how each procedure rejects bad
-input. It also has a table and plots that
-compare the CORDIC functions with Ghostscript's built-in sin and cos. Each
-code entry is executed as written while the PDF is built, so the document
-always matches the library. To rebuild it after changing the library (about
-50 seconds, mostly the bignum integral):
-
-```bat
-make_showcase.bat
+```latex
+\usepackage[bignum,calc]{pst-numeric}
+...
+\psplot{0}{3}{\pstNumeric{[0.5 0 -1] x polyval}}
+\begin{pspicture}(0,0)(8,0.4)
+  \psNumericShow{30 setbnsize 2 setbn sqrtbn}  % prints +1.41421356237309504880168872421e0
+\end{pspicture}
 ```
 
-`Examples/bignumfactorial.ps` is a stand-alone program, separate from the
-library, that computes 34!. It draws the result on the page, so open it in a
-Ghostscript window (`gswin64c Examples\bignumfactorial.ps`) rather than using
-the launchers, which turn the page off.
+The [manual](doc/pst-numeric-doc.pdf) describes the package, with examples
+and a reference of every procedure. The library has five parts, chosen by
+the package options:
 
-## License
+| Option | Source | What it does |
+|---|---|---|
+| `bignum` | `bignumlibrary.ps` | Decimal floating-point numbers with as many significant digits as you ask for: arithmetic, comparisons, sqrt, exp, powers, logarithms, trigonometric and hyperbolic functions and their inverses, pi, factorials |
+| `trig` | `Trig.ps` | sin/cos/tan/atan for ordinary PostScript reals using the CORDIC algorithm |
+| `matrix` | `Matrix.ps` | Matrices of reals or bignums: build, add, multiply, transpose, determinant, inverse, linear systems, least squares, symmetric eigenvalues |
+| `complex` | `Complex.ps` | Complex numbers of reals or bignums: arithmetic, modulus and argument, sqrt, exp, ln, powers (loads `matrix`) |
+| `calc` | `Numeric.ps` | Roots of functions, integrals, polynomials (values, roots, fitting), gcd and lcm (loads `matrix` and `complex`) |
 
-Copyright 2012, 2026 Buddy Ledger.
+With no option, all five are loaded. Matrices, complex numbers and `calc`
+work on reals without `bignum`; load it too to use them with bignums.
+Like every PSTricks package it needs the `latex`–`dvips` route (or `xelatex`).
 
-This work may be distributed and/or modified under the conditions of the
-[LaTeX Project Public License](https://www.latex-project.org/lppl/), either
-version 1.3c of this license or (at your option) any later version. The full
-text is in [LICENSE](LICENSE).
+## Files
 
-This work has the LPPL maintenance status `author-maintained`. The Current
-Maintainer of this work is Buddy Ledger.
+| Folder | Contents | On CTAN |
+|---|---|---|
+| `tex/`, `latex/` | The package, `pst-numeric.tex`, and its LaTeX wrapper `pst-numeric.sty` | yes |
+| `dvips/` | `pst-numeric-<part>.pro`, each part as a dvips header (generated), and `pst-numeric.pro`, the package's own helpers | yes |
+| `doc/` | The manual: [`pst-numeric-doc.pdf`](doc/pst-numeric-doc.pdf), its source and bibliography | yes |
+| `source/` | The library's PostScript files, `Load.ps` to load them all, `make_headers.py` to generate the headers, and `gs.bat` to run Ghostscript on Windows | yes, without `gs.bat` |
+| `test/` | `test_bignum.ps` (581 tests of the library), `make_tests.py` that generates it, and `tex-test.sh` with `tex-test.tex` (tests of the package with latex and dvips) | no |
+| `examples/` | [`showcase.pdf`](examples/showcase.pdf), every public procedure with a live result, with its source `showcase.ps` and `make_showcase.bat`; and `bignumfactorial.ps` | no |
+| `tools/` | `make-doc.sh` builds the manual, `make-ctan.py` builds the CTAN archive | no |
 
-This work consists of the files `bignumlibrary.ps`, `Trig.ps`, `Matrix.ps`,
-`Complex.ps`, `Numeric.ps`, `Load.ps`, `gs.bat`, `runme.bat`, `test_bignum.ps`, `make_tests.py`,
-`make_headers.py`, `tex/pst-numeric.tex`, `latex/pst-numeric.sty`,
-`dvips/pst-numeric.pro`, `dvips/pst-numeric-bignum.pro`, `dvips/pst-numeric-trig.pro`,
-`dvips/pst-numeric-matrix.pro`, `dvips/pst-numeric-complex.pro`,
-`dvips/pst-numeric-calc.pro`, `doc/pst-numeric-doc.tex`, `doc/pst-numeric-doc.pdf`,
-`tools/tex-test.sh`, `tools/tex-test.tex`, `tools/make-doc.sh`,
-`showcase.ps`, `showcase.pdf`, `make_showcase.bat`,
-`Examples/bignumfactorial.ps` and `README.md`.
+`README` and `Changes` are the CTAN archive's readme and change log;
+[RELEASING.md](RELEASING.md) describes how a version goes to CTAN.
 
-## Running
+## Building and testing
 
-The batch files call Ghostscript 9.52 (`C:\Program Files\gs\gs9.52\bin\gswin64c.exe`)
-with `-dNODISPLAY -dNOSAFER`.
+The manual and the package tests need TeX Live; its Docker image works
+too. Run from the repository's top folder:
 
-```bat
-gs.bat Load.ps          :: load the library, then type at the GS> prompt
-runme.bat myfile.ps     :: run a file (it can start with (Load.ps) run)
-runme.bat test_bignum.ps
+```bash
+docker run --rm -v "$PWD:/pkg" texlive/texlive:latest bash /pkg/tools/make-doc.sh
 ```
 
-From PowerShell, use `.\gs.bat` and `.\runme.bat`.
+```bash
+docker run --rm -v "$PWD:/pkg:ro" texlive/texlive:latest bash /pkg/test/tex-test.sh
+```
 
-`-dNOSAFER` is required: since 9.50 Ghostscript runs in SAFER mode by default,
-which stops `Load.ps` from `run`-ning the other files. It also means any file
-run through these launchers can read and write your files, so use them only
-for PostScript you trust.
+The dvips headers are generated from the `.ps` files, so don't edit them:
+change the `.ps` file and run
 
-## The library's dictionary
+```bash
+python source/make_headers.py
+```
 
-Every name the library defines is in one dictionary, `tx@NumericDict`,
-so nothing clashes with other PostScript code or with your own names. Loading
-the library adds only that one name to `userdict`.
+A part header is its `.ps` file without the comment and blank lines (DSC
+lines must not appear in a dvips header). `dvips/pst-numeric.pro` is written
+by hand.
 
-`Load.ps` leaves the dictionary open on the dictionary stack, so after
-`(Load.ps) run` you can call everything directly, as in the examples below.
-Anything you `def` at the top level then goes into the library's dictionary
-too, so avoid redefining its names.
+The library tests run in Ghostscript, from the top folder, against the
+`.ps` files or, with `-dPSM_HEADERS`, against the headers (on Windows use
+`gswin64c`):
 
-If you load a part on its own, or the dvips headers, open the dictionary
-yourself:
+```bash
+gs -q -dNODISPLAY -dNOSAFER -dBATCH test/test_bignum.ps
+```
+
+```bash
+gs -q -dNODISPLAY -dNOSAFER -dBATCH -dPSM_HEADERS test/test_bignum.ps
+```
+
+The file prints a line for each failure and ends with
+`N passed, 0 failed / ALL TESTS PASSED`. To see every line, set
+`/bnt_verbose true def` near the top. The first section checks that loading
+adds only the library's dictionary to `userdict` and leaves the stacks as
+they were. Expected values come from Python's `decimal` module, computed to
+100 digits and rounded half away from zero, and from exact fractions
+(`fractions` module) for the matrix and polynomial results.
+
+`test_bignum.ps` is generated, so don't edit it by hand. To add or change
+tests, edit the cases in `test/make_tests.py` and run it again
+(`python test/make_tests.py`). The script writes the file itself; don't
+redirect its output with `>`, which in Windows PowerShell 5.1 writes UTF-16.
+
+`python tools/make-ctan.py` builds `build/pst-numeric.zip`, the archive for
+CTAN, and checks it.
+
+GitHub Actions runs all of these on every push: a check that the headers in
+`dvips/` are up to date, the library tests both ways, the package tests, and
+the CTAN archive.
+
+## Using the library with Ghostscript
+
+`source/Load.ps` loads all five parts from the current folder and opens the
+library's dictionary, so after `(Load.ps) run` everything can be called
+directly. In `source/`:
+
+```bash
+gs -dNODISPLAY -dNOSAFER Load.ps
+```
+
+On Windows, `source\gs.bat` calls Ghostscript 9.52
+(`C:\Program Files\gs\gs9.52\bin\gswin64c.exe`) with `-dNODISPLAY -dNOSAFER`:
+`gs.bat Load.ps` loads the library and waits at the `GS>` prompt, and
+`gs.bat myfile.ps` runs a file (it can start with `(Load.ps) run`).
+
+`-dNOSAFER` is required: since 9.50 Ghostscript runs in SAFER mode by
+default, which stops `Load.ps` from `run`-ning the other files. It also means
+any file run this way can read and write your files, so use it only for
+PostScript you trust.
+
+Every name the library defines is in one dictionary, `tx@NumericDict`, so
+nothing clashes with other PostScript code or with your own names. Loading
+adds only that one name to `userdict`. `Load.ps` leaves the dictionary open,
+so anything you `def` at the top level then goes into it too; avoid
+redefining its names. If you load a part on its own, or the dvips headers,
+open the dictionary yourself:
 
 ```postscript
 (Matrix.ps) run
@@ -107,56 +142,23 @@ tx@NumericDict begin
 end
 ```
 
-## Using it from LaTeX: pst-numeric
+[examples/showcase.pdf](examples/showcase.pdf) runs every public procedure
+and typesets the code next to its result, with a note under each row. Red
+results are errors raised on purpose, to show how each procedure rejects bad
+input. It also compares the CORDIC functions with Ghostscript's built-in sin
+and cos. To rebuild it after changing the library (about 50 seconds), run
+`examples\make_showcase.bat`. `examples/bignumfactorial.ps` is a stand-alone
+program, separate from the library, that computes 34! and draws it on the
+page, so open it in a Ghostscript window.
 
-```latex
-\usepackage{pst-numeric}                % every part
-\usepackage[matrix,complex]{pst-numeric}
-...
-\psplot{0}{3}{\pstNumeric{[0.25 0 -1] x polyval}}
-\begin{pspicture}(0,0)(8,0.4)
-  \psNumericShow{30 setbnsize 2 setbn sqrtbn}  % prints +1.41421356237309504880168872421e0
-\end{pspicture}
-```
+## Reference
 
-`\pstNumeric{code}` runs PostScript code with the library's dictionary open,
-inside any PostScript argument of PSTricks. `\psNumericShow{code}` prints the
-result. The options `bignum`, `trig`, `matrix`, `complex` and `calc` (Numeric.ps)
-choose the parts; `complex` loads `matrix` too, and `calc` loads both. The
-[manual](doc/pst-numeric-doc.pdf) has the details and examples. Like every
-PSTricks package it needs the `latex`–`dvips` route (or `xelatex`).
+The manual has the reference for the package. This section has more detail
+on each part of the library.
 
-Each part is a separate dvips header in `dvips/`, so a document carries only
-what it uses:
+### bignumlibrary.ps
 
-| Header | Part | Needs |
-|---|---|---|
-| `pst-numeric-bignum.pro` | `bignumlibrary.ps` | |
-| `pst-numeric-trig.pro` | `Trig.ps` | |
-| `pst-numeric-matrix.pro` | `Matrix.ps` | bignum, for bignum matrices |
-| `pst-numeric-complex.pro` | `Complex.ps` | matrix; bignum, for bignums |
-| `pst-numeric-calc.pro` | `Numeric.ps` | matrix and complex; bignum, for bignums |
-| `pst-numeric.pro` | the package's helpers (`pstnum_cvs`, `pstnum_list`) | |
-
-A part header is its `.ps` file without the comment and blank lines (DSC
-lines must not appear in a dvips header). These are generated, so don't edit
-them: change the `.ps` file and run
-
-```bat
-python make_headers.py
-```
-
-`pst-numeric.pro` is written by hand.
-
-To build the manual, with TeX Live or its Docker image:
-
-```bash
-docker run --rm -v "$PWD:/pkg" texlive/texlive:latest bash /pkg/tools/make-doc.sh
-```
-
-## bignumlibrary.ps
-
-### Quick example
+#### Quick example
 
 ```postscript
 (Load.ps) run
@@ -167,7 +169,7 @@ pibn bnPrint                       % +3.14159265358979323846264338328e0
 (1.5) setbn (1.25) setbn gtbn =    % true
 ```
 
-### Number format
+#### Number format
 
 A bignum is a three-element array `[sign digits exponent]`:
 
@@ -180,7 +182,7 @@ With `5 setbnsize`, 509 is stored as `[true (50900) -2]`.
 
 `typchk` returns `(bignumtype)` for anything with this shape.
 
-### Precision and rounding
+#### Precision and rounding
 
 `n setbnsize` sets the number of significant digits (`bnn`). The default is
 **20**. Every result is rounded to `bnn` digits, half away from zero.
@@ -195,7 +197,7 @@ Inputs are rounded too when `setbn` converts them.
 Precision doesn't change existing bignums. A bignum made at one precision
 is re-rounded to the current `bnn` when it's used.
 
-### Procedures
+#### Procedures
 
 Stack effects are shown as `inputs → outputs`. `bn` is a bignum.
 
@@ -253,20 +255,20 @@ print each result of `setbn` and the arithmetic procedures).
 
 Procedures whose names start with `bn_` are internal.
 
-### Errors
+#### Errors
 
 Errors are raised through `errordict`, the same way built-in operators raise
 them, so `stopped` catches them and Ghostscript reports them as, for example,
 `Error: /undefinedresult in /divbn`.
 
-### Speed
+#### Speed
 
 Arithmetic works one decimal digit at a time. At 20 digits each operation is
 instant. At 100 digits, `pibn` takes about 5 s the first time (it's cached
 after that) and `sinbn` about 2 s. The full test suite (581 tests) takes
 about 30 seconds, mostly for bignum integrals and polynomial roots.
 
-## Trig.ps
+### Trig.ps
 
 CORDIC functions for ordinary reals, accurate to about 6 significant digits
 (40 iterations; PostScript reals limit the precision). CORDIC builds an angle
@@ -283,7 +285,7 @@ file loads. It works on its own and doesn't need Matrix.ps.
 
 Also defines `pi` as a real.
 
-## Matrix.ps
+### Matrix.ps
 
 Matrices are arrays of columns, and indices start at 1. The easiest way to
 write one is as a list of rows:
@@ -333,7 +335,7 @@ Hilbert matrices. Use bignums when that matters.
 
 The operations never change their arguments, except `mput`.
 
-## Complex.ps
+### Complex.ps
 
 A complex number is the array `[re im]`. Wherever one is expected, a plain
 number, bignum or string `x` counts as `[x 0]`. As in Matrix.ps, a bignum or
@@ -362,7 +364,7 @@ Parts much smaller than the modulus can show rounding noise instead of 0, for
 example `[0 pibn] cexp` gives −1 − 3.7e−20i because pibn is pi rounded to
 `bnn` digits.
 
-## Numeric.ps
+### Numeric.ps
 
 Numerical methods for reals or bignums. Needs Matrix.ps; `polyroots` and a
 complex `x` in `polyval` also need Complex.ps.
@@ -405,114 +407,30 @@ Limits:
 - `froot` and `polyroots` stop after 500 iterations even if they haven't
   converged.
 
-## Tests
+## License
 
-```bat
-runme.bat test_bignum.ps
-```
+Copyright 2012, 2026 Buddy Ledger.
 
-The file prints a line for each failure and ends with
-`N passed, 0 failed / ALL TESTS PASSED`. To see every line, set
-`/bnt_verbose true def` near the top. Expected values come from Python's
-`decimal` module, computed to 100 digits and rounded half away from zero,
-and from exact fractions (`fractions` module) for the matrix and polynomial
-results.
+This work may be distributed and/or modified under the conditions of the
+[LaTeX Project Public License](https://www.latex-project.org/lppl/), either
+version 1.3c of this license or (at your option) any later version. The full
+text is in [LICENSE](LICENSE).
 
-`test_bignum.ps` is generated, so don't edit it by hand. To add or change
-tests, edit the cases in `make_tests.py` and run it again:
+This work has the LPPL maintenance status `author-maintained`. The Current
+Maintainer of this work is Buddy Ledger.
 
-```bat
-python make_tests.py
-runme.bat test_bignum.ps
-```
+This work consists of the files `README`, `README.md`, `Changes`,
+`RELEASING.md`, `tex/pst-numeric.tex`, `latex/pst-numeric.sty`,
+`dvips/pst-numeric.pro`, `dvips/pst-numeric-bignum.pro`,
+`dvips/pst-numeric-trig.pro`, `dvips/pst-numeric-matrix.pro`,
+`dvips/pst-numeric-complex.pro`, `dvips/pst-numeric-calc.pro`,
+`doc/pst-numeric-doc.tex`, `doc/pst-numeric-doc.bib`,
+`doc/pst-numeric-doc.pdf`, `source/bignumlibrary.ps`, `source/Trig.ps`,
+`source/Matrix.ps`, `source/Complex.ps`, `source/Numeric.ps`,
+`source/Load.ps`, `source/make_headers.py`, `source/gs.bat`,
+`test/test_bignum.ps`, `test/make_tests.py`, `test/tex-test.sh`,
+`test/tex-test.tex`, `examples/showcase.ps`, `examples/showcase.pdf`,
+`examples/make_showcase.bat`, `examples/bignumfactorial.ps`,
+`tools/make-doc.sh` and `tools/make-ctan.py`.
 
-The script writes `test_bignum.ps` itself. Don't redirect its output with
-`>`: in Windows PowerShell 5.1 that writes UTF-16, which Ghostscript can't
-read.
-
-The tests normally load the `.ps` files. To test the dvips headers instead,
-run `make_headers.py` and then
-
-```bat
-"C:\Program Files\gs\gs9.52\bin\gswin64c.exe" -q -dNODISPLAY -dNOSAFER -dBATCH -dPSM_HEADERS test_bignum.ps
-```
-
-The first line of output says which were tested. The first section checks
-that loading adds only the library's dictionary to `userdict` and leaves the
-stacks as they were.
-
-The package itself is tested with latex, dvips and Ghostscript: every part
-is loaded and its printed results compared, the options are checked to load
-the right headers, and unknown options and parts must give errors.
-
-```bash
-docker run --rm -v "$PWD:/pkg:ro" texlive/texlive:latest bash /pkg/tools/tex-test.sh
-```
-
-GitHub Actions runs all of these on every push: the library tests both ways,
-a check that the headers in `dvips/` are up to date, and the package tests.
-
-## Changes in version 1.2 (November 2026)
-
-- The library is now also the PSTricks package **pst-numeric**
-  (`tex/pst-numeric.tex`, `latex/pst-numeric.sty`), with options to load
-  only some parts, `\pstNumeric` and `\psNumericShow`, a manual, and tests
-  with latex and dvips.
-- Every name is now defined in `tx@NumericDict` instead of `userdict`.
-  `Load.ps` opens the dictionary, so code that starts with `(Load.ps) run`
-  works unchanged.
-- Each part is available as a dvips header in `dvips/`, built by
-  `make_headers.py`.
-- 6 new tests for the namespace (581 in all), and the suite can run against
-  the headers. The tests also pass with Ghostscript 10.08.
-
-## Changes in version 1.1 (November 2026)
-
-**Matrix.ps** now stands on its own as a linear algebra library:
-
-- Added `mfromrows`, `mtorows`, `mcopy`, `midentity`, `mtranspose`, `madd`,
-  `msub`, `mscale`, `mdet`, `minv`, `msolve`, `mlstsq`, `meigsym` and
-  `mPrint`.
-- Every operation, including `mmul`, accepts bignum and decimal-string
-  elements, for exact decimal results.
-
-**bignumlibrary.ps**: added `sqrtbn`, `expbn`, `powbn`, `atanbn`, `asinbn`,
-`acosbn`, `atan2bn`, `sinhbn`, `coshbn`, `tanhbn`, `factbn` and `binombn`.
-`typchk` recognises complex numbers, and no longer calls a list of bignums a
-matrix.
-
-**New files**: `Complex.ps` (complex numbers) and `Numeric.ps` (roots,
-integrals, polynomials, gcd and lcm), both working on reals or bignums.
-
-**Tests and showcase**: 253 new tests (575 in all), and showcase sections for
-every new procedure.
-
-## Changes in version 1.0 (November 2026)
-
-**bignumlibrary.ps** was rewritten using the same number format.
-
-- Bugs fixed in 0.5:
-  - `subbn` crashed with `rangecheck` and changed the sign of its second argument.
-  - `mulbn` returned nothing.
-  - `setbn` changed the string passed to it (`(12.5)` became `(1250)`) and left its working variables behind as globals.
-  - `setbn` and `addbn` printed debug output on every call.
-- Added `divbn`, the six comparisons and `cmpbn`, `negbn`, `absbn`, `truncbn`, `roundbn`, `bniszero`, `bncvs`, `bncvr`, `sinbn`, `cosbn`, `tanbn`, `lnbn`, `log10bn` and `pibn`.
-- Default precision changed from 5 to 20 digits.
-- `setbn` and the arithmetic procedures no longer print; set `bnDebug true` to see results.
-- Removed `tencomp` (only used inside the old `addbn`) and the stray `showpage`.
-
-**Trig.ps** was rewritten from the CORDIC algorithm, with the same procedure
-names and results, so the whole work can be licensed under LPPL.
-
-- Fixes the old version's bugs: `corcos` and `cortan` had the wrong sign in two
-  of the four quadrants (`4 corcos` gave +0.654 instead of −0.654), and
-  `coratan` crashed for x > 0, y < 0.
-- `coratan` no longer prints its result, and handles x = 0.
-- No longer needs Matrix.ps, and the recursion demos `K` and `Q` are gone.
-
-**Matrix.ps**: removed a stray `showpage` at the end of the file, which added
-a blank page to any document that loaded the library.
-
-**Showcase**: added `showcase.ps` and the generated `showcase.pdf`.
-
-**Licensing**: the work is now under LPPL 1.3c, with a notice in each file.
+The history of the changes is in [Changes](Changes).

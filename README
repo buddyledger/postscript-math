@@ -1,0 +1,51 @@
+pst-numeric: arbitrary precision arithmetic, matrices, complex numbers
+and numerical methods for PSTricks
+
+Version 1.2, 2026/11/21
+
+pst-numeric is a library of PostScript procedures for PSTricks. Its
+decimal numbers (bignums) carry as many significant digits as asked for,
+with arithmetic, square roots, exponentials, logarithms, trigonometric
+and hyperbolic functions and their inverses, pi, factorials and binomial
+coefficients. On top of that it has matrices (determinant, inverse,
+linear systems, least squares, symmetric eigenvalues), complex numbers,
+roots of functions, integrals and polynomials (values, roots, fitting),
+each working on ordinary reals or on bignums. The calculations run in
+the PostScript interpreter while the page is drawn, so they can feed
+plots directly.
+
+    \usepackage[bignum,calc]{pst-numeric}
+    ...
+    \psplot{0}{3}{\pstNumeric{[0.5 0 -1] x polyval}}
+    \psNumericShow{50 setbnsize pibn}
+
+The package options choose the parts (bignum, trig, matrix, complex,
+calc); each part is a separate dvips header. Like every PSTricks package
+it needs the latex-dvips route, or xelatex.
+
+Files
+
+  tex/pst-numeric.tex       the package (TeX and LaTeX)
+  latex/pst-numeric.sty     LaTeX wrapper
+  dvips/pst-numeric*.pro    PostScript headers
+  doc/pst-numeric-doc.*     manual (PDF, source and bibliography)
+  source/*.ps               the PostScript library the headers are
+                            generated from, also usable with Ghostscript
+  source/make_headers.py    generates dvips/pst-numeric-*.pro (Python 3)
+
+Install the files of tex/ in tex/generic/pst-numeric/, latex/ in
+tex/latex/pst-numeric/ and dvips/ in dvips/pst-numeric/ of a TeX tree.
+
+Repository, tests and bug reports:
+  https://github.com/buddyledger/pst-numeric
+
+Copyright 2012, 2026 Buddy Ledger
+
+This work may be distributed and/or modified under the conditions of the
+LaTeX Project Public License, either version 1.3c of this license or (at
+your option) any later version. The latest version of this license is in
+https://www.latex-project.org/lppl.txt and version 1.3c or later is part
+of all distributions of LaTeX version 2008 or later.
+
+This work has the LPPL maintenance status `author-maintained'.
+The Current Maintainer of this work is Buddy Ledger.

@@ -1,5 +1,5 @@
 %!PS-Adobe-3.0
-%%Title: showcase.ps - every function of postscript-math, typeset
+%%Title: showcase.ps - every function of pst-numeric, typeset
 %%Creator: Buddy Ledger
 %%DocumentMedia: Letter 612 792 0 () ()
 %%EndComments
@@ -20,9 +20,10 @@
 %
 % This work consists of the files listed in README.md.
 %
-% Build the PDF with make_showcase.bat, or:
+% Build the PDF with make_showcase.bat, or from the folder source/
+% (Load.ps loads the parts from the current folder):
 %   gswin64c -q -dNOSAFER -dBATCH -dNOPAUSE -sDEVICE=pdfwrite
-%            -sOutputFile=showcase.pdf showcase.ps
+%            -sOutputFile=../examples/showcase.pdf ../examples/showcase.ps
 %
 % Every "Code" column entry below is a string that is executed as written;
 % the "Result" column is whatever it leaves on the stack (or the error it
@@ -31,7 +32,7 @@
 (Load.ps) run
 
 /pdfmark where { pop }{ userdict /pdfmark /cleartomark load put } ifelse
-[ /Title (postscript-math: function showcase)
+[ /Title (pst-numeric: function showcase)
   /Author (Buddy Ledger)
   /Subject (Arbitrary-precision decimals, CORDIC trig and matrices in PostScript)
   /DOCINFO pdfmark
@@ -59,7 +60,7 @@
 
 /sc_footer {
 	/Helvetica 8 sc_font sc_muted
-	sc_L 34 moveto (postscript-math  \267  function showcase) show
+	sc_L 34 moveto (pst-numeric  \267  function showcase) show
 	(Page ) sc_page 4 string cvs mergestr
 	dup stringwidth pop sc_R exch sub 34 moveto show
 	sc_ink
@@ -188,7 +189,7 @@
 % ================================================================ page 1
 /sc_title {
 	/Helvetica-Bold 24 sc_font sc_ink
-	sc_L sc_y 22 sub moveto (postscript-math) show
+	sc_L sc_y 22 sub moveto (pst-numeric) show
 	32 sc_down
 	/Helvetica 13 sc_font sc_muted
 	sc_L sc_y 12 sub moveto (Function showcase) show
@@ -196,7 +197,7 @@
 } def
 sc_title
 
-(This document shows every public procedure of postscript-math with a live result. Each row has three parts. The Code column, in gray, is PostScript that is executed exactly as written while the document is generated. The Result column, in blue, is what that code leaves on the operand stack. The note in italics underneath explains what the row shows and why the result is what it is.) sc_para
+(This document shows every public procedure of pst-numeric with a live result. Each row has three parts. The Code column, in gray, is PostScript that is executed exactly as written while the document is generated. The Result column, in blue, is what that code leaves on the operand stack. The note in italics underneath explains what the row shows and why the result is what it is.) sc_para
 (Results in red are errors, and every one of them is deliberate: those rows feed a procedure bad input, such as a division by zero or the logarithm of a negative number, to show that it refuses with a standard PostScript error instead of returning a wrong answer. Rows marked no result are procedures that change a setting or print to the console rather than leave a value.) sc_para
 (Because every result is computed while the PDF is built by showcase.ps, the document always matches the library.) sc_para
 (The library has five parts: bignumlibrary.ps for decimal numbers with any number of significant digits, Trig.ps for CORDIC trigonometry on ordinary PostScript reals, Matrix.ps for linear algebra, Complex.ps for complex numbers, and Numeric.ps for roots, integrals and polynomials. Matrix.ps, Complex.ps and Numeric.ps work on ordinary reals or on bignums. All five are loaded with \(Load.ps\) run.) sc_para

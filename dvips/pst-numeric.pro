@@ -2,7 +2,7 @@
 % pst-numeric.pro: PostScript helpers of the TeX interface of pst-numeric
 % Copyright 2026 Buddy Ledger
 % LaTeX Project Public License 1.3c or later, see LICENSE
-% https://github.com/buddyledger/postscript-math
+% https://github.com/buddyledger/pst-numeric
 % The library itself is in pst-numeric-bignum.pro, -trig.pro, -matrix.pro,
 % -complex.pro and -calc.pro, which pst-numeric.tex loads as needed.
 /tx@NumericDict where { pop }{ /tx@NumericDict 600 dict def } ifelse

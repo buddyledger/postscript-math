@@ -1,15 +1,15 @@
 #!/bin/bash
 # Tests the TeX interface of pst-numeric with latex, dvips and Ghostscript.
 # Needs TeX Live with PSTricks. Run from anywhere:
-#   tools/tex-test.sh
+#   test/tex-test.sh
 # or, with Docker:
-#   docker run --rm -v "$PWD:/pkg:ro" texlive/texlive:latest bash /pkg/tools/tex-test.sh
+#   docker run --rm -v "$PWD:/pkg:ro" texlive/texlive:latest bash /pkg/test/tex-test.sh
 #
 # Copyright 2026 Buddy Ledger
 # LaTeX Project Public License 1.3c or later, see LICENSE
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-export TEXINPUTS="$root/tex:$root/latex:$root/tools:"
+export TEXINPUTS="$root/tex:$root/latex:$root/test:"
 export TEXPSHEADERS="$root/dvips:"
 export DVIPSHEADERS="$root/dvips:"
 work="$(mktemp -d)"
@@ -34,7 +34,7 @@ headers() { # ps file -> names of the pst-numeric headers that dvips included
 }
 
 echo "== every part, results printed by \\psNumericShow"
-cp "$root/tools/tex-test.tex" .
+cp "$root/test/tex-test.tex" .
 build tex-test || exit 1
 for want in \
   "+1.41421356237309504880168872421e0" \
