@@ -833,7 +833,7 @@ end
 	} ifelse
 } bind def
 /n_rfin { % R -> R, its bignums rounded to bnn
-	[ /coef /se /cov /sse /sst /ssr /r2 /adjr2 /s /level /tval /fitted /resid /stdresid /n_P ]
+	[ /coef /se /cov /sse /sst /ssr /r2 /adjr2 /s /level /tval /fitted /resid /stdresid /n_P /n_yoc ]
 	{ 1 index exch 2 copy get n_finv put } forall
 	dup /params get dup [ exch { pop } forall ] { 1 index exch 2 copy get n_finv put } forall pop
 } bind def
@@ -849,11 +849,12 @@ end
 	3 copy 60 dict begin
 	/n_mdl exch def /n_Y exch def /n_X exch def
 	count /n_cnt exch def /n_rgop /regress def /n_open false def
-	/n_W null def /n_c null def /n_lev null def
+	/n_W null def /n_c null def /n_lev null def /n_yo null def
 	/n_mdl load type /dicttype eq {
 		/n_mdl load /weights known { /n_W /n_mdl load /weights get def } if
 		/n_mdl load /intercept known { /n_c /n_mdl load /intercept get def } if
 		/n_mdl load /level known { /n_lev /n_mdl load /level get def } if
+		/n_mdl load /yoffset known { /n_yo /n_mdl load /yoffset get def } if
 		/n_mdl /n_mdl load /model known { /n_mdl load /model get }{ null } ifelse def
 	} if
 	n_X type /arraytype ne n_Y type /arraytype ne or { /typecheck n_rgerr } if
@@ -887,6 +888,7 @@ end
 	n_W null ne { /n_bn n_bn n_W n_hasbn or def } if
 	n_icpt { /n_bn n_bn n_c m_isstrbn or def } if
 	n_lev null ne { /n_bn n_bn n_lev m_isstrbn or def } if
+	n_yo null ne { /n_bn n_bn n_yo m_isstrbn or def } if
 	/n_L currentdict def
 	n_bn m_ops begin m_guard n_L begin /n_open true def
 	n_lev null eq { /n_lev n_bn { (0.95) }{ 0.95 } ifelse def } if
@@ -896,9 +898,11 @@ end
 	n_Y length n_n ne { /rangecheck n_rgerr } if
 	n_W null ne { n_W length n_n ne { /rangecheck n_rgerr } if } if
 	n_icpt { /n_cc n_c m_cv def } if
+	/n_yoc n_yo null eq { null }{ n_yo m_cv } ifelse def
 	/n_Bs n_n array def /n_Yt n_n array def /n_sw n_n array def /n_wv n_n array def
 	0 1 n_n 1 sub { /n_i exch def
 		/n_x n_X n_i get m_cv def /n_y n_Y n_i get m_cv def
+		n_yoc null ne { /n_y n_y n_yoc m_sub def } if
 		n_x n_xchk not { /rangecheck n_rgerr } if
 		n_y n_ychk not { /rangecheck n_rgerr } if
 		/n_b n_x n_xt n_bas def
@@ -986,7 +990,7 @@ end
 	/n_R 40 dict def
 	n_R /model n_mod put
 	n_mod /basis eq { n_R /basis /n_mdl load put } if
-	n_R /intercept n_c put
+	n_R /intercept n_c put n_R /yoffset n_yo put n_R /n_yoc n_yoc put
 	n_R /x n_X put n_R /y n_Y put n_R /weights n_W put
 	n_R /coef n_cof put n_R /params n_par put n_R /se n_se put n_R /cov n_cov put
 	n_R /n n_n put n_R /k n_k put n_R /dof n_dof put
@@ -1016,6 +1020,9 @@ end
 	/n_cf n_R /coef get def
 	/n_Yh m_zero 0 1 n_b length 1 sub { /n_j exch def n_b n_j get n_cf n_j get m_cv m_mul m_add } for def
 } bind def
+/n_yadd { % Y -> Y + yoffset   (inside n_rgbeg)
+	n_R /n_yoc get dup null eq { pop }{ m_cv m_add } ifelse
+} bind def
 /n_band { % pred -> lo hi, closing what n_rgbeg opened
 	/n_pr exch def
 	n_R /tval get null eq { /undefinedresult n_rgerr } if
@@ -1025,11 +1032,11 @@ end
 		n_bv n_a 1 sub get n_bv n_c 1 sub get m_mul n_P n_a n_c mget m_cv m_mul m_add } for } for
 	n_pr { m_one m_add } if
 	m_sqrt n_R /s get m_cv m_mul n_R /tval get m_cv m_mul /n_hw exch def
-	n_Yh n_hw m_sub n_R /n_yb get exec
-	n_Yh n_hw m_add n_R /n_yb get exec
+	n_Yh n_hw m_sub n_R /n_yb get exec n_yadd
+	n_Yh n_hw m_add n_R /n_yb get exec n_yadd
 	end m_unguard m_fin exch m_fin exch end end
 } bind def
-/regeval { /regeval n_rgbeg n_Yh n_R /n_yb get exec end m_unguard m_fin end end 3 1 roll pop pop } bind def
+/regeval { /regeval n_rgbeg n_Yh n_R /n_yb get exec n_yadd end m_unguard m_fin end end 3 1 roll pop pop } bind def
 /regci { /regci n_rgbeg false n_band 2 array astore 3 1 roll pop pop } bind def
 /regpi { /regpi n_rgbeg true n_band 2 array astore 3 1 roll pop pop } bind def
 /n_rngs 1 def

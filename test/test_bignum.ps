@@ -1210,6 +1210,17 @@ count /bnt_junk exch def clear
 (gauss A) { [-1 -0.5 0 0.5 1 1.5 2 2.5 3] [0.1292 0.5173 1.401 2.4431 3.03 2.4184 1.3735 0.5276 0.1305] /gauss regress /params get /A get } 3.00827293 1e-4 bnt_approx
 (gauss regeval at 1.2) { [-1 -0.5 0 0.5 1 1.5 2 2.5 3] [0.1292 0.5173 1.401 2.4431 3.03 2.4184 1.3735 0.5276 0.1305] /gauss regress 1.2 regeval } 2.91640051 1e-4 bnt_approx
 (gauss k) { [-1 -0.5 0 0.5 1 1.5 2 2.5 3] [0.1292 0.5173 1.401 2.4431 3.03 2.4184 1.3735 0.5276 0.1305] /gauss regress /k get } (3) check
+(yoffset power coef) { [1 2 3 4 5 6] [7.1 10.6 15.5 21.2 27.1 34.2] << /model /power /yoffset 5 >> regress /coef get } [0.728505838 1.47430177] lapprox
+(yoffset power b) { [1 2 3 4 5 6] [7.1 10.6 15.5 21.2 27.1 34.2] << /model /power /yoffset 5 >> regress /params get /b get } 1.47430177 approx
+(yoffset power regeval at 3.5) { [1 2 3 4 5 6] [7.1 10.6 15.5 21.2 27.1 34.2] << /model /power /yoffset 5 >> regress 3.5 regeval } 18.137313 1e-4 bnt_approx
+(yoffset power regci) { [1 2 3 4 5 6] [7.1 10.6 15.5 21.2 27.1 34.2] << /model /power /yoffset 5 >> regress 3.5 regci } [17.8774221 18.4024491] lapprox
+(yoffset kept) { [1 2 3 4 5 6] [7.1 10.6 15.5 21.2 27.1 34.2] << /model /power /yoffset 5 >> regress /yoffset get } (5) check
+(yoffset null) { [1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1] /power regress /yoffset get null eq } (true) check
+(yoffset shifts c0 of a polynomial) { [0 1 2 3 4 5 6] [1.2 1.9 4.1 7.8 13.2 20.5 28.9] << /model 2 /yoffset 3 >> regress /coef get } [-1.76666667 -0.192857143 0.802380952] lapprox
+(yoffset -1 exp regeval at 2.5) { [1 2 3 4 5 6] [2.7 7.6 19.8 55.1 147.0 405.0] << /model /exp /yoffset -1 >> regress 2.5 regeval } 13.0726798 1e-4 bnt_approx
+(yoffset gauss baseline) { [0 1 2 3 4] [1.5413 3.4261 5 3.4261 1.5413] << /model /gauss /yoffset 1 >> regress /params get /sigma get } 1 1e-3 bnt_approx
+(yoffset gauss regeval adds it back) { [0 1 2 3 4] [1.5413 3.4261 5 3.4261 1.5413] << /model /gauss /yoffset 1 >> regress 2 regeval 5 sub abs 0.001 lt } (true) check
+(yoffset string gives bignums) { [1 2 3 4 5 6] [7.1 10.6 15.5 21.2 27.1 34.2] << /model /power /yoffset (5) >> regress /coef get 0 get type /arraytype eq } (true) check
 (power with x = 0) { [0 1 2] [1 2 3] /power regress } (ERR:rangecheck) check
 (exp with y < 0) { [0 1 2] [1 -2 3] /exp regress } (ERR:rangecheck) check
 (log10 with x < 0) { [-1 1 2] [1 2 3] /log10 regress } (ERR:rangecheck) check
@@ -1228,6 +1239,7 @@ count /bnt_junk exch def clear
 (intercept with own basis) { [1 2 3] [1 2 4] << /model { dup dup mul 2 array astore } /intercept 0 >> regress } (ERR:rangecheck) check
 (intercept leaves nothing to fit) { [1 2 3] [1 2 4] << /model 0 /intercept 0 >> regress } (ERR:rangecheck) check
 (dependent columns) { [1 1 1] [1 2 3] 1 regress } (ERR:undefinedresult) check
+(yoffset above the data) { [1 2 3] [6 7 9] << /model /power /yoffset 7 >> regress } (ERR:rangecheck) check
 (basis not a list) { [1 2 3] [1 2 4] { } regress } (ERR:typecheck) check
 (basis of unequal lengths) { [1 2 3 4] [1 2 4 5] { dup 2 gt { 1 2 array astore }{ 1 array astore } ifelse } regress } (ERR:rangecheck) check
 (error leaves the operands) { { [1 2] [1 2] 1 regress } stopped pop pop length exch length add } (4) check

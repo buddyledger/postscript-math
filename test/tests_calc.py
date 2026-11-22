@@ -279,6 +279,32 @@ ra("gauss A", f"{RG} /params get /A get", _m.exp(c0 - c1 * c1 / (4 * c2)), "1e-4
 ra("gauss regeval at 1.2", f"{RG} 1.2 regeval", _m.exp(c0 + 1.2 * c1 + 1.44 * c2), "1e-4")
 t("gauss k", f"{RG} /k get", "3")
 
+# ---------------------------------------------------------------- yoffset (pst-fit's Yint)
+YKO = [7.1, 10.6, 15.5, 21.2, 27.1, 34.2]          # about 5 + 2 x^1.5
+rko = tfit(XT, YKO, _m.log, lambda y: _m.log(y - 5))
+RKO = f"{_ps(XT)} {_ps(YKO)} << /model /power /yoffset 5 >> regress"
+la("yoffset power coef", f"{RKO} /coef get", [float(v) for v in rko["c"]])
+ra("yoffset power b", f"{RKO} /params get /b get", float(rko["c"][1]))
+ra("yoffset power regeval at 3.5", f"{RKO} 3.5 regeval",
+   5 + _m.exp(float(rko["c"][0])) * 3.5 ** float(rko["c"][1]), "1e-4")
+b0 = [F(1), F(_m.log(3.5))]; yl = float(sum(c * b for c, b in zip(rko["c"], b0)))
+w0 = tq(0.975, 4) * float(rko["s2"]) ** 0.5 * float(quad(rko["P"], b0)) ** 0.5
+la("yoffset power regci", f"{RKO} 3.5 regci", [5 + _m.exp(yl - w0), 5 + _m.exp(yl + w0)])
+t("yoffset kept", f"{RKO} /yoffset get", "5")
+t("yoffset null", f"{RP} /yoffset get null eq", "true")
+rqo = wls([[F(1), F(x), F(x) ** 2] for x in X2], [_q(y) - F(3) for y in Y2])
+la("yoffset shifts c0 of a polynomial", f"{_ps(X2)} [{' '.join(Y2)}] << /model 2 /yoffset 3 >> regress /coef get",
+   [float(v) for v in rqo["c"]])
+reo = tfit(XT, YEX, float, lambda y: _m.log(y + 1))
+ra("yoffset -1 exp regeval at 2.5", f"{_ps(XT)} {_ps(YEX)} << /model /exp /yoffset -1 >> regress 2.5 regeval",
+   _m.exp(float(reo["c"][0]) + 2.5 * float(reo["c"][1])) - 1, "1e-4")
+ra("yoffset gauss baseline", "[0 1 2 3 4] [1.5413 3.4261 5 3.4261 1.5413] << /model /gauss /yoffset 1 >> regress /params get /sigma get",
+   1.0, "1e-3")
+t("yoffset gauss regeval adds it back",
+  "[0 1 2 3 4] [1.5413 3.4261 5 3.4261 1.5413] << /model /gauss /yoffset 1 >> regress 2 regeval 5 sub abs 0.001 lt", "true")
+t("yoffset string gives bignums",
+  f"{_ps(XT)} {_ps(YKO)} << /model /power /yoffset (5) >> regress /coef get 0 get type /arraytype eq", "true")
+
 # ---------------------------------------------------------------- errors
 t("power with x = 0", "[0 1 2] [1 2 3] /power regress", "ERR:rangecheck")
 t("exp with y < 0", "[0 1 2] [1 -2 3] /exp regress", "ERR:rangecheck")
@@ -298,6 +324,7 @@ t("level 1", "[1 2 3] [1 2 4] << /model 1 /level 1 >> regress", "ERR:rangecheck"
 t("intercept with own basis", f"[1 2 3] [1 2 4] << /model {BP} /intercept 0 >> regress", "ERR:rangecheck")
 t("intercept leaves nothing to fit", "[1 2 3] [1 2 4] << /model 0 /intercept 0 >> regress", "ERR:rangecheck")
 t("dependent columns", "[1 1 1] [1 2 3] 1 regress", "ERR:undefinedresult")
+t("yoffset above the data", "[1 2 3] [6 7 9] << /model /power /yoffset 7 >> regress", "ERR:rangecheck")
 t("basis not a list", "[1 2 3] [1 2 4] { } regress", "ERR:typecheck")
 t("basis of unequal lengths", "[1 2 3 4] [1 2 4 5] { dup 2 gt { 1 2 array astore }{ 1 array astore } ifelse } regress", "ERR:rangecheck")
 t("error leaves the operands", "{ [1 2] [1 2] 1 regress } stopped pop pop length exch length add", "4")

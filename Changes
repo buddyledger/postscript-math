@@ -1,6 +1,17 @@
 pst-numeric: changes
 
-1.4  2026/11/22  first release on CTAN
+1.4.1  2026/11/22  first release on CTAN
+                 - regress: option /yoffset c fits y - c and adds c back
+                   (y = c + a x^b, y = c + a e^(bx), a Gauss curve on a
+                   baseline), as pst-fit's Yint does; regeval, regci,
+                   regpi and \psNumericRegression take it into account
+                 - the documentation no longer says that /intercept is
+                   pst-fit's Yint: it fixes the constant term in the
+                   space of the fit, which matches Yint only for
+                   polynomials without a constant term (ReduceOrder)
+                 - 12 new tests (1524 in all)
+
+1.4  2026/11/22  (not released on CTAN)
                  - presentation: number formats (numFormat=auto, fixed,
                    sci; numDigits, numTrim, numDecimal, sciStyle) for
                    \psNumericShow; \psNumericMatrix lays out matrices,

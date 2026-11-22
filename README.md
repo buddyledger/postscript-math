@@ -48,7 +48,7 @@ Like every PSTricks package it needs the `latex`–`dvips` route (or `xelatex`).
 | `dvips/` | `pst-numeric-<part>.pro`, each part as a dvips header (generated), and `pst-numeric.pro`, the package's own helpers | yes |
 | `doc/` | The manual: [`pst-numeric-doc.pdf`](doc/pst-numeric-doc.pdf), its source and bibliography | yes |
 | `source/` | The library's PostScript files, `Load.ps` to load them all, `make_headers.py` to generate the headers, and `gs.bat` to run Ghostscript on Windows | yes, without `gs.bat` |
-| `test/` | `test_bignum.ps` (1512 tests of the library; more cases in `tests_*.py`), `make_tests.py` that generates it, and `tex-test.sh` with `tex-test.tex` (tests of the package with latex and dvips) | no |
+| `test/` | `test_bignum.ps` (1524 tests of the library; more cases in `tests_*.py`), `make_tests.py` that generates it, and `tex-test.sh` with `tex-test.tex` (tests of the package with latex and dvips) | no |
 | `examples/` | [`showcase.pdf`](examples/showcase.pdf), every public procedure with a live result, with its source `showcase.ps` and `make_showcase.bat`; and `bignumfactorial.ps` | no |
 | `tools/` | `make-doc.sh` builds the manual, `make-ctan.py` builds the CTAN archive | no |
 
@@ -317,7 +317,7 @@ them, so `stopped` catches them and Ghostscript reports them as, for example,
 Arithmetic works one decimal digit at a time. At 20 digits each operation is
 instant and a function takes a few hundredths of a second. At 100 digits,
 `pibn` takes about 1.5 s the first time (it's cached after that) and `sinbn`
-about 0.3 s. The full test suite (1512 tests) takes about four minutes, mostly for
+about 0.3 s. The full test suite (1524 tests) takes about four minutes, mostly for
 bignum integrals, polynomial roots, the special functions, and the
 distributions, matrix decompositions and regressions with bignums.
 
@@ -487,7 +487,7 @@ return a bignum. It runs at 6 digits above `bnn`, so it shouldn't change
 | `skewness` `kurtosis` | `[x …] → number` | adjusted sample skewness G1 and excess kurtosis G2 (Excel's SKEW and KURT); at least 3 and 4 values, a constant list gives `undefinedresult` |
 | `quantile` | `[x …] p → number` | R type 7 (Excel's PERCENTILE.INC): x₍ₕ₎ interpolated at h = (n − 1)p, 0 ≤ p ≤ 1; p = 0.5 is the median |
 | `histogram` | `[x …] a b k → [c₁ … cₖ]` | counts in k equal bins on [a, b], the last bin closed; values outside are not counted |
-| `regress` | `[x …] [y …] model → R` | linear least squares with statistics (GLLSR of pst-fit). model: an integer degree, `/linear`, a basis procedure `{ x → [b₁(x) … bₖ(x)] }`, `/power` (a xᵇ), `/exp` (a eᵇˣ), `/log10`, `/ln` (a + b log x), `/recip` (a + b/x), `/gauss` (A e^(−(x−μ)²/2σ²)), or a dictionary with `/model` and optional `/weights [w …]`, `/intercept c`, `/level p` (default 0.95). Householder QR; transforms are fitted in the transformed space. Invalid data for a transform, too few points, an unknown model give `rangecheck`; dependent columns and a `/gauss` without maximum give `undefinedresult` |
+| `regress` | `[x …] [y …] model → R` | linear least squares with statistics (GLLSR of pst-fit). model: an integer degree, `/linear`, a basis procedure `{ x → [b₁(x) … bₖ(x)] }`, `/power` (a xᵇ), `/exp` (a eᵇˣ), `/log10`, `/ln` (a + b log x), `/recip` (a + b/x), `/gauss` (A e^(−(x−μ)²/2σ²)), or a dictionary with `/model` and optional `/weights [w …]`, `/intercept c`, `/yoffset c` (fit y − c and add c back: y = c + a xᵇ, y = c + a eᵇˣ, a Gauss curve on a baseline; pst-fit's `Yint`), `/level p` (default 0.95). Householder QR; transforms are fitted in the transformed space. Invalid data for a transform, too few points, an unknown model give `rangecheck`; dependent columns and a `/gauss` without maximum give `undefinedresult` |
 | `linreg` | `[x …] [y …] → R` | the straight line, `1 regress` |
 | `regeval` | `R x → y` | the fitted curve at x, in the original coordinates |
 | `regci` | `R x → [lo hi]` | confidence band of the mean response, ŷ ± t s √(b(x)ᵀ(XᵀWX)⁻¹b(x)), transformed back |
@@ -499,7 +499,10 @@ return a bignum. It runs at 6 digits above `bnn`, so it shouldn't change
 
 The result of `regress` is a dictionary. `/model` is the degree (an integer;
 `/linear` becomes 1), the transform's name, or `/basis` (the procedure is
-then in `/basis`); `/intercept` is null or the fixed constant term as given;
+then in `/basis`); `/intercept` is null or the fixed constant term as given
+(in the space of the fit, so for /power it fixes ln a; it matches pst-fit's
+`Yint` only for polynomials without a constant term); `/yoffset` is null or
+the offset as given;
 `/x`, `/y` and `/weights` (null if none) hold the data as given. `/coef` are
 the coefficients in the space of the fit, constant term first (with
 `/intercept` it is the fixed value); `/params` is a dictionary of natural

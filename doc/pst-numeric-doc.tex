@@ -957,7 +957,7 @@ equal bins, ready for \Lcs{psbar} or \Lcs{listplot}.
 \Lps{regress} fits a model to data by linear least squares and returns a
 dictionary with the coefficients and their statistics. It brings the GLLSR
 code of \LPack{pst-fit}'s thesis example into the library: polynomials,
-linearizing transforms, a forced intercept, $r^2$, the standard error of the
+linearizing transforms, a forced intercept, an offset of $y$, $r^2$, the standard error of the
 fit and confidence and prediction bands, now with weights, your own basis
 functions, the exact $t$ value for any number of degrees of freedom, and
 bands that are right for every model. The coefficients come from a Householder
@@ -975,9 +975,17 @@ The model is one of
   $\ln y$);
 \item a dictionary with \texttt{/model} and any of \texttt{/weights [}\Larg{w}\dots\texttt{]},
   \texttt{/intercept} \Larg{c} (the constant term fixed at $c$, so the curve
-  passes through $(0,c)$; in the space of the fit) and \texttt{/level}
+  passes through $(0,c)$; in the space of the fit), \texttt{/yoffset}
+  \Larg{c} ($y-c$ is fitted and $c$ added back) and \texttt{/level}
   \Larg{p} (the confidence level of the bands, default 0.95).
 \end{itemize}
+With \texttt{/yoffset} the transforms fit curves that approach $c$ instead
+of 0: $y=c+ax^b$ for \texttt{/power}, $y=c+ae^{bx}$ for \texttt{/exp}, and
+a Gauss curve on the baseline $c$. This is what \LPack{pst-fit}'s
+\texttt{Yint} does, for example for King's law. \texttt{/intercept} is a
+different thing: it fixes the constant term after the transform (for
+\texttt{/power} it fixes $\ln a$), and it matches \texttt{Yint} only for a
+polynomial without a constant term (\LPack{pst-fit}'s \texttt{ReduceOrder}).
 The transforms are fitted in the transformed space, and their statistics
 are those of that fit. Data a transform cannot take, such as $x\le0$ for
 \texttt{/power}, give \texttt{rangecheck}; they are not left out silently.
@@ -992,7 +1000,7 @@ The result \Larg{R} holds, among others:
 \texttt{/sse} \texttt{/sst} \texttt{/ssr} & sums of squares\\
 \texttt{/tval} \texttt{/level} & the $t$ value of the bands and their level\\
 \texttt{/fitted} \texttt{/resid} \texttt{/stdresid} & fitted values, residuals, studentized residuals\\
-\texttt{/model} \texttt{/intercept} \texttt{/x} \texttt{/y} \texttt{/weights} & the input, normalized\\
+\texttt{/model} \texttt{/intercept} \texttt{/yoffset} \texttt{/x} \texttt{/y} \texttt{/weights} & the input, normalized\\
 \end{reference}
 
 Compute the fit once, with \Lcs{psNumericDef}, and draw it with
@@ -1027,12 +1035,15 @@ The residuals show whether a straight line suits the data;
 \end{LTXexample}
 
 \begin{LTXexample}[pos=t]
-\begin{pspicture}(0,-0.2)(14,1.5)
+\begin{pspicture}(0,-0.7)(14,1.5)
 \rput[l](0,1.0){\psNumericShow{[1 2 3 4 5 6] [2.1 5.5 10.6 15.8 22.6 29.1]
   /power regress /params get dup /a get exch /b get 2 array astore pstnum_list}}
 \rput[l](0,0.5){\psNumericShow{[(1) 2 3 4 5] [2.1 3.9 6.2 7.8 10.1] linreg /coef get pstnum_list}}
 \rput[l](0,0.0){\psNumericShow{[1 2 3 4] [3 5 7 10]
   << /model 1 /intercept 1 >> regress /coef get pstnum_list}}
+\rput[l](0,-0.5){\psNumericShow{[1 2 3 4 5 6] [7.1 10.6 15.5 21.2 27.1 34.2]
+  << /model /power /yoffset 5 >> regress /params get
+  dup /a get exch /b get 2 array astore pstnum_list}}
 \end{pspicture}
 \end{LTXexample}
 

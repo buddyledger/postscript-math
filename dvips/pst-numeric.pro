@@ -397,15 +397,20 @@ tx@NumericDict begin
 } bind def
 % R -> the fitted equation as rich text
 /pstnum_regeq {
-	8 dict begin /R exch def /md R /model get def /cf R /coef get def
+	12 dict begin /R exch def /md R /model get def /cf R /coef get def
 	/pr R /params known { R /params get }{ 0 dict } ifelse def
 	/v { pstnum_fmtnum } def
 	/pv { pr exch get v } def
+	% a yoffset is added to the constant term, or written in front
+	/yo R /yoffset known { R /yoffset get }{ null } ifelse def
+	/P yo null eq { (y = ) }{ (y = ) yo v pstnum_cat ( + ) pstnum_cat } ifelse def
+	/c0f { yo null ne {
+		dup type /arraytype eq yo type /stringtype eq or { yo setbn addbn }{ yo add } ifelse } if } def
 	md type /integertype eq md /linear eq or {
 		/dg md /linear eq { 1 }{ md } ifelse def
 		(y = )
 		0 1 cf length 1 sub { /j exch def
-			/c cf j get v def
+			/c cf j get j 0 eq { c0f } if v def
 			/xp j 0 eq { () }{ j 1 eq { (x) }{ (x^{) j 3 string cvs pstnum_cat (}) pstnum_cat } ifelse } ifelse def
 			j 0 gt c (1) eq and { /c () def } if
 			j 0 gt c (-1) eq and { /c (-) def } if
@@ -413,20 +418,20 @@ tx@NumericDict begin
 				c xp pstnum_cat 1 index (y = ) eq { pstnum_cat }{ pstnum_term pstnum_cat } ifelse } ifelse
 		} for
 	}{
-	md /power eq { (y = ) /a pv pstnum_cat (\001\327x^{) pstnum_cat /b pv pstnum_cat (}) pstnum_cat }{
-	md /exp eq { (y = ) /a pv pstnum_cat (\001\327e^{) pstnum_cat /b pv pstnum_cat (x}) pstnum_cat }{
+	md /power eq { P /a pv pstnum_cat (\001\327x^{) pstnum_cat /b pv pstnum_cat (}) pstnum_cat }{
+	md /exp eq { P /a pv pstnum_cat (\001\327e^{) pstnum_cat /b pv pstnum_cat (x}) pstnum_cat }{
 	md /log10 eq md /ln eq or md /recip eq or {
-		(y = ) cf 0 get v pstnum_cat cf 1 get v
+		(y = ) cf 0 get c0f v pstnum_cat cf 1 get v
 		md /log10 eq { ( log x) }{ md /ln eq { ( ln x) }{ (/x) } ifelse } ifelse pstnum_cat
 		pstnum_term pstnum_cat }{
 	md /gauss eq {
-		(y = ) /A pv pstnum_cat (\001\327exp\(-\(x) pstnum_cat
+		P /A pv pstnum_cat (\001\327exp\(-\(x) pstnum_cat
 		/mu pv dup length 0 gt { dup 0 get 45 eq }{ false } ifelse
 		{ 1 1 index length 1 sub getinterval ( + ) exch pstnum_cat }{ ( - ) exch pstnum_cat } ifelse pstnum_cat
 		(\)^{2}/) pstnum_cat
 		pr /sigma get dup type /arraytype eq { dup mulbn (2) setbn mulbn }{ dup mul 2 mul } ifelse v pstnum_cat
 		(\)) pstnum_cat }{
-		(y = \001S c_{j} b_{j}\(x\)) } ifelse } ifelse } ifelse } ifelse } ifelse
+		P (\001S c_{j} b_{j}\(x\)) pstnum_cat } ifelse } ifelse } ifelse } ifelse } ifelse
 	end
 } bind def
 % R -> draws the lines that pstnum_regshow names, one below the other,
