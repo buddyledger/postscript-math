@@ -40,6 +40,14 @@ work on reals without `bignum`; load it too to use them with bignums
 (`calc` loads it, through `special`).
 Like every PSTricks package it needs the `latex`–`dvips` route (or `xelatex`).
 
+## Released versions
+
+The released versions of pst-numeric, the ones meant for production use, will be
+on CTAN at
+[graphics/pstricks/contrib/pst-numeric](https://ctan.org/tex-archive/graphics/pstricks/contrib/pst-numeric)
+and from there in TeX Live and MiKTeX. The package is not on CTAN yet. This
+repository holds the development version.
+
 ## Files
 
 | Folder | Contents | On CTAN |
@@ -52,8 +60,7 @@ Like every PSTricks package it needs the `latex`–`dvips` route (or `xelatex`).
 | `examples/` | [`showcase.pdf`](examples/showcase.pdf), every public procedure with a live result, with its source `showcase.ps` and `make_showcase.bat`; and `bignumfactorial.ps` | no |
 | `tools/` | `make-doc.sh` builds the manual, `make-ctan.py` builds the CTAN archive | no |
 
-`README` and `Changes` are the CTAN archive's readme and change log;
-[RELEASING.md](RELEASING.md) describes how a version goes to CTAN.
+`README` and `Changes` are the CTAN archive's readme and change log.
 
 ## Building and testing
 
@@ -683,7 +690,7 @@ This work has the LPPL maintenance status `author-maintained`. The Current
 Maintainer of this work is Buddy Ledger.
 
 This work consists of the files `README`, `README.md`, `Changes`,
-`RELEASING.md`, `tex/pst-numeric.tex`, `latex/pst-numeric.sty`,
+`tex/pst-numeric.tex`, `latex/pst-numeric.sty`,
 `dvips/pst-numeric.pro`, `dvips/pst-numeric-bignum.pro`,
 `dvips/pst-numeric-trig.pro`, `dvips/pst-numeric-matrix.pro`,
 `dvips/pst-numeric-complex.pro`, `dvips/pst-numeric-calc.pro`, `dvips/pst-numeric-special.pro`,
