@@ -109,6 +109,56 @@ tensor  & pst-numeric-tensor.pro  & tensors of any rank: products,
 \end{tabularx}
 
 
+\section{Relation to other \PST{} packages}\label{sec:relation}
+
+Several \PST{} packages already compute some of what \pkg{} computes. They
+work with \PS reals, which have about 7 digits with dvips and Ghostscript
+and about 16 with Lua\LaTeX. \pkg{} gives the same results at any precision
+with bignums, and reports invalid arguments as \PS errors. If reals are
+enough for you, the packages below are enough too. Their procedures do not
+accept bignums, because they are written with the operators of \PS, which
+take only integers and reals; convert a bignum with \Lps{bncvr} first, which
+keeps only the digits of a real. In the other direction, a real from one of
+them goes into any procedure of \pkg.
+
+\begin{itemize}
+\item \LPack{pst-math} has the trigonometric and hyperbolic functions in
+  radians, \texttt{GAMMA}, \texttt{GAMMALN}, \texttt{BETA}, the Bessel
+  functions $J_0$, $J_1$, $Y_0$, $Y_1$ and $Y_n$, \texttt{norminv},
+  \texttt{SIMPSON}, \texttt{HORNER} and \texttt{SolveLinEqSystem}. \pkg{}
+  has these for any integer order and any precision, and adds the incomplete
+  gamma and beta functions, \Lps{digamma}, \Lps{erf} and the modified Bessel
+  functions (section~\ref{sec:special}).
+\item \LPack{pst-func} plots polynomials with their derivatives and zeros,
+  the densities of the common distributions, integrals (\Lcs{psIntegral},
+  \Lcs{psCumIntegral}) and zeros (\Lcs{psZero}). It also has the Beta, Gamma,
+  Cauchy and Weibull distributions, which \pkg{} lacks. \pkg{} returns the
+  numbers instead of a plot, and adds the distribution functions and their
+  quantiles (\Lps{tinv}, \Lps{chi2inv}, \Lps{finv}).
+\item \LPack{pst-ode} and \Lcs{psplotDiffEqn} of \LPack{pstricks-add} solve
+  differential equations. The RKF45 method of \LPack{pst-ode} chooses its
+  step size itself and is the better choice for plotting a solution.
+  \Lps{oderk4} and \Lps{odesolve} are for solutions with more digits than a
+  real has.
+\item \LPack{pst-fit} fits curves to data and draws them with confidence and
+  prediction bands. \Lps{regress} (section~\ref{sec:regression}) does the
+  same calculation, and a later version of \LPack{pst-fit} is planned to
+  compute with it. The plot style \texttt{LSM} of \LPack{pst-plot} draws a
+  least-squares straight line.
+\item \LPack{pst-tools} and \LPack{pst-func} have the complex arithmetic
+  \texttt{cxadd}, \texttt{cxmul}, \texttt{cxdiv}, \texttt{cxsqrt},
+  \texttt{cxlog} and \texttt{cxexp}, and \Lcs{psPrintValue} to print a \PS
+  result. \pkg{} adds the complex trigonometric functions and their inverses;
+  \Lcs{psNumericShow} also prints bignums, matrices and regression results.
+\item \LPack{pst-3dplot} and \LPack{pst-solides3d} have products of
+  3-vectors and of small matrices for their own drawing.
+\end{itemize}
+
+Only \pkg{} has the bignums, the matrix decompositions and eigenvalues, the
+tensors, the number theory (\Lps{isprime}, \Lps{factor}, \Lps{powmodbn}),
+the Fourier transform and the descriptive statistics.
+
+
 \section{Loading the package}
 
 \begin{BDef}
